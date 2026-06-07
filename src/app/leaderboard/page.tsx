@@ -101,11 +101,41 @@ export default async function LeaderboardPage({
     if (r.submitted) r.rank = ++rank;
   }
 
+  const ordinal = (n: number) => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+  };
+  const me = rows.find((r) => r.ownerId === userId);
+
   return (
     <div className="space-y-4 py-4">
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>
       </header>
+
+      {me ? (
+        <div className="card flex items-center justify-between px-4 py-3">
+          <div>
+            <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">
+              Your rank
+            </div>
+            <div className="font-display text-3xl leading-none">
+              {me.submitted && me.rank ? (
+                <>
+                  {ordinal(me.rank)} <span className="text-muted">of {rows.length}</span>
+                </>
+              ) : (
+                <span className="text-gold">Not locked in</span>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-display text-4xl leading-none text-accent">{me.points}</div>
+            <div className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">pts</div>
+          </div>
+        </div>
+      ) : null}
 
       {memberships.length > 1 ? (
         <div className="flex gap-2 overflow-x-auto pb-1">
