@@ -31,12 +31,12 @@ export default function ThemeButton({ initial }: { initial: Theme }) {
       type="button"
       onClick={toggle}
       aria-label={theme === 'dark' ? 'Switch to day theme' : 'Switch to night theme'}
-      className="glass fixed right-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-full shadow-lg shadow-black/20 active:scale-90"
+      className="fixed right-3 top-3 z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-edge-strong bg-surface-raised shadow-lg shadow-black/25 active:scale-90"
     >
       {theme === 'dark' ? (
-        <Sun className="h-5 w-5 text-gold" strokeWidth={2.3} />
+        <Sun className="h-5 w-5 text-gold" strokeWidth={2.4} />
       ) : (
-        <Moon className="h-5 w-5 text-accent" strokeWidth={2.3} />
+        <Moon className="h-5 w-5 text-accent" strokeWidth={2.4} />
       )}
     </button>
   );

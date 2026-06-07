@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { brackets, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLocked } from '@/lib/lock';
-import PoolActions from '@/components/pools/PoolActions';
 import RenameBracket from '@/components/me/RenameBracket';
 import BracketControls from '@/components/me/BracketControls';
 import SwitchPlayer from '@/components/auth/SwitchPlayer';
@@ -80,10 +79,6 @@ export default async function MePage() {
         ))}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl text-muted">Join or create a pool</h2>
-        <PoolActions />
-      </section>
     </div>
   );
 }
