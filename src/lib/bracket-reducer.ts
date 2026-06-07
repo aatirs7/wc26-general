@@ -3,6 +3,7 @@
 // invalidated picks.
 
 import type { Predictions } from '@/types/bracket';
+import { GROUP_POSITIONS } from '@/types/bracket';
 import {
   ROUND_SIZES,
   THIRD_PLACE_PICKS,
@@ -14,7 +15,7 @@ import { pruneDownstream, qualifiersOf } from './predictions';
 
 export type BracketAction =
   | { type: 'load'; predictions: Predictions }
-  | { type: 'cycleGroupPick'; letter: GroupLetter; code: string }
+  | { type: 'rankGroupTeam'; letter: GroupLetter; code: string }
   | { type: 'toggleThird'; code: string }
   | { type: 'toggleRoundPick'; round: KnockoutRoundKey; code: string }
   | { type: 'toggleChampion'; code: string };
@@ -30,23 +31,18 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
     case 'load':
       return pruneDownstream(action.predictions);
 
-    case 'cycleGroupPick': {
+    case 'rankGroupTeam': {
+      // Tap an unranked team to give it the next open finishing spot
+      // (1st, then 2nd, 3rd, 4th); tap a ranked team to clear it.
       const { letter, code } = action;
       const g = { ...(state.groups[letter] ?? {}) };
-      if (g.first === code) {
-        // 1st -> 2nd, displacing any current 2nd
-        g.first = undefined;
-        g.second = code;
-      } else if (g.second === code) {
-        // 2nd -> none
-        g.second = undefined;
-      } else if (!g.first) {
-        g.first = code;
-      } else if (!g.second) {
-        g.second = code;
+      const current = GROUP_POSITIONS.find((pos) => g[pos] === code);
+      if (current) {
+        g[current] = undefined;
       } else {
-        // Both slots taken; tap a picked team first to free one.
-        return state;
+        const free = GROUP_POSITIONS.find((pos) => !g[pos]);
+        if (!free) return state;
+        g[free] = code;
       }
       return pruneDownstream({
         ...state,
@@ -63,10 +59,10 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
         });
       }
       if (state.thirdPlace.length >= THIRD_PLACE_PICKS) return state;
-      const top2 = new Set(
-        Object.values(state.groups).flatMap((g) => [g?.first, g?.second]).filter(Boolean),
+      const thirds = new Set(
+        Object.values(state.groups).map((g) => g?.third).filter(Boolean) as string[],
       );
-      if (top2.has(code)) return state;
+      if (!thirds.has(code)) return state;
       return { ...state, thirdPlace: [...state.thirdPlace, code] };
     }
 

@@ -32,10 +32,12 @@ export default function NamePicker({ players }: Props) {
   }
 
   return (
-    <div className="w-full max-w-xs space-y-4">
+    <div className="space-y-5">
       {players.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">Who are you?</p>
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
+            Who are you?
+          </p>
           <div className="flex flex-wrap justify-center gap-2">
             {players.map((p) => (
               <button
@@ -43,7 +45,7 @@ export default function NamePicker({ players }: Props) {
                 type="button"
                 disabled={busy}
                 onClick={() => signIn(p.displayName)}
-                className="min-h-11 rounded-full border border-edge bg-surface px-4 text-sm font-semibold active:bg-surface-raised disabled:opacity-40"
+                className="min-h-11 rounded-full border border-edge bg-white/[0.03] px-4 text-sm font-semibold active:scale-95 disabled:opacity-40"
               >
                 {p.displayName}
               </button>
@@ -53,7 +55,7 @@ export default function NamePicker({ players }: Props) {
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted">
+        <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
           {players.length > 0 ? 'Or join as someone new' : 'Enter your name to play'}
         </p>
         <div className="flex gap-2">
@@ -62,7 +64,7 @@ export default function NamePicker({ players }: Props) {
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
             maxLength={40}
-            className="min-h-12 flex-1 rounded-xl border border-edge bg-surface px-3 text-sm"
+            className="min-h-12 flex-1 rounded-xl border border-edge bg-white/[0.03] px-3.5 text-sm outline-none placeholder:text-muted-2 focus:border-accent/60"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && name.trim()) signIn(name);
             }}
@@ -71,14 +73,14 @@ export default function NamePicker({ players }: Props) {
             type="button"
             disabled={busy || !name.trim()}
             onClick={() => signIn(name)}
-            className="min-h-12 rounded-xl bg-accent px-5 text-sm font-bold text-black disabled:opacity-40"
+            className="min-h-12 rounded-xl bg-accent px-5 text-sm font-bold text-[var(--accent-ink)] active:scale-95 disabled:opacity-30"
           >
             Go
           </button>
         </div>
       </div>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-live">{error}</p> : null}
     </div>
   );
 }

@@ -36,15 +36,15 @@ export default function RenameBracket({ bracketId, currentName }: { bracketId: s
           setSaved(false);
         }}
         maxLength={60}
-        className="min-h-11 flex-1 rounded-xl border border-edge bg-surface px-3 text-sm"
+        className="min-h-11 flex-1 rounded-xl border border-edge bg-white/[0.03] px-3.5 text-sm outline-none focus:border-accent/60"
       />
       <button
         type="button"
         onClick={save}
         disabled={busy || name.trim().length === 0 || name === currentName}
-        className="min-h-11 rounded-xl border border-edge bg-surface px-4 text-sm font-semibold disabled:opacity-40"
+        className="min-h-11 rounded-xl border border-edge bg-white/[0.03] px-4 text-sm font-semibold active:scale-95 disabled:opacity-40"
       >
-        {saved ? 'Saved' : 'Rename'}
+        {saved ? 'Saved ✓' : 'Rename'}
       </button>
     </div>
   );

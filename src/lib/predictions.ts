@@ -4,8 +4,8 @@ import {
   KNOCKOUT_ROUNDS,
   ROUND_SIZES,
   THIRD_PLACE_PICKS,
-  type GroupLetter,
 } from './constants';
+import type { GroupLetter } from './constants';
 import type { Predictions } from '@/types/bracket';
 
 const teamCode = z.string().regex(/^[A-Z]{3}$/);
@@ -14,10 +14,27 @@ const groupPick = z
   .object({
     first: teamCode.optional(),
     second: teamCode.optional(),
+    third: teamCode.optional(),
+    fourth: teamCode.optional(),
   })
-  .refine((g) => !g.first || !g.second || g.first !== g.second, {
-    message: 'first and second must differ',
-  });
+  .refine(
+    (g) => {
+      const picks = [g.first, g.second, g.third, g.fourth].filter(Boolean);
+      return new Set(picks).size === picks.length;
+    },
+    { message: 'group positions must be distinct teams' },
+  );
+
+// The team a bracket ranks third in each group, the candidate pool for
+// the best-thirds bonus.
+function thirdsOf(p: { groups: Partial<Record<GroupLetter, { third?: string }>> }): Set<string> {
+  const out = new Set<string>();
+  for (const letter of GROUP_LETTERS) {
+    const t = p.groups[letter]?.third;
+    if (t) out.add(t);
+  }
+  return out;
+}
 
 // Structural validation for in-progress saves. Partial picks are allowed;
 // completeness is only required at submit (see isComplete).
@@ -40,14 +57,16 @@ export const predictionsSchema = z
       if (g?.first) top2.add(g.first);
       if (g?.second) top2.add(g.second);
     }
+    const thirds = thirdsOf(p);
     if (new Set(p.thirdPlace).size !== p.thirdPlace.length) {
       ctx.addIssue({ code: 'custom', message: 'thirdPlace has duplicates', path: ['thirdPlace'] });
     }
+    // Best-thirds picks must be teams the bracket actually ranked third.
     for (const code of p.thirdPlace) {
-      if (top2.has(code)) {
+      if (!thirds.has(code)) {
         ctx.addIssue({
           code: 'custom',
-          message: `thirdPlace pick ${code} is already a top-2 pick`,
+          message: `thirdPlace pick ${code} is not ranked third in any group`,
           path: ['thirdPlace'],
         });
       }
@@ -105,7 +124,9 @@ export function pruneDownstream(p: Predictions): Predictions {
     if (g?.first) top2.add(g.first);
     if (g?.second) top2.add(g.second);
   }
-  const thirdPlace = p.thirdPlace.filter((c) => !top2.has(c));
+  // Keep only best-thirds picks still ranked third somewhere.
+  const thirds = thirdsOf(p);
+  const thirdPlace = p.thirdPlace.filter((c) => thirds.has(c));
   let pool = new Set([...top2, ...thirdPlace]);
 
   const knockout = { ...p.knockout };
@@ -119,10 +140,13 @@ export function pruneDownstream(p: Predictions): Predictions {
   return { groups: p.groups, thirdPlace, knockout };
 }
 
+export function isGroupComplete(g: { first?: string; second?: string; third?: string; fourth?: string } | undefined): boolean {
+  return !!g?.first && !!g?.second && !!g?.third && !!g?.fourth;
+}
+
 export function isComplete(p: Predictions): boolean {
   for (const letter of GROUP_LETTERS) {
-    const g = p.groups[letter];
-    if (!g?.first || !g?.second) return false;
+    if (!isGroupComplete(p.groups[letter])) return false;
   }
   if (p.thirdPlace.length !== THIRD_PLACE_PICKS) return false;
   for (const round of KNOCKOUT_ROUNDS) {
@@ -131,4 +155,4 @@ export function isComplete(p: Predictions): boolean {
   return !!p.knockout.champion;
 }
 
-export type GroupPickMap = Partial<Record<GroupLetter, { first?: string; second?: string }>>;
+export { thirdsOf };

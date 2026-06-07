@@ -103,10 +103,10 @@ export default async function LeaderboardPage({
 
   return (
     <div className="space-y-4 py-4">
-      <header className="flex items-end justify-between">
-        <h1 className="text-xl font-bold">Leaderboard</h1>
-        <span className="text-xs text-muted">
-          Invite code: <span className="font-mono font-bold text-foreground">{active.joinCode}</span>
+      <header className="flex items-end justify-between pt-2">
+        <h1 className="font-display text-4xl leading-none">Standings</h1>
+        <span className="rounded-full bg-white/[0.04] px-3 py-1.5 text-xs text-muted">
+          Code <span className="font-mono font-bold text-accent">{active.joinCode}</span>
         </span>
       </header>
 
@@ -116,10 +116,10 @@ export default async function LeaderboardPage({
             <Link
               key={m.poolId}
               href={`/leaderboard?pool=${m.poolId}`}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
                 m.poolId === active.poolId
                   ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-edge bg-surface text-muted'
+                  : 'border-edge bg-white/[0.02] text-muted'
               }`}
             >
               {m.poolName}
@@ -130,19 +130,28 @@ export default async function LeaderboardPage({
 
       <ol className="space-y-2">
         {rows.map((row) => {
+          const medal = row.rank && row.rank <= 3 ? `medal-${row.rank}` : '';
           const inner = (
-            <div className="flex min-h-12 items-center gap-3 rounded-xl border border-edge bg-surface px-3 py-2">
-              <span className="w-6 text-center text-sm font-bold text-muted">
+            <div
+              className={`card flex min-h-14 items-center gap-3 px-3 py-2.5 ${
+                row.rank && row.rank <= 3 ? `ring-${row.rank}` : ''
+              } ${!row.submitted ? 'opacity-60' : ''}`}
+            >
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-lg ${
+                  medal || 'bg-white/[0.04] text-muted'
+                }`}
+              >
                 {row.rank ?? '–'}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">{row.bracketName}</div>
+                <div className="truncate text-sm font-bold">{row.bracketName}</div>
                 <div className="truncate text-xs text-muted">
                   {row.ownerName}
                   {!row.submitted ? ' · did not lock' : ''}
                 </div>
               </div>
-              <span className="text-base font-bold text-accent">{row.points}</span>
+              <span className="font-display text-2xl leading-none text-accent">{row.points}</span>
             </div>
           );
           return (

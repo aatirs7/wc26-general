@@ -3,7 +3,12 @@ import type { GroupLetter } from '@/lib/constants';
 export interface GroupPick {
   first?: string;
   second?: string;
+  third?: string;
+  fourth?: string;
 }
+
+export const GROUP_POSITIONS = ['first', 'second', 'third', 'fourth'] as const;
+export type GroupPosition = (typeof GROUP_POSITIONS)[number];
 
 export interface KnockoutPicks {
   r16: string[];

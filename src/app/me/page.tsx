@@ -38,32 +38,37 @@ export default async function MePage() {
   );
 
   return (
-    <div className="space-y-6 py-4">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">{me?.displayName ?? 'You'}</h1>
-          <p className="text-sm text-muted">
-            {isLocked() ? 'Tournament running' : 'Brackets editable until kickoff'}
-          </p>
+    <div className="space-y-7 py-4">
+      <header className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent font-display text-2xl text-[var(--accent-ink)]">
+            {(me?.displayName ?? 'Y').slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <h1 className="font-display text-3xl leading-none">{me?.displayName ?? 'You'}</h1>
+            <p className="text-sm text-muted">
+              {isLocked() ? 'Tournament running' : 'Editable until kickoff'}
+            </p>
+          </div>
         </div>
         <SwitchPlayer />
       </header>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted">My pools</h2>
+        <h2 className="font-display text-xl text-muted">My pools</h2>
         {myBrackets.map(({ pool, bracket }) => (
-          <div key={pool.poolId} className="space-y-3 rounded-2xl border border-edge bg-surface/50 p-3">
+          <div key={pool.poolId} className="card space-y-3 p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{pool.name}</span>
-              <span className="text-xs text-muted">
-                Invite: <span className="font-mono font-bold text-foreground">{pool.joinCode}</span>
+              <span className="font-display text-lg">{pool.name}</span>
+              <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-xs text-muted">
+                <span className="font-mono font-bold text-accent">{pool.joinCode}</span>
               </span>
             </div>
             {bracket ? (
               <>
                 <RenameBracket bracketId={bracket.id} currentName={bracket.name} />
                 {!bracket.submitted && !isLocked() ? (
-                  <p className="text-xs text-gold">Not submitted yet</p>
+                  <p className="text-xs font-semibold text-gold">Not submitted yet</p>
                 ) : null}
               </>
             ) : (
@@ -74,9 +79,7 @@ export default async function MePage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted">
-          Join or create a pool
-        </h2>
+        <h2 className="font-display text-xl text-muted">Join or create a pool</h2>
         <PoolActions />
       </section>
     </div>

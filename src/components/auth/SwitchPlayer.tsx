@@ -19,9 +19,9 @@ export default function SwitchPlayer() {
       type="button"
       onClick={switchPlayer}
       disabled={busy}
-      className="min-h-11 rounded-xl border border-edge bg-surface px-4 text-sm font-semibold disabled:opacity-40"
+      className="min-h-11 rounded-xl border border-edge bg-white/[0.03] px-4 text-sm font-semibold active:scale-95 disabled:opacity-40"
     >
-      Switch player
+      Switch
     </button>
   );
 }

@@ -57,15 +57,15 @@ export default async function BracketPage({
   return (
     <div className="py-4">
       {memberships.length > 1 ? (
-        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 pt-2">
           {memberships.map((m) => (
             <Link
               key={m.poolId}
               href={`/bracket?pool=${m.poolId}`}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
                 m.poolId === activePoolId
                   ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-edge bg-surface text-muted'
+                  : 'border-edge bg-white/[0.02] text-muted'
               }`}
             >
               {m.poolName}
@@ -76,8 +76,9 @@ export default async function BracketPage({
 
       {!bracket ? (
         locked ? (
-          <div className="mt-8 rounded-2xl border border-edge bg-surface/50 p-6 text-center">
-            <h1 className="text-lg font-bold">Brackets are locked</h1>
+          <div className="card mt-8 p-6 text-center">
+            <div className="text-4xl">🔒</div>
+            <h1 className="mt-2 font-display text-3xl">Brackets are locked</h1>
             <p className="mt-2 text-sm text-muted">
               The tournament has started, so new brackets cannot be entered.
               You can still follow the pool on the leaderboard.
@@ -87,11 +88,11 @@ export default async function BracketPage({
           <StartBracket poolId={activePoolId} />
         )
       ) : locked ? (
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <header>
-            <h1 className="text-xl font-bold">{bracket.name}</h1>
-            <p className="text-sm text-muted">
-              Locked in. {bracket.submitted ? 'Good luck!' : 'This bracket was not submitted before kickoff.'}
+            <h1 className="font-display text-4xl leading-none">{bracket.name}</h1>
+            <p className="mt-1 text-sm text-muted">
+              {bracket.submitted ? 'Locked in. Good luck! 🍀' : 'Not submitted before kickoff.'}
             </p>
           </header>
           <BracketSummary predictions={bracket.predictions} teams={allTeams} />

@@ -15,8 +15,8 @@ interface Props {
 
 export default function StickyProgressBar({ steps, activeKey, onSelect }: Props) {
   return (
-    <div className="sticky top-0 z-30 -mx-4 border-b border-edge bg-background/95 px-4 py-2 backdrop-blur">
-      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+    <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-3 pb-2 glass">
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
         {steps.map((step) => {
           const active = step.key === activeKey;
           const complete = step.done >= step.total;
@@ -25,18 +25,22 @@ export default function StickyProgressBar({ steps, activeKey, onSelect }: Props)
               key={step.key}
               type="button"
               onClick={() => onSelect(step.key)}
-              className={`flex min-h-11 shrink-0 flex-col items-center justify-center rounded-xl border px-3 text-xs font-medium ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
                 active
-                  ? 'border-accent bg-accent/10 text-accent'
+                  ? 'border-accent bg-accent/15 text-accent'
                   : complete
-                    ? 'border-edge bg-surface text-foreground'
-                    : 'border-edge bg-surface text-muted'
+                    ? 'border-edge bg-white/[0.04] text-foreground'
+                    : 'border-edge bg-transparent text-muted'
               }`}
             >
-              <span>{step.title}</span>
-              <span className={complete ? 'text-accent' : 'text-muted'}>
-                {step.done}/{step.total}
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-full text-[0.6rem] ${
+                  complete ? 'bg-accent text-[var(--accent-ink)]' : 'bg-white/10 text-muted'
+                }`}
+              >
+                {complete ? '✓' : step.done}
               </span>
+              {step.title}
             </button>
           );
         })}

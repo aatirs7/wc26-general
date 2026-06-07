@@ -2,34 +2,56 @@
 
 import type { Team } from '@/types/team';
 
+type Rank = 1 | 2 | 3 | 4;
+
 interface Props {
   team: Team;
+  rank?: Rank; // group finishing position -> medal
+  badge?: string; // generic right-side badge (knockout "IN", champion, etc)
   selected?: boolean;
-  badge?: string;
   disabled?: boolean;
   onTap?: () => void;
 }
 
-export default function TeamChip({ team, selected, badge, disabled, onTap }: Props) {
+const RANK_LABEL: Record<Rank, string> = { 1: '1', 2: '2', 3: '3', 4: '4' };
+
+export default function TeamChip({ team, rank, badge, selected, disabled, onTap }: Props) {
+  const active = selected || !!rank || !!badge;
   return (
     <button
       type="button"
       onClick={onTap}
       disabled={disabled}
-      className={`flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left transition-colors ${
-        selected
-          ? 'border-accent bg-accent/10'
-          : 'border-edge bg-surface active:bg-surface-raised'
-      } ${disabled ? 'opacity-40' : ''}`}
+      className={`group flex min-h-13 w-full items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-all duration-150 active:scale-[0.99] ${
+        active
+          ? 'border-accent/50 bg-accent/[0.07]'
+          : 'border-edge bg-white/[0.02] hover:border-edge-strong'
+      } ${disabled ? 'opacity-35' : ''} ${rank ? `ring-${rank}` : ''}`}
     >
-      <span className="text-xl leading-none">{team.flag}</span>
-      <span className="flex-1 truncate text-sm font-medium">{team.name}</span>
-      <span className="font-mono text-xs text-muted">{team.code}</span>
-      {badge ? (
-        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-black">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/30 text-xl">
+        {team.flag}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.95rem] font-semibold leading-tight">
+          {team.name}
+        </span>
+        <span className="font-mono text-[0.7rem] uppercase tracking-widest text-muted">
+          {team.code}
+        </span>
+      </span>
+      {rank ? (
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold medal-${rank}`}
+        >
+          {RANK_LABEL[rank]}
+        </span>
+      ) : badge ? (
+        <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-[var(--accent-ink)]">
           {badge}
         </span>
-      ) : null}
+      ) : (
+        <span className="h-7 w-7 shrink-0 rounded-full border border-edge" />
+      )}
     </button>
   );
 }

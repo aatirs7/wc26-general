@@ -23,27 +23,36 @@ export default function KnockoutRound({ teams, predictions, round, description, 
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">{description}</p>
+      <p className="text-sm leading-relaxed text-muted">{description}</p>
+
       {candidates.length === 0 ? (
-        <p className="rounded-xl border border-edge bg-surface p-4 text-sm text-muted">
-          Finish the previous step first; the teams you advance there show up here.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {candidates.map((team) => {
-            const selected = picks.has(team.code);
-            return (
-              <TeamChip
-                key={team.code}
-                team={team}
-                selected={selected}
-                badge={selected ? 'IN' : undefined}
-                disabled={!selected && full}
-                onTap={() => onToggle(team.code)}
-              />
-            );
-          })}
+        <div className="card p-5 text-center text-sm text-muted">
+          Finish the previous step first. The teams you advance there appear here.
         </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2 text-sm">
+            <span className="text-muted">Advancing</span>
+            <span className="font-display text-xl text-accent">
+              {picks.size}/{size}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {candidates.map((team) => {
+              const selected = picks.has(team.code);
+              return (
+                <TeamChip
+                  key={team.code}
+                  team={team}
+                  selected={selected}
+                  badge={selected ? 'ADVANCE' : undefined}
+                  disabled={!selected && full}
+                  onTap={() => onToggle(team.code)}
+                />
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

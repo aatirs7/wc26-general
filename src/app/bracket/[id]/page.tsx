@@ -43,13 +43,19 @@ export default async function BracketViewPage({
   const scored = scores.filter((s) => s.points > 0);
 
   return (
-    <div className="space-y-4 py-4">
-      <header>
-        <h1 className="text-xl font-bold">{bracket.name}</h1>
-        <p className="text-sm text-muted">
-          by {owner?.displayName ?? 'Unknown'} · {bracket.totalPoints} pts
-          {bracket.submitted ? '' : ' · not submitted'}
-        </p>
+    <div className="space-y-5 py-4">
+      <header className="card flex items-center justify-between p-4 pt-4">
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-3xl leading-none">{bracket.name}</h1>
+          <p className="mt-1 text-sm text-muted">
+            by {owner?.displayName ?? 'Unknown'}
+            {bracket.submitted ? '' : ' · not submitted'}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="font-display text-4xl leading-none text-accent">{bracket.totalPoints}</div>
+          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-muted">pts</div>
+        </div>
       </header>
 
       {scored.length > 0 ? (
@@ -57,9 +63,9 @@ export default async function BracketViewPage({
           {scored.map((s) => (
             <span
               key={s.roundKey}
-              className="rounded-full border border-edge bg-surface px-2 py-1 text-xs"
+              className="rounded-full border border-edge bg-white/[0.03] px-2.5 py-1 text-xs font-semibold"
             >
-              {s.roundKey}: <span className="font-bold text-accent">{s.points}</span>
+              {s.roundKey} <span className="font-bold text-accent">+{s.points}</span>
             </span>
           ))}
         </div>

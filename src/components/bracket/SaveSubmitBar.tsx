@@ -16,10 +16,10 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<SaveStatus, string> = {
-  idle: '',
-  saving: 'Saving...',
-  saved: 'Saved',
-  error: 'Save failed, retrying on next change',
+  idle: 'Auto-saves',
+  saving: 'Saving…',
+  saved: 'Saved ✓',
+  error: 'Save failed',
 };
 
 export default function SaveSubmitBar(props: Props) {
@@ -29,10 +29,12 @@ export default function SaveSubmitBar(props: Props) {
   } = props;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-edge bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2">
+    <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 px-4">
+      <div className="glass mx-auto flex max-w-md items-center gap-2 rounded-2xl px-3 py-2.5 shadow-xl shadow-black/40">
         <span
-          className={`w-20 text-xs ${saveStatus === 'error' ? 'text-danger' : 'text-muted'}`}
+          className={`w-16 text-[0.7rem] font-medium ${
+            saveStatus === 'error' ? 'text-live' : saveStatus === 'saved' ? 'text-accent' : 'text-muted'
+          }`}
         >
           {STATUS_LABEL[saveStatus]}
         </span>
@@ -41,7 +43,7 @@ export default function SaveSubmitBar(props: Props) {
             <button
               type="button"
               onClick={onBack}
-              className="min-h-11 rounded-xl border border-edge bg-surface px-4 text-sm font-semibold"
+              className="min-h-11 rounded-xl border border-edge px-4 text-sm font-semibold text-foreground active:scale-95"
             >
               Back
             </button>
@@ -51,20 +53,20 @@ export default function SaveSubmitBar(props: Props) {
               type="button"
               onClick={onSubmit}
               disabled={!submitEnabled || submitting || submitted}
-              className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-bold ${
+              className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-bold transition-all active:scale-95 ${
                 submitted
-                  ? 'bg-surface-raised text-accent'
-                  : 'bg-accent text-black disabled:opacity-40'
+                  ? 'bg-accent/15 text-accent'
+                  : 'bg-accent text-[var(--accent-ink)] disabled:opacity-30'
               }`}
             >
-              {submitted ? 'Submitted ✓' : submitting ? 'Submitting...' : 'Submit bracket'}
+              {submitted ? 'Submitted ✓' : submitting ? 'Submitting…' : 'Submit bracket'}
             </button>
           ) : (
             <button
               type="button"
               onClick={onNext}
               disabled={!canNext}
-              className="min-h-11 rounded-xl bg-accent px-6 text-sm font-bold text-black disabled:opacity-40"
+              className="min-h-11 rounded-xl bg-accent px-7 text-sm font-bold text-[var(--accent-ink)] disabled:opacity-30 active:scale-95"
             >
               Next
             </button>

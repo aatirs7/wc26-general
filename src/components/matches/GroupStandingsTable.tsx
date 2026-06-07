@@ -21,44 +21,55 @@ interface Props {
 export default function GroupStandingsTable({ letter, rows, teamsByCode }: Props) {
   const sorted = [...rows].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
   return (
-    <section className="rounded-2xl border border-edge bg-surface/50 p-3">
-      <h3 className="mb-2 text-sm font-bold uppercase tracking-wide">Group {letter}</h3>
+    <section className="card p-3">
+      <h3 className="mb-2 font-display text-2xl leading-none">
+        Group <span className="text-accent">{letter}</span>
+      </h3>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[10px] uppercase text-muted">
-            <th className="w-6 pb-1 font-medium">#</th>
-            <th className="pb-1 font-medium">Team</th>
-            <th className="w-8 pb-1 text-right font-medium">P</th>
-            <th className="w-8 pb-1 text-right font-medium">GD</th>
-            <th className="w-10 pb-1 text-right font-medium">Pts</th>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wider text-muted-2">
+            <th className="w-5 pb-1.5 font-semibold">#</th>
+            <th className="pb-1.5 font-semibold">Team</th>
+            <th className="w-7 pb-1.5 text-right font-semibold">P</th>
+            <th className="w-8 pb-1.5 text-right font-semibold">GD</th>
+            <th className="w-9 pb-1.5 text-right font-semibold">Pts</th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row) => {
+          {sorted.map((row, i) => {
             const team = teamsByCode.get(row.teamCode);
+            const pos = row.rank ?? i + 1;
             return (
-              <tr key={row.teamCode} className="border-t border-edge/50">
-                <td className="py-1.5 text-muted">{row.rank ?? '–'}</td>
-                <td className="py-1.5">
+              <tr key={row.teamCode} className="border-t border-edge/60">
+                <td className="py-2">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[0.6rem] font-bold ${
+                      pos <= 3 ? `medal-${pos}` : 'text-muted'
+                    }`}
+                  >
+                    {pos}
+                  </span>
+                </td>
+                <td className="py-2">
                   <span className="flex items-center gap-2">
-                    <span>{team?.flag}</span>
-                    <span className="truncate font-medium">{team?.name ?? row.teamCode}</span>
+                    <span className="text-base">{team?.flag}</span>
+                    <span className="truncate font-semibold">{team?.name ?? row.teamCode}</span>
                     {row.advanced ? (
                       <span
-                        className={`rounded-full px-1.5 text-[9px] font-bold ${
-                          row.isBestThird ? 'bg-gold/20 text-gold' : 'bg-accent/20 text-accent'
+                        className={`rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold ${
+                          row.isBestThird ? 'bg-bronze/20 text-bronze' : 'bg-accent/20 text-accent'
                         }`}
                       >
-                        {row.isBestThird ? '3rd' : 'Q'}
+                        {row.isBestThird ? '3RD' : 'Q'}
                       </span>
                     ) : null}
                   </span>
                 </td>
-                <td className="py-1.5 text-right text-muted">{row.played}</td>
-                <td className="py-1.5 text-right text-muted">
+                <td className="py-2 text-right tabular-nums text-muted">{row.played}</td>
+                <td className="py-2 text-right tabular-nums text-muted">
                   {row.gd > 0 ? `+${row.gd}` : row.gd}
                 </td>
-                <td className="py-1.5 text-right font-bold">{row.points}</td>
+                <td className="py-2 text-right font-display text-lg tabular-nums">{row.points}</td>
               </tr>
             );
           })}

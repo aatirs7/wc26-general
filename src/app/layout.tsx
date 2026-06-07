@@ -1,15 +1,16 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Bebas_Neue, Hanken_Grotesk } from 'next/font/google';
 import BottomTabBar from '@/components/nav/BottomTabBar';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const display = Bebas_Neue({
+  variable: '--font-bebas',
   subsets: ['latin'],
+  weight: '400',
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const body = Hanken_Grotesk({
+  variable: '--font-hanken',
   subsets: ['latin'],
 });
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0b0e14',
+  themeColor: '#060a13',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,9 +34,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col pb-tabbar">
+        <div className="bg-atmosphere" aria-hidden />
+        <div className="bg-pitch" aria-hidden />
+        <div className="bg-grain" aria-hidden />
         <main className="mx-auto w-full max-w-md flex-1 px-4">{children}</main>
         <BottomTabBar />
       </body>

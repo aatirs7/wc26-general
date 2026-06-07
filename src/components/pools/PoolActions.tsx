@@ -31,48 +31,53 @@ export default function PoolActions() {
     }
   }
 
+  const input =
+    'min-h-11 flex-1 rounded-xl border border-edge bg-white/[0.03] px-3.5 text-sm outline-none placeholder:text-muted-2 focus:border-accent/60';
+  const btn =
+    'min-h-11 rounded-xl bg-accent px-4 text-sm font-bold text-[var(--accent-ink)] active:scale-95 disabled:opacity-30';
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {error ? (
-        <p className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+        <p className="rounded-xl border border-live/40 bg-live/[0.08] p-3 text-sm text-live">
           {error}
         </p>
       ) : null}
 
-      <div className="rounded-2xl border border-edge bg-surface/50 p-4">
-        <h3 className="mb-2 text-sm font-bold">Join a pool</h3>
+      <div className="card p-4">
+        <h3 className="mb-2 font-display text-xl">Join a pool</h3>
         <div className="flex gap-2">
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Invite code"
-            className="min-h-11 flex-1 rounded-xl border border-edge bg-surface px-3 font-mono text-sm uppercase placeholder:normal-case placeholder:font-sans"
+            className={`${input} font-mono uppercase placeholder:font-sans placeholder:normal-case`}
           />
           <button
             type="button"
             disabled={busy || code.trim().length < 4}
             onClick={() => call({ action: 'join', code })}
-            className="min-h-11 rounded-xl bg-accent px-4 text-sm font-bold text-black disabled:opacity-40"
+            className={btn}
           >
             Join
           </button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-edge bg-surface/50 p-4">
-        <h3 className="mb-2 text-sm font-bold">Start a new pool</h3>
+      <div className="card p-4">
+        <h3 className="mb-2 font-display text-xl">Start a new pool</h3>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Pool name"
-            className="min-h-11 flex-1 rounded-xl border border-edge bg-surface px-3 text-sm"
+            className={input}
           />
           <button
             type="button"
             disabled={busy || name.trim().length === 0}
             onClick={() => call({ action: 'create', name })}
-            className="min-h-11 rounded-xl bg-accent px-4 text-sm font-bold text-black disabled:opacity-40"
+            className={btn}
           >
             Create
           </button>

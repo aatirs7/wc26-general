@@ -53,18 +53,18 @@ export default async function MatchesPage({
     <div className="space-y-4 py-4">
       <LivePoller active={anyLive || anySoon} />
 
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Matches</h1>
-        <div className="flex rounded-full border border-edge bg-surface p-0.5 text-xs font-medium">
+      <header className="flex items-center justify-between pt-2">
+        <h1 className="font-display text-4xl leading-none">Matches</h1>
+        <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
           <Link
             href="/matches"
-            className={`rounded-full px-3 py-1.5 ${!showGroups ? 'bg-accent text-black' : 'text-muted'}`}
+            className={`rounded-full px-3 py-1.5 transition-colors ${!showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Fixtures
           </Link>
           <Link
             href="/matches?view=groups"
-            className={`rounded-full px-3 py-1.5 ${showGroups ? 'bg-accent text-black' : 'text-muted'}`}
+            className={`rounded-full px-3 py-1.5 transition-colors ${showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Groups
           </Link>
@@ -86,7 +86,7 @@ export default async function MatchesPage({
         <div className="space-y-5">
           {[...upcoming, ...past].map((day) => (
             <section key={day}>
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+              <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur">
                 {new Date(`${day}T12:00:00Z`).toLocaleDateString(undefined, {
                   weekday: 'long',
                   month: 'long',
@@ -101,7 +101,7 @@ export default async function MatchesPage({
             </section>
           ))}
           {allMatches.length === 0 ? (
-            <p className="rounded-xl border border-edge bg-surface p-4 text-sm text-muted">
+            <p className="card p-5 text-sm text-muted">
               No fixtures yet. Run the seed script to load the schedule.
             </p>
           ) : null}

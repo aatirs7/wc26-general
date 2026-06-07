@@ -10,7 +10,7 @@ import {
   type GroupLetter,
   type KnockoutRoundKey,
 } from '@/lib/constants';
-import { isComplete } from '@/lib/predictions';
+import { isComplete, isGroupComplete } from '@/lib/predictions';
 import { bracketReducer } from '@/lib/bracket-reducer';
 import GroupPicker from './GroupPicker';
 import ThirdPlacePicker from './ThirdPlacePicker';
@@ -42,6 +42,16 @@ const STEP_TITLES: Record<StepKey, string> = {
   qf: 'Quarters',
   sf: 'Semis',
   final: 'Final',
+  champion: 'Champion',
+};
+
+const STEP_HEADINGS: Record<StepKey, string> = {
+  groups: 'Group stage',
+  thirds: 'Third-place race',
+  r16: 'Round of 16',
+  qf: 'Quarter-finals',
+  sf: 'Semi-finals',
+  final: 'The Final',
   champion: 'Champion',
 };
 
@@ -93,10 +103,7 @@ export default function BracketBuilder({ bracket, teams }: Props) {
   }, [predictions, bracket.id]);
 
   const stepInfos: StepInfo[] = useMemo(() => {
-    const groupsDone = GROUP_LETTERS.filter((l) => {
-      const g = predictions.groups[l];
-      return !!g?.first && !!g?.second;
-    }).length;
+    const groupsDone = GROUP_LETTERS.filter((l) => isGroupComplete(predictions.groups[l])).length;
     return STEP_ORDER.map((key) => {
       if (key === 'groups') return { key, title: STEP_TITLES[key], done: groupsDone, total: 12 };
       if (key === 'thirds')
@@ -137,28 +144,35 @@ export default function BracketBuilder({ bracket, teams }: Props) {
   const finalTeams = teams.filter((t) => predictions.knockout.final.includes(t.code));
 
   return (
-    <div className="pb-24">
+    <div className="pb-28">
       <StickyProgressBar steps={stepInfos} activeKey={step} onSelect={(k) => setStep(k as StepKey)} />
 
+      <div className="mt-3 mb-3 flex items-baseline justify-between">
+        <h2 className="font-display text-3xl leading-none">{STEP_HEADINGS[step]}</h2>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+          Step {stepIndex + 1}/{STEP_ORDER.length}
+        </span>
+      </div>
+
       {submitted ? (
-        <p className="mt-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm text-accent">
+        <p className="mb-3 rounded-xl border border-accent/40 bg-accent/[0.08] p-3 text-sm text-accent">
           Bracket submitted. You can still tweak picks until kickoff; changing
           anything means you need to submit again.
         </p>
       ) : null}
       {error ? (
-        <p className="mt-3 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+        <p className="mb-3 rounded-xl border border-live/40 bg-live/[0.08] p-3 text-sm text-live">
           {error}
         </p>
       ) : null}
 
-      <div className="mt-4">
+      <div key={step} className="reveal">
         {step === 'groups' ? (
           <GroupPicker
             teams={teams}
             predictions={predictions}
-            onCycle={(letter: GroupLetter, code: string) =>
-              dispatch({ type: 'cycleGroupPick', letter, code })
+            onRank={(letter: GroupLetter, code: string) =>
+              dispatch({ type: 'rankGroupTeam', letter, code })
             }
           />
         ) : step === 'thirds' ? (
@@ -169,13 +183,13 @@ export default function BracketBuilder({ bracket, teams }: Props) {
           />
         ) : step === 'champion' ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted">
+            <p className="text-sm leading-relaxed text-muted">
               The big one. Who lifts the trophy on July 19? 30 points.
             </p>
             {finalTeams.length === 0 ? (
-              <p className="rounded-xl border border-edge bg-surface p-4 text-sm text-muted">
+              <div className="card p-5 text-center text-sm text-muted">
                 Pick your two finalists first.
-              </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {finalTeams.map((team) => (
@@ -183,7 +197,7 @@ export default function BracketBuilder({ bracket, teams }: Props) {
                     key={team.code}
                     team={team}
                     selected={predictions.knockout.champion === team.code}
-                    badge={predictions.knockout.champion === team.code ? '🏆' : undefined}
+                    badge={predictions.knockout.champion === team.code ? '🏆 CHAMP' : undefined}
                     onTap={() => dispatch({ type: 'toggleChampion', code: team.code })}
                   />
                 ))}
