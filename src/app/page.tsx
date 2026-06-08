@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { Trophy, Lock, Timer } from 'lucide-react';
 import { db } from '@/lib/db';
-import { poolMembers } from '@/lib/schema';
+import { poolMembers, pools } from '@/lib/schema';
 import { currentUserId, LAST_NAME_COOKIE } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
@@ -19,8 +19,9 @@ export default async function LandingPage() {
   const lastName = userId ? null : (await cookies()).get(LAST_NAME_COOKIE)?.value ?? null;
   const groups = userId
     ? await db
-        .select({ id: poolMembers.poolId })
+        .select({ id: poolMembers.poolId, name: pools.name })
         .from(poolMembers)
+        .innerJoin(pools, eq(pools.id, poolMembers.poolId))
         .where(eq(poolMembers.userId, userId))
     : [];
 
@@ -68,19 +69,35 @@ export default async function LandingPage() {
         ) : (
           <div className="space-y-4">
             {groups.length > 0 ? (
-              <Link
-                href="/bracket"
-                className="flex min-h-13 w-full items-center justify-center rounded-2xl bg-accent text-lg font-bold text-[var(--accent-ink)] shadow-lg shadow-accent/20 active:scale-95"
-              >
-                {locked ? 'View your bracket' : 'Build your bracket'}
-              </Link>
+              <div className="space-y-2">
+                <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
+                  {groups.length > 1 ? 'Your groups' : 'Your group'}
+                </p>
+                {groups.map((g) => (
+                  <Link
+                    key={g.id}
+                    href={`/bracket?pool=${g.id}`}
+                    className="flex min-h-13 w-full items-center justify-between gap-2 rounded-2xl border border-edge bg-white/[0.03] px-4 text-left active:scale-95"
+                  >
+                    <span className="truncate font-semibold">{g.name}</span>
+                    <span className="shrink-0 text-sm font-bold text-accent">
+                      {locked ? 'View' : 'Play'} &rarr;
+                    </span>
+                  </Link>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-muted">
                 You are not in a group yet. Create one and share the code, or join a
                 friend&apos;s group below.
               </p>
             )}
-            <PoolActions />
+            <section className="space-y-2">
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
+                {groups.length > 0 ? 'Start or join another group' : 'Get started'}
+              </p>
+              <PoolActions />
+            </section>
           </div>
         )}
       </div>

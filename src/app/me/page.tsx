@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -63,7 +64,17 @@ export default async function MePage() {
         ) : null}
         {myBrackets.map(({ pool, bracket }) => (
           <div key={pool.poolId} className="card space-y-3 p-3.5">
-            <span className="block truncate font-display text-lg leading-none">{pool.name}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 flex-1 truncate font-display text-lg leading-none">
+                {pool.name}
+              </span>
+              <Link
+                href={`/bracket?pool=${pool.poolId}`}
+                className="shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent active:scale-95"
+              >
+                Open
+              </Link>
+            </div>
             <InviteShare code={pool.joinCode} groupName={pool.name} />
             {bracket ? (
               <>
