@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
+import { AlertTriangle } from 'lucide-react';
 import type { Team } from '@/types/team';
 import type { Predictions } from '@/types/bracket';
 import {
@@ -109,9 +110,9 @@ export default function BracketBuilder({ bracket, teams }: Props) {
 
   const stepIndex = STEP_ORDER.indexOf(step);
   const complete = isComplete(predictions);
-  const thirdsReady =
-    GROUP_LETTERS.every((l) => isGroupComplete(predictions.groups[l])) &&
-    predictions.thirdPlace.length === THIRD_PLACE_PICKS;
+  const incompleteGroups = GROUP_LETTERS.filter((l) => !isGroupComplete(predictions.groups[l]));
+  const thirdsCount = predictions.thirdPlace.length;
+  const thirdsReady = incompleteGroups.length === 0 && thirdsCount === THIRD_PLACE_PICKS;
 
   async function submit() {
     setSubmitting(true);
@@ -173,16 +174,63 @@ export default function BracketBuilder({ bracket, teams }: Props) {
           />
         ) : (
           <div className="space-y-3">
-            <p className="text-sm leading-relaxed text-muted">
-              Tap the winner of each tie and they slide into the next round to
-              face the neighbouring winner. Drag sideways to follow it all the
-              way to the trophy.
-            </p>
             {!thirdsReady ? (
-              <p className="rounded-xl border border-gold/30 bg-gold/[0.08] p-3 text-sm text-gold">
-                Finish your group ranks and best-thirds first to seed the 32 teams.
+              <div className="rounded-xl border-2 border-live/60 bg-live/[0.12] p-3.5">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-live" strokeWidth={2.4} />
+                  <p className="text-sm font-bold text-live">
+                    Your bracket has empty slots
+                  </p>
+                </div>
+                <p className="mt-1.5 text-sm text-foreground">
+                  Teams only appear here once you finish seeding all 32. You
+                  still need to:
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {incompleteGroups.length > 0 ? (
+                    <li className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted">
+                        Rank all 4 in{' '}
+                        <span className="font-semibold text-foreground">
+                          {incompleteGroups.length === 1 ? 'Group' : 'Groups'}{' '}
+                          {incompleteGroups.join(', ')}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setStep('groups')}
+                        className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-[var(--accent-ink)] active:scale-95"
+                      >
+                        Fix
+                      </button>
+                    </li>
+                  ) : null}
+                  {thirdsCount < THIRD_PLACE_PICKS ? (
+                    <li className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted">
+                        Pick best thirds{' '}
+                        <span className="font-semibold text-foreground">
+                          ({thirdsCount}/{THIRD_PLACE_PICKS})
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setStep('thirds')}
+                        className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-[var(--accent-ink)] active:scale-95"
+                      >
+                        Fix
+                      </button>
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed text-muted">
+                Tap the winner of each tie and they slide into the next round to
+                face the neighbouring winner. Drag sideways to follow it all the
+                way to the trophy.
               </p>
-            ) : null}
+            )}
             <FullBracket
               predictions={predictions}
               teamsByCode={teamsByCode}
