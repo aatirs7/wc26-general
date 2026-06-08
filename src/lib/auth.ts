@@ -1,6 +1,7 @@
-// Family-scale auth: pick your name, get a long-lived cookie with your
-// user id. No passwords, intentionally. Anyone in the household can act
-// as anyone by picking their name; that is accepted for this pool.
+// Lightweight name-based auth: type your name, get a long-lived cookie
+// with your user id. No passwords, intentionally, for a small pool.
+// Anyone can act as anyone by entering their name; that trade-off is
+// accepted here. The landing page warns before reusing an existing name.
 
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
@@ -45,9 +46,12 @@ export async function signInByName(rawName: string) {
   return user;
 }
 
-export async function listPlayers() {
-  return db
-    .select({ id: users.id, displayName: users.displayName })
-    .from(users)
-    .orderBy(users.displayName);
+// True if a user already plays under this name (case-insensitive). Used
+// to warn on the landing page before signing someone in as an existing
+// player, since names are the only identity here.
+export async function nameExists(rawName: string): Promise<boolean> {
+  const name = rawName.trim().toLowerCase();
+  if (!name) return false;
+  const all = await db.select({ displayName: users.displayName }).from(users);
+  return all.some((u) => u.displayName.toLowerCase() === name);
 }

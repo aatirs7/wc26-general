@@ -1,8 +1,8 @@
 // The schedule is shown in one fixed timezone so day headings and kickoff
 // times always agree (grouping by UTC while showing local time made a
-// Friday 9pm ET match sit under a "Saturday" heading). The family is
-// US-based, so Eastern is the canonical "tournament time". Change here to
-// move everyone to a different zone.
+// Friday 9pm ET match sit under a "Saturday" heading). Eastern is the
+// canonical "tournament time" for this pool. Change the constant + label
+// below to move everyone to a different zone (display only; sync is UTC).
 
 export const DISPLAY_TZ = 'America/New_York';
 export const DISPLAY_TZ_LABEL = 'ET';

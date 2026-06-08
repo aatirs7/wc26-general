@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { Predictions } from '@/types/bracket';
 
-// Family-scale identity: a user is just a display name plus a generated
+// Lightweight identity: a user is just a display name plus a generated
 // id kept in a long-lived cookie. No passwords.
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),

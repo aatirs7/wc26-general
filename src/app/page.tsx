@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Trophy, Lock, Timer } from 'lucide-react';
-import { currentUserId, listPlayers, LAST_NAME_COOKIE } from '@/lib/auth';
+import { currentUserId, LAST_NAME_COOKIE } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
-import NamePicker from '@/components/auth/NamePicker';
+import NameEntry from '@/components/auth/NameEntry';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +12,6 @@ export default async function LandingPage() {
   const userId = await currentUserId();
   const locked = isLocked();
   const kickoff = kickoffUtc();
-  const players = userId ? [] : await listPlayers();
   const lastName = userId ? null : (await cookies()).get(LAST_NAME_COOKIE)?.value ?? null;
 
   return (
@@ -32,11 +31,11 @@ export default async function LandingPage() {
 
         <div className="mx-auto max-w-xs space-y-1">
           <p className="font-display text-2xl tracking-wide text-foreground">
-            The Siddiqui Family League
+            World Cup 2026 Bracket Pool
           </p>
           <p className="text-sm leading-relaxed text-muted">
-            Rank every group, call the knockouts, and see who has the best ball knowledge... 
-            May the best Siddiqui win.
+            Rank every group, call the knockouts, and see who has the best ball knowledge...
+            May the best bracket win.
           </p>
         </div>
       </div>
@@ -55,7 +54,7 @@ export default async function LandingPage() {
 
       <div className="reveal w-full max-w-xs" style={{ animationDelay: '160ms' }}>
         {!userId ? (
-          <NamePicker players={players} lastName={lastName} />
+          <NameEntry lastName={lastName} />
         ) : (
           <Link
             href="/bracket"
@@ -70,7 +69,7 @@ export default async function LandingPage() {
         className="reveal text-xs text-muted-2"
         style={{ animationDelay: '240ms' }}
       >
-        Made by Aatir Siddiqui for the Siddiqui family ·{' '}
+        World Cup 2026 Bracket Pool ·{' '}
         <span className="text-muted">2026</span>
       </p>
     </div>

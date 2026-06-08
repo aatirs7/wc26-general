@@ -17,8 +17,8 @@ const body = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'WC26 Bracket Pool',
-  description: 'World Cup 2026 bracket pool with friends',
+  title: 'World Cup 2026 Bracket Pool',
+  description: 'Rank the groups, call the knockouts, and see who knows ball.',
 };
 
 export const viewport: Viewport = {
