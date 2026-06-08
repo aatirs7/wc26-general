@@ -2,24 +2,42 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import InviteShare from '@/components/pools/InviteShare';
 
 type Mode = 'choose' | 'create' | 'join';
 
+interface Created {
+  poolId: string;
+  code: string;
+  groupName: string;
+}
+
 // Signed-out onboarding: pick a group first (create one or join with a
 // code), then enter a name. On submit we sign in by name and create/join
-// the group in one step, then drop into that group's bracket.
-export default function Onboard({ lastName }: { lastName?: string | null }) {
+// the group in one step. After creating, we show the invite code and a
+// shareable link before continuing to the bracket.
+//
+// When `invite` is passed (from /join/[code]) we skip the chooser and go
+// straight to the name step, locked to that group's code.
+export default function Onboard({
+  lastName,
+  invite,
+}: {
+  lastName?: string | null;
+  invite?: { code: string; groupName: string };
+}) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('choose');
+  const [mode, setMode] = useState<Mode>(invite ? 'join' : 'choose');
   const [groupName, setGroupName] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(invite?.code ?? '');
   const [name, setName] = useState(lastName ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [takenName, setTakenName] = useState<string | null>(null);
+  const [created, setCreated] = useState<Created | null>(null);
 
   // Returns true if signed in, false if the name is taken and needs
-  // confirmation (the warning is surfaced via takenName).
+  // confirmation (surfaced via takenName).
   async function signIn(confirm: boolean): Promise<boolean> {
     const res = await fetch('/api/auth', {
       method: 'POST',
@@ -34,7 +52,7 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
     return true;
   }
 
-  async function joinOrCreate(): Promise<string> {
+  async function joinOrCreate(): Promise<{ id: string; name: string; joinCode: string }> {
     const body =
       mode === 'create'
         ? { action: 'create', name: groupName.trim() }
@@ -46,7 +64,7 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? 'something went wrong');
-    return data.pool.id;
+    return data.pool;
   }
 
   async function go(confirm: boolean) {
@@ -58,8 +76,14 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
         setBusy(false);
         return;
       }
-      const poolId = await joinOrCreate();
-      router.push(`/bracket?pool=${poolId}`);
+      const pool = await joinOrCreate();
+      if (mode === 'create') {
+        // Pause on a share screen so the owner sees the code and link.
+        setCreated({ poolId: pool.id, code: pool.joinCode, groupName: pool.name });
+        setBusy(false);
+        return;
+      }
+      router.push(`/bracket?pool=${pool.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'something went wrong');
@@ -78,25 +102,33 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
     <p className="pt-1 text-center text-xs text-muted-2">Made by Aatir Siddiqui</p>
   );
 
-  // Step 1: choose to create or join.
-  if (mode === 'choose') {
+  // Post-create: show the invite code and link before continuing.
+  if (created) {
     return (
-      <div className="space-y-3">
-        <button type="button" onClick={() => setMode('create')} className={primary}>
-          Create a group
+      <div className="space-y-3 text-center">
+        <div>
+          <p className="font-display text-2xl leading-tight">{created.groupName} is ready</p>
+          <p className="mt-1 text-sm text-muted">
+            Share this so friends can join. You can always find it again later.
+          </p>
+        </div>
+        <InviteShare code={created.code} groupName={created.groupName} />
+        <button
+          type="button"
+          onClick={() => {
+            router.push(`/bracket?pool=${created.poolId}`);
+            router.refresh();
+          }}
+          className={primary}
+        >
+          Continue to your bracket
         </button>
-        <button type="button" onClick={() => setMode('join')} className={outline}>
-          Join a group
-        </button>
-        <p className="text-center text-xs text-muted">
-          Start your own group and share the code, or join a friend&apos;s with theirs.
-        </p>
         {credit}
       </div>
     );
   }
 
-  // Step 2 (mid-flow): the chosen name is already in use.
+  // Mid-flow: the chosen name is already in use.
   if (takenName) {
     return (
       <div className="space-y-3 text-center">
@@ -119,6 +151,24 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
           Use a different name
         </button>
         {error ? <p className="text-sm text-live">{error}</p> : null}
+      </div>
+    );
+  }
+
+  // Step 1: choose to create or join (skipped when arriving via invite).
+  if (mode === 'choose') {
+    return (
+      <div className="space-y-3">
+        <button type="button" onClick={() => setMode('create')} className={primary}>
+          Create a group
+        </button>
+        <button type="button" onClick={() => setMode('join')} className={outline}>
+          Join a group
+        </button>
+        <p className="text-center text-xs text-muted">
+          Start your own group and share the code, or join a friend&apos;s with theirs.
+        </p>
+        {credit}
       </div>
     );
   }
@@ -147,7 +197,7 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
           placeholder="Group name"
           className={input}
         />
-      ) : (
+      ) : invite ? null : (
         <input
           type="text"
           value={code}
@@ -172,17 +222,19 @@ export default function Onboard({ lastName }: { lastName?: string | null }) {
       <button type="submit" disabled={busy || !ready} className={primary}>
         {mode === 'create' ? 'Create & play' : 'Join & play'}
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => {
-          setMode('choose');
-          setError(null);
-        }}
-        className="min-h-9 w-full text-center text-xs font-semibold text-muted active:scale-95"
-      >
-        Back
-      </button>
+      {invite ? null : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setMode('choose');
+            setError(null);
+          }}
+          className="min-h-9 w-full text-center text-xs font-semibold text-muted active:scale-95"
+        >
+          Back
+        </button>
+      )}
       {error ? <p className="text-center text-sm text-live">{error}</p> : null}
       {credit}
     </form>

@@ -8,6 +8,7 @@ import RenameBracket from '@/components/me/RenameBracket';
 import BracketControls from '@/components/me/BracketControls';
 import InstallGuide from '@/components/me/InstallGuide';
 import SwitchPlayer from '@/components/auth/SwitchPlayer';
+import InviteShare from '@/components/pools/InviteShare';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,15 +63,8 @@ export default async function MePage() {
         ) : null}
         {myBrackets.map(({ pool, bracket }) => (
           <div key={pool.poolId} className="card space-y-3 p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-display text-lg leading-none">{pool.name}</span>
-              <span
-                className="shrink-0 rounded-md bg-white/[0.05] px-2 py-1 font-mono text-xs tracking-[0.2em] text-accent"
-                title="Share this code so others can join your group"
-              >
-                {pool.joinCode}
-              </span>
-            </div>
+            <span className="block truncate font-display text-lg leading-none">{pool.name}</span>
+            <InviteShare code={pool.joinCode} groupName={pool.name} />
             {bracket ? (
               <>
                 <RenameBracket bracketId={bracket.id} currentName={bracket.name} />

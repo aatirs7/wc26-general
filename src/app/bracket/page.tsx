@@ -10,6 +10,7 @@ import BracketBuilder from '@/components/bracket/BracketBuilder';
 import BracketSummary from '@/components/brackets/BracketSummary';
 import StartBracket from '@/components/bracket/StartBracket';
 import PoolActions from '@/components/pools/PoolActions';
+import InviteButton from '@/components/pools/InviteButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export default async function BracketPage({
   if (!userId) redirect('/');
 
   const memberships = await db
-    .select({ poolId: poolMembers.poolId, poolName: pools.name })
+    .select({ poolId: poolMembers.poolId, poolName: pools.name, joinCode: pools.joinCode })
     .from(poolMembers)
     .innerJoin(pools, eq(pools.id, poolMembers.poolId))
     .where(eq(poolMembers.userId, userId));
@@ -41,6 +42,7 @@ export default async function BracketPage({
     memberships.find((m) => m.poolId === requested)?.poolId ??
     memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID)?.poolId ??
     memberships[0].poolId;
+  const activePool = memberships.find((m) => m.poolId === activePoolId) ?? memberships[0];
 
   const [bracket] = await db
     .select()
@@ -74,6 +76,10 @@ export default async function BracketPage({
           ))}
         </div>
       ) : null}
+
+      <div className="mb-3">
+        <InviteButton code={activePool.joinCode} groupName={activePool.poolName} />
+      </div>
 
       {!bracket ? (
         locked ? (

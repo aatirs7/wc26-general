@@ -4,6 +4,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { brackets, bracketScores, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import InviteButton from '@/components/pools/InviteButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,11 +113,10 @@ export default async function LeaderboardPage({
     <div className="space-y-4 py-4">
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>
-        <p className="mt-1 text-xs text-muted">
-          {active.poolName} · invite code{' '}
-          <span className="font-mono tracking-[0.2em] text-accent">{active.joinCode}</span>
-        </p>
+        <p className="mt-1 text-xs text-muted">{active.poolName}</p>
       </header>
+
+      <InviteButton code={active.joinCode} groupName={active.poolName} />
 
       {me ? (
         <div className="card flex items-center justify-between px-4 py-3">
