@@ -106,6 +106,7 @@ export default function NameEntry({ lastName }: Props) {
         Let&apos;s go
       </button>
       {error ? <p className="text-sm text-live">{error}</p> : null}
+      <p className="pt-1 text-center text-xs text-muted-2">Made by Aatir Siddiqui</p>
     </form>
   );
 }
