@@ -7,7 +7,7 @@ import { poolMembers } from '@/lib/schema';
 import { currentUserId, LAST_NAME_COOKIE } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
-import NameEntry from '@/components/auth/NameEntry';
+import Onboard from '@/components/auth/Onboard';
 import PoolActions from '@/components/pools/PoolActions';
 
 export const dynamic = 'force-dynamic';
@@ -64,7 +64,7 @@ export default async function LandingPage() {
 
       <div className="reveal w-full max-w-sm" style={{ animationDelay: '160ms' }}>
         {!userId ? (
-          <NameEntry lastName={lastName} />
+          <Onboard lastName={lastName} />
         ) : (
           <div className="space-y-4">
             {groups.length > 0 ? (
