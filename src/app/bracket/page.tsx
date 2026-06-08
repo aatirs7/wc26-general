@@ -30,7 +30,7 @@ export default async function BracketPage({
   if (memberships.length === 0) {
     return (
       <div className="py-6">
-        <h1 className="mb-4 text-xl font-bold">Join a pool to play</h1>
+        <h1 className="mb-4 text-xl font-bold">Join or create a group to play</h1>
         <PoolActions />
       </div>
     );

@@ -23,6 +23,8 @@ export default function PoolActions() {
       if (!res.ok) throw new Error(data.error ?? 'request failed');
       setName('');
       setCode('');
+      // Drop straight into the group's bracket so the new group is active.
+      router.push(`/bracket?pool=${data.pool.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'request failed');
@@ -45,7 +47,8 @@ export default function PoolActions() {
       ) : null}
 
       <div className="card p-4">
-        <h3 className="mb-2 font-display text-xl">Join a pool</h3>
+        <h3 className="mb-2 font-display text-xl">Join a group</h3>
+        <p className="mb-2 text-xs text-muted">Have a code from a friend? Enter it to join their group.</p>
         <div className="flex gap-2">
           <input
             value={code}
@@ -65,12 +68,13 @@ export default function PoolActions() {
       </div>
 
       <div className="card p-4">
-        <h3 className="mb-2 font-display text-xl">Start a new pool</h3>
+        <h3 className="mb-2 font-display text-xl">Create a group</h3>
+        <p className="mb-2 text-xs text-muted">Start your own group and share the code so others can join.</p>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Pool name"
+            placeholder="Group name"
             className={input}
           />
           <button

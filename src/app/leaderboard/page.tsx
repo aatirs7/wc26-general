@@ -37,7 +37,7 @@ export default async function LeaderboardPage({
     return (
       <div className="py-6">
         <h1 className="text-xl font-bold">Leaderboard</h1>
-        <p className="mt-2 text-sm text-muted">Join a pool from the Bracket tab first.</p>
+        <p className="mt-2 text-sm text-muted">Create or join a group from the home screen first.</p>
       </div>
     );
   }
@@ -112,6 +112,10 @@ export default async function LeaderboardPage({
     <div className="space-y-4 py-4">
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>
+        <p className="mt-1 text-xs text-muted">
+          {active.poolName} · invite code{' '}
+          <span className="font-mono tracking-[0.2em] text-accent">{active.joinCode}</span>
+        </p>
       </header>
 
       {me ? (

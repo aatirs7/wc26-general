@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { eq } from 'drizzle-orm';
 import { Trophy, Lock, Timer } from 'lucide-react';
+import { db } from '@/lib/db';
+import { poolMembers } from '@/lib/schema';
 import { currentUserId, LAST_NAME_COOKIE } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import NameEntry from '@/components/auth/NameEntry';
+import PoolActions from '@/components/pools/PoolActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +17,12 @@ export default async function LandingPage() {
   const locked = isLocked();
   const kickoff = kickoffUtc();
   const lastName = userId ? null : (await cookies()).get(LAST_NAME_COOKIE)?.value ?? null;
+  const groups = userId
+    ? await db
+        .select({ id: poolMembers.poolId })
+        .from(poolMembers)
+        .where(eq(poolMembers.userId, userId))
+    : [];
 
   return (
     <div className="flex min-h-[88vh] flex-col items-center justify-center gap-8 py-12 text-center">
@@ -52,16 +62,26 @@ export default async function LandingPage() {
           : `Locks ${matchDayLabel(kickoff)}, ${matchTime(kickoff)} ${DISPLAY_TZ_LABEL}`}
       </div>
 
-      <div className="reveal w-full max-w-xs" style={{ animationDelay: '160ms' }}>
+      <div className="reveal w-full max-w-sm" style={{ animationDelay: '160ms' }}>
         {!userId ? (
           <NameEntry lastName={lastName} />
         ) : (
-          <Link
-            href="/bracket"
-            className="flex min-h-13 w-full items-center justify-center rounded-2xl bg-accent text-lg font-bold text-[var(--accent-ink)] shadow-lg shadow-accent/20 active:scale-95"
-          >
-            {locked ? 'View your bracket' : 'Build your bracket'}
-          </Link>
+          <div className="space-y-4">
+            {groups.length > 0 ? (
+              <Link
+                href="/bracket"
+                className="flex min-h-13 w-full items-center justify-center rounded-2xl bg-accent text-lg font-bold text-[var(--accent-ink)] shadow-lg shadow-accent/20 active:scale-95"
+              >
+                {locked ? 'View your bracket' : 'Build your bracket'}
+              </Link>
+            ) : (
+              <p className="text-sm text-muted">
+                You are not in a group yet. Create one and share the code, or join a
+                friend&apos;s group below.
+              </p>
+            )}
+            <PoolActions />
+          </div>
         )}
       </div>
 

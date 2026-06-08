@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, groupStandings, matches, poolMembers, teams, users } from '@/lib/schema';
+import { brackets, groupStandings, matches, poolMembers, pools, teams, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { attainablePoints, buildFacts } from '@/lib/scoring';
 import type { Predictions } from '@/types/bracket';
@@ -10,19 +10,34 @@ import MemberList, { type Member } from '@/components/stats/MemberList';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StatsPage() {
+export default async function StatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pool?: string }>;
+}) {
   const userId = await currentUserId();
   if (!userId) redirect('/');
 
-  const poolId = process.env.NEXT_PUBLIC_DEFAULT_POOL_ID;
-  if (!poolId) {
+  const memberships = await db
+    .select({ poolId: poolMembers.poolId, poolName: pools.name })
+    .from(poolMembers)
+    .innerJoin(pools, eq(pools.id, poolMembers.poolId))
+    .where(eq(poolMembers.userId, userId));
+
+  if (memberships.length === 0) {
     return (
       <div className="py-4">
         <h1 className="font-display text-4xl">Stats</h1>
-        <p className="mt-2 text-sm text-muted">No pool configured.</p>
+        <p className="mt-2 text-sm text-muted">
+          Create or join a group from the home screen first.
+        </p>
       </div>
     );
   }
+
+  const { pool: requested } = await searchParams;
+  const active = memberships.find((m) => m.poolId === requested) ?? memberships[0];
+  const poolId = active.poolId;
 
   const members = await db
     .select({ name: users.displayName, userId: poolMembers.userId })
@@ -112,16 +127,34 @@ export default async function StatsPage() {
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Stats</h1>
         <p className="mt-1 text-sm text-muted">
-          How the pool is doing ·{' '}
+          {active.poolName} ·{' '}
           <Link href="/scoring" className="font-semibold text-accent underline">
             How it&apos;s scored
           </Link>
         </p>
       </header>
 
+      {memberships.length > 1 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {memberships.map((m) => (
+            <Link
+              key={m.poolId}
+              href={`/stats?pool=${m.poolId}`}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                m.poolId === poolId
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-edge bg-white/[0.02] text-muted'
+              }`}
+            >
+              {m.poolName}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
       <div className="card p-4">
         <div className="text-center text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
-          Pool snapshot
+          Group snapshot
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div>

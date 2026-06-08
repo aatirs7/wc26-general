@@ -6,7 +6,7 @@
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db } from './db';
-import { poolMembers, users } from './schema';
+import { users } from './schema';
 
 export const AUTH_COOKIE = 'wc26_uid';
 export const LAST_NAME_COOKIE = 'wc26_lastname';
@@ -22,8 +22,10 @@ export async function currentUserId(): Promise<string | null> {
   return u?.id ?? null;
 }
 
-// Finds or creates a user by display name (case-insensitive on find)
-// and joins them to the default pool. Returns the user row.
+// Finds or creates a user by display name (case-insensitive on find).
+// Returns the user row. Group membership is no longer automatic: a new
+// player joins or creates a group from the landing page, so groups stay
+// distinct rather than everyone landing in one shared pool.
 export async function signInByName(rawName: string) {
   const name = rawName.trim();
   if (!name) throw new Error('name required');
@@ -33,14 +35,6 @@ export async function signInByName(rawName: string) {
   if (!user) {
     const [created] = await db.insert(users).values({ displayName: name }).returning();
     user = created;
-  }
-
-  const defaultPoolId = process.env.NEXT_PUBLIC_DEFAULT_POOL_ID;
-  if (defaultPoolId) {
-    await db
-      .insert(poolMembers)
-      .values({ poolId: defaultPoolId, userId: user.id })
-      .onConflictDoNothing();
   }
 
   return user;
