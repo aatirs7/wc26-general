@@ -44,7 +44,8 @@ export default async function PredictPage() {
     if (st === 'open') open.push(m);
     else if (st === 'upcoming') upcoming.push(m);
   }
-  const upcomingShow = upcoming.slice(0, 8);
+  // Only matches whose window opens within the next 48 hours.
+  const upcomingShow = upcoming.filter((m) => m.kickoffUtc.getTime() <= now + 48 * 3600 * 1000);
   // Your settled predictions, most recent kickoff first.
   const results = allMatches
     .filter((m) => predByMatch.has(m.id) && m.kickoffUtc.getTime() <= now)
@@ -78,7 +79,7 @@ export default async function PredictPage() {
         <h2 className="mb-2 font-display text-2xl">Open now</h2>
         {open.length === 0 ? (
           <p className="card p-4 text-sm text-muted">
-            Nothing open to predict yet. Matches open 24h before kickoff — check back soon.
+            Nothing open to predict yet. Matches open 24h before kickoff, so check back soon.
           </p>
         ) : (
           <div className="space-y-3">
@@ -109,7 +110,7 @@ export default async function PredictPage() {
 
       {results.length > 0 ? (
         <section>
-          <h2 className="mb-2 font-display text-2xl">Your results</h2>
+          <h2 className="mb-2 text-center font-display text-2xl">Your results</h2>
           <ul className="space-y-2">
             {results.map((m) => {
               const h = label(m.homeCode, m.homePlaceholder);
