@@ -76,13 +76,11 @@ export default async function LandingPage() {
                 {groups.map((g) => (
                   <Link
                     key={g.id}
-                    href={`/bracket?pool=${g.id}`}
+                    href={`/home?pool=${g.id}`}
                     className="flex min-h-13 w-full items-center justify-between gap-2 rounded-2xl border border-edge bg-white/[0.03] px-4 text-left active:scale-95"
                   >
                     <span className="truncate font-semibold">{g.name}</span>
-                    <span className="shrink-0 text-sm font-bold text-accent">
-                      {locked ? 'View' : 'Play'} &rarr;
-                    </span>
+                    <span className="shrink-0 text-sm font-bold text-accent">Open &rarr;</span>
                   </Link>
                 ))}
               </div>

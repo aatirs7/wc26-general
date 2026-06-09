@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, CalendarDays, ListOrdered, BarChart3, User, type LucideIcon } from 'lucide-react';
+import { Home, CalendarDays, ListOrdered, BarChart3, User, type LucideIcon } from 'lucide-react';
 
 const TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/bracket', label: 'Bracket', icon: Trophy },
+  { href: '/home', label: 'Home', icon: Home },
   { href: '/matches', label: 'Matches', icon: CalendarDays },
   { href: '/leaderboard', label: 'Table', icon: ListOrdered },
   { href: '/stats', label: 'Stats', icon: BarChart3 },
