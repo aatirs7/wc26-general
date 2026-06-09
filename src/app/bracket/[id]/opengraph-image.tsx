@@ -68,8 +68,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 40, color: '#9fb3aa' }}>
-            {owner?.displayName ?? 'A player'}
-            {pool?.name ? ` · ${pool.name}` : ''}
+            {`${owner?.displayName ?? 'A player'}${pool?.name ? ` · ${pool.name}` : ''}`}
           </div>
           {champTeam ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>

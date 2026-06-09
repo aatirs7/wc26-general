@@ -17,7 +17,11 @@ export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // one year
 export async function currentUserId(): Promise<string | null> {
   const jar = await cookies();
   const uid = jar.get(AUTH_COOKIE)?.value;
-  if (!uid) return null;
+  // Guard the uuid shape: a tampered/garbage cookie would otherwise throw
+  // a Postgres type error and 500 the page instead of acting signed out.
+  if (!uid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)) {
+    return null;
+  }
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, uid)).limit(1);
   return u?.id ?? null;
 }
