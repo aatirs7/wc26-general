@@ -50,15 +50,19 @@ export default async function BracketPage({
     .where(and(eq(brackets.ownerId, userId), eq(brackets.poolId, activePoolId)))
     .limit(1);
 
-  // For the "reuse your picks" option when this group has no bracket yet:
-  // the user's brackets in their other groups.
-  const otherBrackets = !bracket
-    ? await db
-        .select({ id: brackets.id, poolName: pools.name, submitted: brackets.submitted })
-        .from(brackets)
-        .innerJoin(pools, eq(pools.id, brackets.poolId))
-        .where(and(eq(brackets.ownerId, userId), ne(brackets.poolId, activePoolId)))
-    : [];
+  // The user's brackets in their other groups, used both for the "reuse
+  // your picks" empty state and the "copy from another group" action in the
+  // builder.
+  const otherBrackets = await db
+    .select({
+      id: brackets.id,
+      poolName: pools.name,
+      submitted: brackets.submitted,
+      predictions: brackets.predictions,
+    })
+    .from(brackets)
+    .innerJoin(pools, eq(pools.id, brackets.poolId))
+    .where(and(eq(brackets.ownerId, userId), ne(brackets.poolId, activePoolId)));
 
   const allTeams = await db
     .select()
@@ -123,6 +127,11 @@ export default async function BracketPage({
             submitted: bracket.submitted,
           }}
           teams={allTeams}
+          copySources={otherBrackets.map((o) => ({
+            id: o.id,
+            poolName: o.poolName,
+            predictions: o.predictions,
+          }))}
         />
       )}
     </div>

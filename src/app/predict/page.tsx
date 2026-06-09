@@ -76,7 +76,7 @@ export default async function PredictPage() {
       </div>
 
       <section>
-        <h2 className="mb-2 font-display text-2xl">Open now</h2>
+        <h2 className="mb-2 text-center font-display text-2xl">Open now</h2>
         {open.length === 0 ? (
           <p className="card p-4 text-sm text-muted">
             Nothing open to predict yet. Matches open 24h before kickoff, so check back soon.
@@ -143,7 +143,7 @@ export default async function PredictPage() {
 
       {upcomingShow.length > 0 ? (
         <section>
-          <h2 className="mb-2 font-display text-2xl text-muted">Opening soon</h2>
+          <h2 className="mb-2 text-center font-display text-2xl text-muted">Opening soon</h2>
           <ul className="space-y-2">
             {upcomingShow.map((m) => {
               const h = label(m.homeCode, m.homePlaceholder);

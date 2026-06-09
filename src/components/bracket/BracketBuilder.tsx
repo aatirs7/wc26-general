@@ -26,9 +26,16 @@ interface BracketDto {
   submitted: boolean;
 }
 
+interface CopySource {
+  id: string;
+  poolName: string;
+  predictions: Predictions;
+}
+
 interface Props {
   bracket: BracketDto;
   teams: Team[];
+  copySources?: CopySource[];
 }
 
 type StepKey = 'groups' | 'thirds' | 'knockout';
@@ -50,7 +57,7 @@ const STEP_HEADINGS: Record<StepKey, string> = {
 // 16 + 8 + 4 + 2 + 1 ties decide the whole knockout.
 const KO_TOTAL = 31;
 
-export default function BracketBuilder({ bracket, teams }: Props) {
+export default function BracketBuilder({ bracket, teams, copySources = [] }: Props) {
   const [predictions, dispatch] = useReducer(bracketReducer, bracket.predictions, (p) =>
     bracketReducer(p, { type: 'load', predictions: p }),
   );
@@ -63,6 +70,17 @@ export default function BracketBuilder({ bracket, teams }: Props) {
   const [submitted, setSubmitted] = useState(bracket.submitted);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [pendingCopy, setPendingCopy] = useState<CopySource | null>(null);
+
+  // Replace the current picks with a copy of one of the user's other-group
+  // brackets. The autosave effect persists the change like any other edit.
+  function doCopy(src: CopySource) {
+    dispatch({ type: 'load', predictions: src.predictions });
+    setPendingCopy(null);
+    setCopyOpen(false);
+    setStep(isComplete(src.predictions) ? 'knockout' : 'groups');
+  }
 
   const teamsByCode = useMemo(() => new Map(teams.map((t) => [t.code, t])), [teams]);
 
@@ -148,6 +166,66 @@ export default function BracketBuilder({ bracket, teams }: Props) {
       <Link href="/scoring" className="mb-3 inline-block text-xs font-semibold text-accent underline">
         How it&apos;s scored
       </Link>
+
+      {copySources.length > 0 ? (
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => {
+              setCopyOpen((o) => !o);
+              setPendingCopy(null);
+            }}
+            className="text-xs font-semibold text-accent underline"
+          >
+            {copyOpen ? 'Hide copy options' : 'Copy picks from another group'}
+          </button>
+          {copyOpen ? (
+            <div className="card mt-2 space-y-2 p-3">
+              {pendingCopy ? (
+                <div className="space-y-2 text-center">
+                  <p className="text-sm">
+                    Replace your current picks with{' '}
+                    <span className="font-bold">{pendingCopy.poolName}</span>&apos;s bracket?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPendingCopy(null)}
+                      className="min-h-10 flex-1 rounded-xl border border-edge text-sm font-semibold active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => doCopy(pendingCopy)}
+                      className="min-h-10 flex-1 rounded-xl bg-accent text-sm font-bold text-[var(--accent-ink)] active:scale-95"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-muted">
+                    Copy a bracket from another of your groups over your current picks.
+                  </p>
+                  {copySources.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setPendingCopy(s)}
+                      className="flex min-h-10 w-full items-center justify-between rounded-xl border border-edge bg-white/[0.03] px-3 text-sm font-semibold active:scale-95"
+                    >
+                      <span className="truncate">{s.poolName}</span>
+                      <span className="shrink-0 text-accent">Copy &rarr;</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <p className="mb-3 rounded-xl border border-live/40 bg-live/[0.08] p-3 text-sm text-live">
