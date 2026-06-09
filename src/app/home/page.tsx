@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { asc, eq, gt, inArray } from 'drizzle-orm';
-import { ClipboardList, CheckCircle2, ChevronRight, Lock, Timer, CalendarDays } from 'lucide-react';
+import { ClipboardList, CheckCircle2, ChevronRight, Lock, Timer, CalendarDays, Target } from 'lucide-react';
 import { db } from '@/lib/db';
 import { brackets, bracketScores, matches, poolMembers, pools, teams, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
@@ -109,15 +109,22 @@ export default async function HomePage({
   const top3 = ranked.slice(0, 3);
   const showMeSeparately = myRank != null && myRank > 3;
 
+  const initial = (me?.displayName ?? 'P').trim().charAt(0).toUpperCase() || 'P';
+
   return (
     <div className="space-y-4 py-4">
-      <header className="pt-2">
-        <p className="text-sm text-muted">Welcome back</p>
-        <h1 className="font-display text-4xl leading-none">{me?.displayName ?? 'Player'}</h1>
+      <header className="reveal flex flex-col items-center pt-6 pb-1 text-center">
+        <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl bg-accent/10 font-display text-4xl leading-none text-accent ring-1 ring-accent/30">
+          {initial}
+        </div>
+        <p className="mt-4 text-[0.7rem] font-bold uppercase tracking-[0.3em] text-muted">
+          Welcome back
+        </p>
+        <h1 className="font-display text-5xl leading-none">{me?.displayName ?? 'Player'}</h1>
       </header>
 
       {memberships.length > 1 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="reveal flex justify-center gap-2 overflow-x-auto pb-1" style={{ animationDelay: '60ms' }}>
           {memberships.map((m) => (
             <Link
               key={m.poolId}
@@ -135,9 +142,10 @@ export default async function HomePage({
       ) : null}
 
       <div
-        className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+        className={`reveal mx-auto flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
           locked ? 'border-live/30 bg-live/10 text-live' : 'border-gold/30 bg-gold/10 text-gold'
         }`}
+        style={{ animationDelay: '120ms' }}
       >
         {locked ? <Lock className="h-4 w-4 shrink-0" /> : <Timer className="h-4 w-4 shrink-0" />}
         {locked
@@ -146,7 +154,11 @@ export default async function HomePage({
       </div>
 
       {/* Your bracket */}
-      <Link href={`/bracket?pool=${poolId}`} className="card flex items-center gap-3 p-4 active:scale-[0.99]">
+      <Link
+        href={`/bracket?pool=${poolId}`}
+        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
+        style={{ animationDelay: '180ms' }}
+      >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-accent/30">
           {myBracket?.submitted ? (
             <CheckCircle2 className="h-6 w-6 text-accent" strokeWidth={2} />
@@ -175,8 +187,24 @@ export default async function HomePage({
         <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
       </Link>
 
+      {/* Predict mini-game */}
+      <Link
+        href="/predict"
+        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
+        style={{ animationDelay: '210ms' }}
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold/10 ring-1 ring-gold/30">
+          <Target className="h-6 w-6 text-gold" strokeWidth={2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-xl leading-none">Predict scores</div>
+          <div className="mt-1 text-sm text-muted">Call exact scorelines for bonus points</div>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
+      </Link>
+
       {/* Standings preview */}
-      <section className="card p-4">
+      <section className="reveal card p-4" style={{ animationDelay: '240ms' }}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-display text-xl leading-none">Standings</h2>
           <Link href={`/leaderboard?pool=${poolId}`} className="text-xs font-bold text-accent">
@@ -219,7 +247,7 @@ export default async function HomePage({
       </section>
 
       {/* Next matches */}
-      <section className="card p-4">
+      <section className="reveal card p-4" style={{ animationDelay: '300ms' }}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="flex items-center gap-1.5 font-display text-xl leading-none">
             <CalendarDays className="h-4 w-4 text-muted" /> Up next
@@ -248,7 +276,9 @@ export default async function HomePage({
         )}
       </section>
 
-      <InviteButton code={active.joinCode} groupName={active.poolName} />
+      <div className="reveal" style={{ animationDelay: '360ms' }}>
+        <InviteButton code={active.joinCode} groupName={active.poolName} />
+      </div>
     </div>
   );
 }
