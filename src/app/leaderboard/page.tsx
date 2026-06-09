@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, matchPredictions, poolMembers, pools, users } from '@/lib/schema';
+import { brackets, bracketScores, matchPredictions, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import InviteButton from '@/components/pools/InviteButton';
 
@@ -128,6 +128,20 @@ export default async function LeaderboardPage({
     });
   }
 
+  // Movement since the start of today's baseline snapshot (bracket metric only).
+  const snaps = await db
+    .select()
+    .from(standingSnapshots)
+    .where(eq(standingSnapshots.poolId, active.poolId));
+  const snapByUser = new Map(snaps.map((s) => [s.userId, s]));
+  const movementOf = (row: Row): { rankDelta: number; gained: number } | null => {
+    if (metric !== 'bracket') return null;
+    const s = snapByUser.get(row.ownerId);
+    if (!s) return null;
+    const rankDelta = s.rank != null && row.rank != null ? s.rank - row.rank : 0;
+    return { rankDelta, gained: row.value - s.points };
+  };
+
   const ordinal = (n: number) => {
     const s = ['th', 'st', 'nd', 'rd'];
     const v = n % 100;
@@ -208,6 +222,7 @@ export default async function LeaderboardPage({
         {rows.map((row) => {
           const medal = row.rank && row.rank <= 3 ? `medal-${row.rank}` : '';
           const isMe = row.ownerId === userId;
+          const mv = movementOf(row);
           const inner = (
             <div
               className={`card flex min-h-14 items-center gap-3 px-3 py-2.5 ${
@@ -238,6 +253,16 @@ export default async function LeaderboardPage({
                     : row.bracketName}
                 </div>
               </div>
+              {mv && (mv.rankDelta !== 0 || mv.gained > 0) ? (
+                <div className="flex shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
+                  {mv.rankDelta > 0 ? (
+                    <span className="text-accent">▲{mv.rankDelta}</span>
+                  ) : mv.rankDelta < 0 ? (
+                    <span className="text-live">▼{-mv.rankDelta}</span>
+                  ) : null}
+                  {mv.gained > 0 ? <span className="text-muted">+{mv.gained}</span> : null}
+                </div>
+              ) : null}
               <span className="font-display text-2xl leading-none text-accent">{row.value}</span>
             </div>
           );

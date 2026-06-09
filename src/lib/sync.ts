@@ -6,12 +6,22 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { groupStandings, matchPredictions, matches, syncMeta } from './schema';
+import {
+  brackets,
+  bracketScores,
+  groupStandings,
+  matchPredictions,
+  matches,
+  poolMembers,
+  standingSnapshots,
+  syncMeta,
+} from './schema';
 import { footballDataProvider, type ProviderFixture } from './scores-provider';
 import { resolveProviderTeam } from './team-map';
 import { deriveAdvancement } from './standings';
 import { rescoreAll } from './scoring';
 import { scorePrediction } from './predict';
+import { matchDayKey } from './format-time';
 import { FINAL_STATUSES } from './constants';
 
 export interface SyncReport {
@@ -116,6 +126,11 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
       notes,
     };
   }
+
+  // Capture today's baseline standings (before applying new results) so the
+  // leaderboard can show movement since the start of the day. Writes at most
+  // once per day.
+  await snapshotStandings();
 
   const ours = await db.select().from(matches);
   let matchesUpdated = 0;
@@ -226,6 +241,72 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
     standingsUpdated,
     notes,
   };
+}
+
+// Snapshot each group's standings once per day as the baseline for the
+// leaderboard's movement indicators. The ranking here MUST match the
+// leaderboard's bracket-metric sort (submitted first, points, champion+final
+// tiebreak, then earliest lock).
+async function snapshotStandings() {
+  const day = matchDayKey(new Date());
+  const [existing] = await db
+    .select({ capturedDay: standingSnapshots.capturedDay })
+    .from(standingSnapshots)
+    .limit(1);
+  if (existing?.capturedDay === day) return;
+
+  const allBrackets = await db.select().from(brackets);
+  const scores = await db.select().from(bracketScores);
+  const tb = new Map<string, number>();
+  for (const s of scores) {
+    if (s.roundKey === 'champion' || s.roundKey === 'final') {
+      tb.set(s.bracketId, (tb.get(s.bracketId) ?? 0) + s.points);
+    }
+  }
+  const bracketByKey = new Map(allBrackets.map((b) => [`${b.poolId}:${b.ownerId}`, b]));
+
+  const members = await db.select().from(poolMembers);
+  const byPool = new Map<string, string[]>();
+  for (const m of members) {
+    const arr = byPool.get(m.poolId) ?? [];
+    arr.push(m.userId);
+    byPool.set(m.poolId, arr);
+  }
+
+  const toInsert: { poolId: string; userId: string; points: number; rank: number | null; capturedDay: string }[] = [];
+  for (const [poolId, userIds] of byPool) {
+    const rr = userIds.map((userId) => {
+      const b = bracketByKey.get(`${poolId}:${userId}`);
+      return {
+        userId,
+        points: b?.totalPoints ?? 0,
+        submitted: b?.submitted ?? false,
+        tiebreak: b ? tb.get(b.id) ?? 0 : 0,
+        lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
+      };
+    });
+    rr.sort((a, b) => {
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
+      return a.lockedAtMs - b.lockedAtMs;
+    });
+    let r = 0;
+    for (const x of rr) {
+      toInsert.push({ poolId, userId: x.userId, points: x.points, rank: x.submitted ? ++r : null, capturedDay: day });
+    }
+  }
+
+  await db.delete(standingSnapshots);
+  for (const row of toInsert) {
+    await db
+      .insert(standingSnapshots)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [standingSnapshots.poolId, standingSnapshots.userId],
+        set: { points: row.points, rank: row.rank, capturedDay: row.capturedDay },
+      });
+  }
 }
 
 // Recompute score-prediction bonus points from finished matches. Like
