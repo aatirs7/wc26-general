@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Target,
-  ListOrdered,
   UserPlus,
   Copy,
   type LucideIcon,
@@ -23,11 +22,6 @@ const CHANGELOG: { icon: LucideIcon; title: string; desc: string }[] = [
     icon: Target,
     title: 'Predict scores',
     desc: 'Call the exact scoreline of upcoming matches for bonus points. Opens 24h before kickoff, locks at kickoff.',
-  },
-  {
-    icon: ListOrdered,
-    title: 'Combined standings',
-    desc: 'The table ranks everyone by bracket points plus score-prediction bonus. Tap a player to see exactly where their points come from.',
   },
   {
     icon: UserPlus,
