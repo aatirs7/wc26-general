@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, LAST_NAME_COOKIE, nameExists, signInByName } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import {
+  AUTH_COOKIE,
+  AUTH_COOKIE_MAX_AGE,
+  LAST_NAME_COOKIE,
+  currentUserId,
+  nameExists,
+  signInByName,
+} from '@/lib/auth';
 
 const bodySchema = z.object({
   name: z.string().trim().min(1).max(40),
@@ -30,6 +40,38 @@ export async function POST(req: Request) {
   });
   // Remembered across sign-out so the picker can highlight your name.
   res.cookies.set(LAST_NAME_COOKIE, user.displayName, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    path: '/',
+  });
+  return res;
+}
+
+// Rename the signed-in player's display name. Names are the identity, so
+// enforce case-insensitive uniqueness; the cookie keeps the same user id.
+const renameSchema = z.object({ name: z.string().trim().min(1).max(40) });
+
+export async function PATCH(req: Request) {
+  const userId = await currentUserId();
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+  const parsed = renameSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'invalid name' }, { status: 400 });
+  const name = parsed.data.name;
+
+  const all = await db.select({ id: users.id, displayName: users.displayName }).from(users);
+  const clash = all.find((u) => u.id !== userId && u.displayName.toLowerCase() === name.toLowerCase());
+  if (clash) return NextResponse.json({ error: 'name taken' }, { status: 409 });
+
+  const [updated] = await db
+    .update(users)
+    .set({ displayName: name })
+    .where(eq(users.id, userId))
+    .returning();
+
+  const res = NextResponse.json({ user: { id: updated.id, displayName: updated.displayName } });
+  res.cookies.set(LAST_NAME_COOKIE, updated.displayName, {
     httpOnly: true,
     sameSite: 'lax',
     maxAge: AUTH_COOKIE_MAX_AGE,

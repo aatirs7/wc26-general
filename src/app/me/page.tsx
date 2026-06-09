@@ -6,6 +6,7 @@ import { brackets, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLocked } from '@/lib/lock';
 import RenameBracket from '@/components/me/RenameBracket';
+import RenameSelf from '@/components/me/RenameSelf';
 import BracketControls from '@/components/me/BracketControls';
 import InstallGuide from '@/components/me/InstallGuide';
 import SwitchPlayer from '@/components/auth/SwitchPlayer';
@@ -46,11 +47,9 @@ export default async function MePage() {
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent font-display text-3xl text-[var(--accent-ink)]">
           {(me?.displayName ?? 'Y').slice(0, 1).toUpperCase()}
         </span>
-        <div>
+        <div className="flex flex-col items-center gap-1">
           <h1 className="font-display text-3xl leading-none">{me?.displayName ?? 'You'}</h1>
-          <p className="text-sm text-muted">
-            {isLocked() ? 'Tournament running' : 'Editable until kickoff'}
-          </p>
+          <RenameSelf currentName={me?.displayName ?? ''} />
         </div>
         <SwitchPlayer />
       </header>
