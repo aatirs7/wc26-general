@@ -8,6 +8,13 @@
       "when": 1780796311820,
       "tag": "0000_medical_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781035687735,
+      "tag": "0001_magical_callisto",
+      "breakpoints": true
     }
   ]
 }

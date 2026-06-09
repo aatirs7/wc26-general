@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, poolMembers, pools, users } from '@/lib/schema';
+import { brackets, bracketScores, matchPredictions, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import InviteButton from '@/components/pools/InviteButton';
 
 export const dynamic = 'force-dynamic';
+
+type Metric = 'bracket' | 'bonus' | 'combined';
 
 interface Row {
   rank: number | null;
@@ -14,16 +16,22 @@ interface Row {
   bracketName: string;
   ownerId: string;
   ownerName: string;
-  points: number;
-  tiebreak: number;
+  value: number;
   submitted: boolean;
+  tiebreak: number;
   lockedAtMs: number;
 }
+
+const METRICS: { key: Metric; label: string }[] = [
+  { key: 'bracket', label: 'Bracket' },
+  { key: 'bonus', label: 'Bonus' },
+  { key: 'combined', label: 'Combined' },
+];
 
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ pool?: string }>;
+  searchParams: Promise<{ pool?: string; metric?: string }>;
 }) {
   const userId = await currentUserId();
   if (!userId) redirect('/');
@@ -43,17 +51,17 @@ export default async function LeaderboardPage({
     );
   }
 
-  const { pool: requested } = await searchParams;
-  const active =
-    memberships.find((m) => m.poolId === requested) ??
-    memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
-    memberships[0];
+  const { pool: requested, metric: metricParam } = await searchParams;
+  const metric: Metric =
+    metricParam === 'bonus' || metricParam === 'combined' ? metricParam : 'bracket';
+  const active = memberships.find((m) => m.poolId === requested) ?? memberships[0];
 
   const members = await db
     .select({ userId: poolMembers.userId, displayName: users.displayName })
     .from(poolMembers)
     .innerJoin(users, eq(users.id, poolMembers.userId))
     .where(eq(poolMembers.poolId, active.poolId));
+  const memberIds = members.map((m) => m.userId);
 
   const poolBrackets = await db
     .select()
@@ -66,8 +74,6 @@ export default async function LeaderboardPage({
         .from(bracketScores)
         .where(inArray(bracketScores.bracketId, poolBrackets.map((b) => b.id)))
     : [];
-
-  // Tiebreaks: champion + final points, then earliest submit time.
   const tiebreakByBracket = new Map<string, number>();
   for (const s of scoreRows) {
     if (s.roundKey === 'champion' || s.roundKey === 'final') {
@@ -75,31 +81,51 @@ export default async function LeaderboardPage({
     }
   }
 
+  // Score-prediction bonus is per user (global), summed for this group's members.
+  const predRows = memberIds.length
+    ? await db
+        .select({ userId: matchPredictions.userId, points: matchPredictions.points })
+        .from(matchPredictions)
+        .where(inArray(matchPredictions.userId, memberIds))
+    : [];
+  const bonusByUser = new Map<string, number>();
+  for (const p of predRows) bonusByUser.set(p.userId, (bonusByUser.get(p.userId) ?? 0) + p.points);
+
   const bracketByOwner = new Map(poolBrackets.map((b) => [b.ownerId, b]));
   const rows: Row[] = members.map((m) => {
     const b = bracketByOwner.get(m.userId);
+    const bracketPts = b?.totalPoints ?? 0;
+    const bonus = bonusByUser.get(m.userId) ?? 0;
+    const value = metric === 'bonus' ? bonus : metric === 'combined' ? bracketPts + bonus : bracketPts;
     return {
       rank: null,
       bracketId: b?.id ?? null,
       bracketName: b?.name ?? 'No bracket',
       ownerId: m.userId,
       ownerName: m.displayName,
-      points: b?.totalPoints ?? 0,
-      tiebreak: b ? (tiebreakByBracket.get(b.id) ?? 0) : 0,
+      value,
       submitted: b?.submitted ?? false,
+      tiebreak: b ? tiebreakByBracket.get(b.id) ?? 0 : 0,
       lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
     };
   });
 
-  rows.sort((a, b) => {
-    if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
-    return a.lockedAtMs - b.lockedAtMs;
-  });
-  let rank = 0;
-  for (const r of rows) {
-    if (r.submitted) r.rank = ++rank;
+  if (metric === 'bracket') {
+    // Submitted brackets ranked; unsubmitted shown greyed at the bottom.
+    rows.sort((a, b) => {
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
+      if (b.value !== a.value) return b.value - a.value;
+      if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
+      return a.lockedAtMs - b.lockedAtMs;
+    });
+    let rank = 0;
+    for (const r of rows) if (r.submitted) r.rank = ++rank;
+  } else {
+    // Bonus / combined: everyone is ranked by the value.
+    rows.sort((a, b) => b.value - a.value || a.ownerName.localeCompare(b.ownerName));
+    rows.forEach((r, i) => {
+      r.rank = i + 1;
+    });
   }
 
   const ordinal = (n: number) => {
@@ -107,7 +133,11 @@ export default async function LeaderboardPage({
     const v = n % 100;
     return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
   };
+  const rankedCount = metric === 'bracket' ? rows.filter((r) => r.submitted).length : rows.length;
   const me = rows.find((r) => r.ownerId === userId);
+  const dims = (r: Row) => metric === 'bracket' && !r.submitted;
+  const href = (pool: string, m: Metric) => `/leaderboard?pool=${pool}&metric=${m}`;
+  const unitLabel = metric === 'bonus' ? 'bonus' : 'pts';
 
   return (
     <div className="space-y-4 py-4">
@@ -118,6 +148,21 @@ export default async function LeaderboardPage({
 
       <InviteButton code={active.joinCode} groupName={active.poolName} />
 
+      {/* Bracket / Bonus / Combined */}
+      <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
+        {METRICS.map((mt) => (
+          <Link
+            key={mt.key}
+            href={href(active.poolId, mt.key)}
+            className={`flex-1 rounded-full py-1.5 text-center transition-colors ${
+              mt.key === metric ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'
+            }`}
+          >
+            {mt.label}
+          </Link>
+        ))}
+      </div>
+
       {me ? (
         <div className="card flex items-center justify-between px-4 py-3">
           <div>
@@ -125,9 +170,9 @@ export default async function LeaderboardPage({
               Your rank
             </div>
             <div className="font-display text-3xl leading-none">
-              {me.submitted && me.rank ? (
+              {me.rank ? (
                 <>
-                  {ordinal(me.rank)} <span className="text-muted">of {rows.length}</span>
+                  {ordinal(me.rank)} <span className="text-muted">of {rankedCount}</span>
                 </>
               ) : (
                 <span className="text-gold">Not locked in</span>
@@ -135,8 +180,8 @@ export default async function LeaderboardPage({
             </div>
           </div>
           <div className="text-right">
-            <div className="font-display text-4xl leading-none text-accent">{me.points}</div>
-            <div className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">pts</div>
+            <div className="font-display text-4xl leading-none text-accent">{me.value}</div>
+            <div className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">{unitLabel}</div>
           </div>
         </div>
       ) : null}
@@ -146,7 +191,7 @@ export default async function LeaderboardPage({
           {memberships.map((m) => (
             <Link
               key={m.poolId}
-              href={`/leaderboard?pool=${m.poolId}`}
+              href={href(m.poolId, metric)}
               className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
                 m.poolId === active.poolId
                   ? 'border-accent bg-accent/10 text-accent'
@@ -167,7 +212,7 @@ export default async function LeaderboardPage({
             <div
               className={`card flex min-h-14 items-center gap-3 px-3 py-2.5 ${
                 isMe ? 'border-accent bg-accent/[0.06]' : row.rank && row.rank <= 3 ? `ring-${row.rank}` : ''
-              } ${!row.submitted ? 'opacity-60' : ''}`}
+              } ${dims(row) ? 'opacity-60' : ''}`}
             >
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-lg ${
@@ -178,7 +223,9 @@ export default async function LeaderboardPage({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-sm font-bold">{row.bracketName}</span>
+                  <span className="truncate text-sm font-bold">
+                    {metric === 'bracket' ? row.bracketName : row.ownerName}
+                  </span>
                   {isMe ? (
                     <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-[var(--accent-ink)]">
                       You
@@ -186,11 +233,12 @@ export default async function LeaderboardPage({
                   ) : null}
                 </div>
                 <div className="truncate text-xs text-muted">
-                  {row.ownerName}
-                  {!row.submitted ? ' · did not lock' : ''}
+                  {metric === 'bracket'
+                    ? `${row.ownerName}${!row.submitted ? ' · did not lock' : ''}`
+                    : row.bracketName}
                 </div>
               </div>
-              <span className="font-display text-2xl leading-none text-accent">{row.points}</span>
+              <span className="font-display text-2xl leading-none text-accent">{row.value}</span>
             </div>
           );
           return (

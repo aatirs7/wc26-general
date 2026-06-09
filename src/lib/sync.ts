@@ -6,11 +6,12 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { groupStandings, matches, syncMeta } from './schema';
+import { groupStandings, matchPredictions, matches, syncMeta } from './schema';
 import { footballDataProvider, type ProviderFixture } from './scores-provider';
 import { resolveProviderTeam } from './team-map';
 import { deriveAdvancement } from './standings';
 import { rescoreAll } from './scoring';
+import { scorePrediction } from './predict';
 import { FINAL_STATUSES } from './constants';
 
 export interface SyncReport {
@@ -214,6 +215,7 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
   }
 
   await rescoreAll();
+  await rescorePredictions();
   await setMeta('lastFullSync', String(Date.now()));
 
   return {
@@ -224,6 +226,43 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
     standingsUpdated,
     notes,
   };
+}
+
+// Recompute score-prediction bonus points from finished matches. Like
+// rescoreAll, this is idempotent: it only writes rows whose points changed.
+async function rescorePredictions() {
+  const matchRows = await db
+    .select({
+      id: matches.id,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      status: matches.status,
+    })
+    .from(matches);
+  const byId = new Map(matchRows.map((m) => [m.id, m]));
+
+  const preds = await db.select().from(matchPredictions);
+  for (const p of preds) {
+    const m = byId.get(p.matchId);
+    const pts = m
+      ? scorePrediction(p, {
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          isFinal: isFinal(m.status),
+        })
+      : 0;
+    if (pts !== p.points) {
+      await db
+        .update(matchPredictions)
+        .set({ points: pts })
+        .where(
+          and(
+            eq(matchPredictions.userId, p.userId),
+            eq(matchPredictions.matchId, p.matchId),
+          ),
+        );
+    }
+  }
 }
 
 // True when something is happening or about to: any live match, or a

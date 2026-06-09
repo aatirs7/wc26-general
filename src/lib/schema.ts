@@ -107,6 +107,45 @@ export const bracketScores = pgTable(
   (t) => [primaryKey({ columns: [t.bracketId, t.roundKey] })],
 );
 
+// Score-prediction mini-game: one prediction per user per match (global,
+// reused across all their groups). Exact scoreline scores bonus points.
+export const matchPredictions = pgTable(
+  'match_predictions',
+  {
+    userId: uuid('user_id').notNull(),
+    matchId: integer('match_id').notNull(),
+    homeScore: integer('home_score').notNull(),
+    awayScore: integer('away_score').notNull(),
+    points: integer('points').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.matchId] })],
+);
+
+// Per-group standing captured at the start of each day, so the leaderboard
+// can show movement (rank change and points gained) since then.
+export const standingSnapshots = pgTable(
+  'standing_snapshots',
+  {
+    poolId: uuid('pool_id').notNull(),
+    userId: uuid('user_id').notNull(),
+    points: integer('points').notNull().default(0),
+    rank: integer('rank'),
+    capturedDay: text('captured_day').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.poolId, t.userId] })],
+);
+
+// Group smack-talk: a lightweight per-group message feed.
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  poolId: uuid('pool_id').notNull(),
+  userId: uuid('user_id').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Tiny key-value row for sync bookkeeping (last full sync time, etc).
 export const syncMeta = pgTable('sync_meta', {
   key: text('key').primaryKey(),
