@@ -149,12 +149,6 @@ export default function BracketBuilder({ bracket, teams }: Props) {
         How it&apos;s scored
       </Link>
 
-      {submitted ? (
-        <p className="mb-3 rounded-xl border border-accent/40 bg-accent/[0.08] p-3 text-sm text-accent">
-          Bracket submitted. You can still tweak picks until kickoff; changing
-          anything means you need to submit again.
-        </p>
-      ) : null}
       {error ? (
         <p className="mb-3 rounded-xl border border-live/40 bg-live/[0.08] p-3 text-sm text-live">
           {error}

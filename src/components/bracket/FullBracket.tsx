@@ -155,17 +155,17 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     return { s: v.s, x, y };
   }
 
-  // First time we know the content size, fit it to the viewport width
-  // (capped at 1x) and pin it, so the bracket opens filling the space
-  // instead of floating top-left with empty room below.
+  // First time we know the content size, open at 1x pinned to the top-left.
+  // (Fitting to width shrank the tree until it fit vertically too, which
+  // made one-finger vertical panning do nothing. At 1x it overflows both
+  // axes, so you can drag up/down as well as side to side.)
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current || !dims.w) return;
     const vp = viewportRef.current;
     if (!vp) return;
     didInit.current = true;
-    const s = clampScale(Math.min(1, vp.clientWidth / dims.w));
-    setView(clampView({ s, x: 0, y: 0 }));
+    setView(clampView({ s: 1, x: 0, y: 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dims]);
 

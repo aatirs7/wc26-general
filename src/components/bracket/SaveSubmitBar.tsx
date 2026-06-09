@@ -15,29 +15,26 @@ interface Props {
   onSubmit: () => void;
 }
 
-const STATUS_LABEL: Record<SaveStatus, string> = {
-  idle: 'Auto-saves',
-  saving: 'Saving…',
-  saved: 'Saved ✓',
-  error: 'Save failed',
-};
-
 export default function SaveSubmitBar(props: Props) {
   const {
     saveStatus, canBack, canNext, onBack, onNext,
     showSubmit, submitEnabled, submitted, submitting, onSubmit,
   } = props;
 
+  // Quiet by default: only speak up while saving or if a save failed.
+  const note =
+    saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed' : '';
+
   return (
     <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 px-4">
       <div className="glass mx-auto flex max-w-md items-center gap-2 rounded-2xl px-3 py-2.5 shadow-xl shadow-black/40">
-        <span
-          className={`w-16 text-[0.7rem] font-medium ${
-            saveStatus === 'error' ? 'text-live' : saveStatus === 'saved' ? 'text-accent' : 'text-muted'
-          }`}
-        >
-          {STATUS_LABEL[saveStatus]}
-        </span>
+        {note ? (
+          <span
+            className={`text-[0.7rem] font-medium ${saveStatus === 'error' ? 'text-live' : 'text-muted'}`}
+          >
+            {note}
+          </span>
+        ) : null}
         <div className="flex flex-1 justify-end gap-2">
           {canBack ? (
             <button
