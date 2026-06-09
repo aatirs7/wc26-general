@@ -8,8 +8,6 @@ import {
   BarChart3,
   Lock,
   Timer,
-  CheckCircle2,
-  AlertCircle,
   ArrowRight,
   MessageCircle,
   Target,
@@ -145,17 +143,6 @@ export default async function HomePage({
     }
   }
 
-  // Bracket status flavour for the headline card.
-  const status = !myBracket
-    ? { text: 'No bracket yet', tone: 'gold' as const, icon: AlertCircle }
-    : locked
-      ? { text: 'Locked in for the tournament', tone: 'muted' as const, icon: Lock }
-      : myBracket.submitted
-        ? { text: 'Submitted and counting', tone: 'accent' as const, icon: CheckCircle2 }
-        : myBracket.complete
-          ? { text: 'Complete, not submitted yet', tone: 'gold' as const, icon: AlertCircle }
-          : { text: 'In progress', tone: 'gold' as const, icon: AlertCircle };
-
   const cta =
     !myBracket || (!locked && !myBracket.submitted)
       ? locked
@@ -164,13 +151,6 @@ export default async function HomePage({
           ? 'Finish your bracket'
           : 'Build your bracket'
       : 'View your bracket';
-
-  const toneClass: Record<'accent' | 'gold' | 'muted', string> = {
-    accent: 'text-accent',
-    gold: 'text-gold',
-    muted: 'text-muted',
-  };
-  const StatusIcon = status.icon;
 
   return (
     <div className="space-y-6 py-4">
@@ -216,7 +196,7 @@ export default async function HomePage({
 
       {/* Overview: rank + points */}
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '120ms' }}>
-        <div className="card flex flex-col justify-between p-4">
+        <div className="card flex flex-col items-center justify-between p-4 text-center">
           <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">
             Your rank
           </div>
@@ -230,10 +210,10 @@ export default async function HomePage({
             )}
           </div>
           {active && memberships.length > 1 ? (
-            <div className="mt-1 truncate text-xs text-muted">{active.poolName}</div>
+            <div className="mt-1 max-w-full truncate text-xs text-muted">{active.poolName}</div>
           ) : null}
         </div>
-        <div className="card flex flex-col justify-between p-4">
+        <div className="card flex flex-col items-center justify-between p-4 text-center">
           <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">
             Points
           </div>
@@ -259,10 +239,6 @@ export default async function HomePage({
             <div className="truncate text-sm font-bold">
               {myBracket?.name ?? 'Your bracket'}
             </div>
-            <div className={`flex items-center gap-1 text-xs ${toneClass[status.tone]}`}>
-              <StatusIcon className="h-3.5 w-3.5" />
-              {status.text}
-            </div>
           </div>
           <span className="flex items-center gap-1 text-sm font-bold text-accent">
             {cta}
@@ -275,7 +251,7 @@ export default async function HomePage({
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '210ms' }}>
         <Link
           href={`/chat${poolQ}`}
-          className="flex flex-col justify-between gap-5 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 active:scale-[0.98]"
+          className="flex flex-col items-center gap-3 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 text-center active:scale-[0.98]"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
             <MessageCircle className="h-5 w-5 text-gold" strokeWidth={2.2} />
@@ -287,7 +263,7 @@ export default async function HomePage({
         </Link>
         <Link
           href="/predict"
-          className="flex flex-col justify-between gap-5 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 active:scale-[0.98]"
+          className="flex flex-col items-center gap-3 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 text-center active:scale-[0.98]"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/40">
             <Target className="h-5 w-5 text-accent" strokeWidth={2.2} />
@@ -309,7 +285,7 @@ export default async function HomePage({
               <Link
                 key={j.href}
                 href={j.href}
-                className="card flex flex-col gap-2 p-4 active:scale-[0.98]"
+                className="card flex flex-col items-center gap-2 p-4 text-center active:scale-[0.98]"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] ring-1 ring-edge">
                   <Icon className="h-5 w-5 text-accent" strokeWidth={2.2} />
