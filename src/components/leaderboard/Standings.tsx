@@ -79,14 +79,14 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
             </button>
 
             {open ? (
-              <div className="mt-1.5 rounded-xl border border-edge bg-white/[0.02] p-3 text-sm">
+              <div className="mt-1.5 rounded-xl border border-edge bg-white/[0.02] p-3 text-center text-sm">
                 <div className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted-2">
                   Where the points come from
                 </div>
                 {row.rounds.length === 0 && row.bonus === 0 ? (
                   <p className="text-xs text-muted">No points scored yet.</p>
                 ) : (
-                  <dl className="space-y-1">
+                  <dl className="mx-auto max-w-[16rem] space-y-1 text-left">
                     {row.rounds.map((r) => (
                       <div key={r.label} className="flex justify-between">
                         <dt className="text-muted">{r.label}</dt>
