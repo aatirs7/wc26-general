@@ -8,10 +8,8 @@ import {
   ChevronRight,
   Target,
   ListOrdered,
-  Home,
   UserPlus,
   Copy,
-  Pencil,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,11 +30,6 @@ const CHANGELOG: { icon: LucideIcon; title: string; desc: string }[] = [
     desc: 'The table ranks everyone by bracket points plus score-prediction bonus. Tap a player to see exactly where their points come from.',
   },
   {
-    icon: Home,
-    title: 'A home dashboard',
-    desc: 'Your group at a glance: rank, bracket status, what is coming up, and a one-tap invite.',
-  },
-  {
     icon: UserPlus,
     title: 'Easy invites',
     desc: 'Share a join code or a link that drops friends straight into your group.',
@@ -45,11 +38,6 @@ const CHANGELOG: { icon: LucideIcon; title: string; desc: string }[] = [
     icon: Copy,
     title: 'Reuse a bracket',
     desc: 'Joined another group? Copy your picks from an existing group and tweak them.',
-  },
-  {
-    icon: Pencil,
-    title: 'Rename & share',
-    desc: 'Change your display name in the Me tab, and share a bracket link with a rich preview.',
   },
 ];
 
