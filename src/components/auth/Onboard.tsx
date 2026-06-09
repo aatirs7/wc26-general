@@ -190,17 +190,20 @@ export default function Onboard({
         <p className="text-center text-xs text-muted">
           Start your own group and share the code, or join a friend&apos;s with theirs.
         </p>
-        <div className="border-t border-edge/60 pt-3 text-center text-xs text-muted">
-          Already playing?{' '}
-          <button
-            type="button"
-            onClick={() => setMode('login')}
-            className="font-bold text-accent underline"
-          >
-            Log in
-          </button>{' '}
-          to pick your group.
+        <div className="flex items-center gap-3 pt-1">
+          <span className="h-px flex-1 bg-edge/60" />
+          <span className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted-2">
+            already playing
+          </span>
+          <span className="h-px flex-1 bg-edge/60" />
         </div>
+        <button
+          type="button"
+          onClick={() => setMode('login')}
+          className="min-h-13 w-full rounded-2xl border border-accent/50 bg-accent/10 text-base font-bold text-accent active:scale-95"
+        >
+          Log in with your name
+        </button>
         {credit}
       </div>
     );
