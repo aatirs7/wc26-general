@@ -28,8 +28,8 @@ const CHANGELOG: { icon: LucideIcon; title: string; desc: string }[] = [
   },
   {
     icon: ListOrdered,
-    title: 'Bonus & Combined standings',
-    desc: 'The table now toggles between bracket points, prediction bonus, and the two combined.',
+    title: 'Combined standings',
+    desc: 'The table ranks everyone by bracket points plus score-prediction bonus. Tap a player to see exactly where their points come from.',
   },
   {
     icon: Home,
@@ -105,7 +105,7 @@ export default function WhatsNew() {
           onClick={close}
         >
           <div
-            className="card relative w-full max-w-[20rem] p-5 text-center"
+            className="relative w-full max-w-[20rem] rounded-2xl border border-edge-strong bg-surface-raised p-5 text-center shadow-2xl shadow-black/40"
             onClick={(e) => e.stopPropagation()}
           >
             <button

@@ -244,9 +244,9 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
 }
 
 // Snapshot each group's standings once per day as the baseline for the
-// leaderboard's movement indicators. The ranking here MUST match the
-// leaderboard's bracket-metric sort (submitted first, points, champion+final
-// tiebreak, then earliest lock).
+// leaderboard's movement indicators. Points are the combined total (bracket
+// + score-prediction bonus) and the ranking MUST match the leaderboard's
+// combined sort.
 async function snapshotStandings() {
   const day = matchDayKey(new Date());
   const [existing] = await db
@@ -265,6 +265,13 @@ async function snapshotStandings() {
   }
   const bracketByKey = new Map(allBrackets.map((b) => [`${b.poolId}:${b.ownerId}`, b]));
 
+  // Score-prediction bonus is per user (global).
+  const preds = await db
+    .select({ userId: matchPredictions.userId, points: matchPredictions.points })
+    .from(matchPredictions);
+  const bonusByUser = new Map<string, number>();
+  for (const p of preds) bonusByUser.set(p.userId, (bonusByUser.get(p.userId) ?? 0) + p.points);
+
   const members = await db.select().from(poolMembers);
   const byPool = new Map<string, string[]>();
   for (const m of members) {
@@ -277,23 +284,25 @@ async function snapshotStandings() {
   for (const [poolId, userIds] of byPool) {
     const rr = userIds.map((userId) => {
       const b = bracketByKey.get(`${poolId}:${userId}`);
+      const combined = (b?.totalPoints ?? 0) + (bonusByUser.get(userId) ?? 0);
       return {
         userId,
-        points: b?.totalPoints ?? 0,
+        points: combined,
         submitted: b?.submitted ?? false,
         tiebreak: b ? tb.get(b.id) ?? 0 : 0,
         lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
       };
     });
+    // MUST match the leaderboard's combined sort.
     rr.sort((a, b) => {
-      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
       if (b.points !== a.points) return b.points - a.points;
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
       if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
       return a.lockedAtMs - b.lockedAtMs;
     });
     let r = 0;
     for (const x of rr) {
-      toInsert.push({ poolId, userId: x.userId, points: x.points, rank: x.submitted ? ++r : null, capturedDay: day });
+      toInsert.push({ poolId, userId: x.userId, points: x.points, rank: ++r, capturedDay: day });
     }
   }
 

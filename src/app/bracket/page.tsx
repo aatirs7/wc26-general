@@ -70,7 +70,7 @@ export default async function BracketPage({
   return (
     <div className="py-4">
       {memberships.length > 1 ? (
-        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 pt-2">
+        <div className="mb-3 flex justify-center gap-2 overflow-x-auto pb-1 pt-2">
           {memberships.map((m) => (
             <Link
               key={m.poolId}

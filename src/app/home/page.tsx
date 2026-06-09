@@ -1,15 +1,35 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { asc, eq, gt, inArray } from 'drizzle-orm';
-import { ClipboardList, CheckCircle2, ChevronRight, Lock, Timer, CalendarDays, Target, MessageCircle } from 'lucide-react';
+import { eq, inArray } from 'drizzle-orm';
+import {
+  Trophy,
+  ListOrdered,
+  CalendarDays,
+  BarChart3,
+  Lock,
+  Timer,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  MessageCircle,
+  Target,
+  type LucideIcon,
+} from 'lucide-react';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, matches, poolMembers, pools, teams, users } from '@/lib/schema';
+import { brackets, bracketScores, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
+import { isComplete } from '@/lib/predictions';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
-import InviteButton from '@/components/pools/InviteButton';
+import Countdown from '@/components/home/Countdown';
 
 export const dynamic = 'force-dynamic';
+
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
 
 export default async function HomePage({
   searchParams,
@@ -19,8 +39,17 @@ export default async function HomePage({
   const userId = await currentUserId();
   if (!userId) redirect('/');
 
+  const locked = isLocked();
+  const kickoff = kickoffUtc();
+
+  const [me] = await db
+    .select({ displayName: users.displayName })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
   const memberships = await db
-    .select({ poolId: poolMembers.poolId, poolName: pools.name, joinCode: pools.joinCode })
+    .select({ poolId: poolMembers.poolId, poolName: pools.name })
     .from(poolMembers)
     .innerJoin(pools, eq(pools.id, poolMembers.poolId))
     .where(eq(poolMembers.userId, userId));
@@ -29,276 +58,271 @@ export default async function HomePage({
   if (memberships.length === 0) redirect('/');
 
   const { pool: requested } = await searchParams;
-  const active = memberships.find((m) => m.poolId === requested) ?? memberships[0];
-  const poolId = active.poolId;
+  const active =
+    memberships.find((m) => m.poolId === requested) ??
+    memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
+    memberships[0];
 
-  const [me] = await db
-    .select({ displayName: users.displayName })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  // This app is multi-pool: bracket and standings are pool-scoped, so carry
+  // the active pool through their links. Matches and stats are global.
+  const poolQ = active ? `?pool=${active.poolId}` : '';
 
-  const members = await db
-    .select({ userId: poolMembers.userId, displayName: users.displayName })
-    .from(poolMembers)
-    .innerJoin(users, eq(users.id, poolMembers.userId))
-    .where(eq(poolMembers.poolId, poolId));
+  const JUMPS: { href: string; label: string; hint: string; icon: LucideIcon }[] = [
+    { href: `/bracket${poolQ}`, label: 'Bracket', hint: 'Build & view', icon: Trophy },
+    { href: `/leaderboard${poolQ}`, label: 'Standings', hint: 'Who is winning', icon: ListOrdered },
+    { href: '/matches', label: 'Matches', hint: 'Fixtures & groups', icon: CalendarDays },
+    { href: '/stats', label: 'Stats', hint: 'Adults vs kids', icon: BarChart3 },
+  ];
 
-  const poolBrackets = await db.select().from(brackets).where(eq(brackets.poolId, poolId));
-  const byOwner = new Map(poolBrackets.map((b) => [b.ownerId, b]));
+  // Compute the player's rank within the active pool, mirroring the
+  // leaderboard's ordering (submitted first, then points, then tiebreak).
+  let myRank: number | null = null;
+  let fieldSize = 0;
+  let myBracket:
+    | { id: string; name: string; submitted: boolean; points: number; complete: boolean }
+    | null = null;
 
-  const scoreRows = poolBrackets.length
-    ? await db
-        .select()
-        .from(bracketScores)
-        .where(inArray(bracketScores.bracketId, poolBrackets.map((b) => b.id)))
-    : [];
-  const tiebreak = new Map<string, number>();
-  for (const s of scoreRows) {
-    if (s.roundKey === 'champion' || s.roundKey === 'final') {
-      tiebreak.set(s.bracketId, (tiebreak.get(s.bracketId) ?? 0) + s.points);
+  if (active) {
+    const members = await db
+      .select({ userId: poolMembers.userId })
+      .from(poolMembers)
+      .where(eq(poolMembers.poolId, active.poolId));
+    fieldSize = members.length;
+
+    const poolBrackets = await db
+      .select()
+      .from(brackets)
+      .where(eq(brackets.poolId, active.poolId));
+
+    const scoreRows = poolBrackets.length
+      ? await db
+          .select()
+          .from(bracketScores)
+          .where(inArray(bracketScores.bracketId, poolBrackets.map((b) => b.id)))
+      : [];
+
+    const tiebreakByBracket = new Map<string, number>();
+    for (const s of scoreRows) {
+      if (s.roundKey === 'champion' || s.roundKey === 'final') {
+        tiebreakByBracket.set(s.bracketId, (tiebreakByBracket.get(s.bracketId) ?? 0) + s.points);
+      }
+    }
+
+    const bracketByOwner = new Map(poolBrackets.map((b) => [b.ownerId, b]));
+    const rows = members.map((m) => {
+      const b = bracketByOwner.get(m.userId);
+      return {
+        ownerId: m.userId,
+        points: b?.totalPoints ?? 0,
+        tiebreak: b ? (tiebreakByBracket.get(b.id) ?? 0) : 0,
+        submitted: b?.submitted ?? false,
+        lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
+      };
+    });
+    rows.sort((a, b) => {
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
+      return a.lockedAtMs - b.lockedAtMs;
+    });
+    let rank = 0;
+    for (const r of rows) {
+      if (r.submitted) {
+        rank += 1;
+        if (r.ownerId === userId) myRank = rank;
+      }
+    }
+
+    const mine = bracketByOwner.get(userId);
+    if (mine) {
+      myBracket = {
+        id: mine.id,
+        name: mine.name,
+        submitted: mine.submitted,
+        points: mine.totalPoints,
+        complete: isComplete(mine.predictions),
+      };
     }
   }
 
-  // Same ranking as the leaderboard so the dashboard rank matches.
-  const ranked = members
-    .map((m) => {
-      const b = byOwner.get(m.userId);
-      return {
-        userId: m.userId,
-        name: m.displayName,
-        points: b?.totalPoints ?? 0,
-        submitted: b?.submitted ?? false,
-        tb: b ? tiebreak.get(b.id) ?? 0 : 0,
-        lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
-      };
-    })
-    .sort((a, b) => {
-      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.tb !== a.tb) return b.tb - a.tb;
-      return a.lockedAtMs - b.lockedAtMs;
-    });
-  let rank = 0;
-  const rankByUser = new Map<string, number>();
-  for (const r of ranked) if (r.submitted) rankByUser.set(r.userId, ++rank);
-  const submittedCount = rank;
-  const myRow = ranked.find((r) => r.userId === userId);
-  const myRank = rankByUser.get(userId) ?? null;
-  const myBracket = byOwner.get(userId) ?? null;
+  // Bracket status flavour for the headline card.
+  const status = !myBracket
+    ? { text: 'No bracket yet', tone: 'gold' as const, icon: AlertCircle }
+    : locked
+      ? { text: 'Locked in for the tournament', tone: 'muted' as const, icon: Lock }
+      : myBracket.submitted
+        ? { text: 'Submitted and counting', tone: 'accent' as const, icon: CheckCircle2 }
+        : myBracket.complete
+          ? { text: 'Complete, not submitted yet', tone: 'gold' as const, icon: AlertCircle }
+          : { text: 'In progress', tone: 'gold' as const, icon: AlertCircle };
 
-  const locked = isLocked();
-  const kickoff = kickoffUtc();
+  const cta =
+    !myBracket || (!locked && !myBracket.submitted)
+      ? locked
+        ? 'View your bracket'
+        : myBracket
+          ? 'Finish your bracket'
+          : 'Build your bracket'
+      : 'View your bracket';
 
-  const allTeams = await db.select().from(teams);
-  const teamsByCode = new Map(allTeams.map((t) => [t.code, t]));
-
-  const now = new Date();
-  const nextMatches = await db
-    .select()
-    .from(matches)
-    .where(gt(matches.kickoffUtc, now))
-    .orderBy(asc(matches.kickoffUtc))
-    .limit(3);
-
-  const slot = (code: string | null, placeholder: string | null) => {
-    const t = code ? teamsByCode.get(code) : null;
-    return t ? `${t.flag} ${t.name}` : placeholder ?? 'TBD';
+  const toneClass: Record<'accent' | 'gold' | 'muted', string> = {
+    accent: 'text-accent',
+    gold: 'text-gold',
+    muted: 'text-muted',
   };
-
-  const top3 = ranked.slice(0, 3);
-  const showMeSeparately = myRank != null && myRank > 3;
-
-  const initial = (me?.displayName ?? 'P').trim().charAt(0).toUpperCase() || 'P';
+  const StatusIcon = status.icon;
 
   return (
-    <div className="space-y-4 py-4">
-      <header className="reveal flex flex-col items-center pt-6 pb-1 text-center">
-        <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl bg-accent/10 font-display text-4xl leading-none text-accent ring-1 ring-accent/30">
-          {initial}
+    <div className="space-y-6 py-4">
+      <header className="reveal flex flex-col items-center gap-2 pt-2 text-center">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent font-display text-2xl text-[var(--accent-ink)]">
+          {(me?.displayName ?? 'Y').slice(0, 1).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
+            Welcome back
+          </p>
+          <h1 className="truncate font-display text-3xl leading-none">
+            {me?.displayName ?? 'Player'}
+          </h1>
         </div>
-        <p className="mt-4 text-[0.7rem] font-bold uppercase tracking-[0.3em] text-muted">
-          Welcome back
-        </p>
-        <h1 className="font-display text-5xl leading-none">{me?.displayName ?? 'Player'}</h1>
       </header>
 
-      {memberships.length > 1 ? (
-        <div className="reveal flex justify-center gap-2 overflow-x-auto pb-1" style={{ animationDelay: '60ms' }}>
-          {memberships.map((m) => (
-            <Link
-              key={m.poolId}
-              href={`/home?pool=${m.poolId}`}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                m.poolId === poolId
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-edge bg-white/[0.02] text-muted'
-              }`}
-            >
-              {m.poolName}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
-      <div
-        className={`reveal mx-auto flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
-          locked ? 'border-live/30 bg-live/10 text-live' : 'border-gold/30 bg-gold/10 text-gold'
-        }`}
-        style={{ animationDelay: '120ms' }}
+      {/* Kickoff / lock banner */}
+      <section
+        className="reveal card space-y-3 p-4 text-center"
+        style={{ animationDelay: '60ms' }}
       >
-        {locked ? <Lock className="h-4 w-4 shrink-0" /> : <Timer className="h-4 w-4 shrink-0" />}
-        {locked
-          ? 'Tournament underway — brackets are locked'
-          : `Brackets lock ${matchDayLabel(kickoff)}, ${matchTime(kickoff)} ${DISPLAY_TZ_LABEL}`}
-      </div>
+        {locked ? (
+          <div className="inline-flex items-center justify-center gap-2 text-live">
+            <Lock className="h-4 w-4" />
+            <span className="text-sm font-semibold">The tournament is live</span>
+          </div>
+        ) : (
+          <>
+            <div className="inline-flex items-center justify-center gap-2 text-gold">
+              <Timer className="h-4 w-4" />
+              <span className="text-[0.7rem] font-bold uppercase tracking-[0.2em]">
+                Brackets lock in
+              </span>
+            </div>
+            <Countdown kickoffMs={kickoff.getTime()} />
+            <p className="text-xs text-muted">
+              Kickoff {matchDayLabel(kickoff)}, {matchTime(kickoff)} {DISPLAY_TZ_LABEL}
+            </p>
+          </>
+        )}
+      </section>
 
-      {/* Your bracket */}
-      <Link
-        href={`/bracket?pool=${poolId}`}
-        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
-        style={{ animationDelay: '180ms' }}
-      >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-accent/30">
-          {myBracket?.submitted ? (
-            <CheckCircle2 className="h-6 w-6 text-accent" strokeWidth={2} />
-          ) : (
-            <ClipboardList className="h-6 w-6 text-accent" strokeWidth={2} />
-          )}
+      {/* Overview: rank + points */}
+      <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '120ms' }}>
+        <div className="card flex flex-col justify-between p-4">
+          <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">
+            Your rank
+          </div>
+          <div className="mt-2 font-display text-4xl leading-none">
+            {myRank ? (
+              <>
+                {ordinal(myRank)} <span className="text-muted">of {fieldSize}</span>
+              </>
+            ) : (
+              <span className="text-gold">&ndash;</span>
+            )}
+          </div>
+          {active && memberships.length > 1 ? (
+            <div className="mt-1 truncate text-xs text-muted">{active.poolName}</div>
+          ) : null}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-xl leading-none">{active.poolName}</div>
-          <div className="mt-1 text-sm text-muted">
-            {!myBracket
-              ? locked
-                ? 'No bracket — entries closed'
-                : 'You have not started your bracket'
-              : myBracket.submitted
-                ? `Submitted${myRank ? ` · ${ordinal(myRank)} of ${submittedCount}` : ''}`
-                : locked
-                  ? 'Not submitted before kickoff'
-                  : 'Draft saved — finish and submit'}
+        <div className="card flex flex-col justify-between p-4">
+          <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">
+            Points
+          </div>
+          <div className="mt-2 font-display text-4xl leading-none text-accent">
+            {myBracket?.points ?? 0}
+          </div>
+          <div className="mt-1 text-xs text-muted">
+            {locked ? 'Live scoring' : 'Scores once it starts'}
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="font-display text-3xl leading-none text-accent">{myRow?.points ?? 0}</div>
-          <div className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">pts</div>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
-      </Link>
-
-      {/* Predict mini-game */}
-      <Link
-        href="/predict"
-        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
-        style={{ animationDelay: '210ms' }}
-      >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold/10 ring-1 ring-gold/30">
-          <Target className="h-6 w-6 text-gold" strokeWidth={2} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-xl leading-none">Predict scores</div>
-          <div className="mt-1 text-sm text-muted">Call exact scorelines for bonus points</div>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
-      </Link>
-
-      {/* Standings preview */}
-      <section className="reveal card p-4" style={{ animationDelay: '240ms' }}>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-display text-xl leading-none">Standings</h2>
-          <Link href={`/leaderboard?pool=${poolId}`} className="text-xs font-bold text-accent">
-            Full table →
-          </Link>
-        </div>
-        {submittedCount === 0 ? (
-          <p className="text-sm text-muted">No submitted brackets yet. Be the first to lock in.</p>
-        ) : (
-          <ol className="space-y-1.5">
-            {top3.map((r, i) => (
-              <li
-                key={r.userId}
-                className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 ${
-                  r.userId === userId ? 'bg-accent/[0.08]' : ''
-                }`}
-              >
-                <span className="w-4 text-center font-display text-base text-muted">{i + 1}</span>
-                <span className="flex-1 truncate text-sm font-semibold">
-                  {r.name}
-                  {r.userId === userId ? (
-                    <span className="ml-1.5 text-[0.6rem] font-bold uppercase text-accent">You</span>
-                  ) : null}
-                </span>
-                <span className="font-display text-lg text-accent">{r.points}</span>
-              </li>
-            ))}
-            {showMeSeparately && myRow ? (
-              <li className="flex items-center gap-2.5 rounded-lg bg-accent/[0.08] px-2 py-1.5">
-                <span className="w-4 text-center font-display text-base text-muted">{myRank}</span>
-                <span className="flex-1 truncate text-sm font-semibold">
-                  {myRow.name}
-                  <span className="ml-1.5 text-[0.6rem] font-bold uppercase text-accent">You</span>
-                </span>
-                <span className="font-display text-lg text-accent">{myRow.points}</span>
-              </li>
-            ) : null}
-          </ol>
-        )}
       </section>
 
-      {/* Next matches */}
-      <section className="reveal card p-4" style={{ animationDelay: '300ms' }}>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 font-display text-xl leading-none">
-            <CalendarDays className="h-4 w-4 text-muted" /> Up next
-          </h2>
-          <Link href="/matches" className="text-xs font-bold text-accent">
-            All matches →
-          </Link>
-        </div>
-        {nextMatches.length === 0 ? (
-          <p className="text-sm text-muted">No upcoming matches.</p>
-        ) : (
-          <ul className="space-y-2">
-            {nextMatches.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 flex-1 truncate font-semibold">
-                  {slot(m.homeCode, m.homePlaceholder)}
-                  <span className="px-1.5 text-muted-2">v</span>
-                  {slot(m.awayCode, m.awayPlaceholder)}
-                </span>
-                <span className="shrink-0 text-xs text-muted">
-                  {matchDayLabel(m.kickoffUtc).split(',')[0]} {matchTime(m.kickoffUtc)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <div className="reveal" style={{ animationDelay: '360ms' }}>
+      {/* Bracket status headline */}
+      <section className="reveal" style={{ animationDelay: '180ms' }}>
         <Link
-        href={`/chat?pool=${poolId}`}
-        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
-      >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-accent/30">
-          <MessageCircle className="h-6 w-6 text-accent" strokeWidth={2} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-xl leading-none">Smack talk</div>
-          <div className="mt-1 text-sm text-muted">Trash talk the group chat</div>
-        </div>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
-      </Link>
+          href={`/bracket${poolQ}`}
+          className="card flex items-center gap-3 p-4 active:scale-[0.99]"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-accent/30">
+            <Trophy className="h-5 w-5 text-accent" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-bold">
+              {myBracket?.name ?? 'Your bracket'}
+            </div>
+            <div className={`flex items-center gap-1 text-xs ${toneClass[status.tone]}`}>
+              <StatusIcon className="h-3.5 w-3.5" />
+              {status.text}
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-sm font-bold text-accent">
+            {cta}
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </Link>
+      </section>
 
-      <InviteButton code={active.joinCode} groupName={active.poolName} />
-      </div>
+      {/* Trash talk + Score predict */}
+      <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '210ms' }}>
+        <Link
+          href={`/chat${poolQ}`}
+          className="flex flex-col justify-between gap-5 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 active:scale-[0.98]"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
+            <MessageCircle className="h-5 w-5 text-gold" strokeWidth={2.2} />
+          </span>
+          <div>
+            <div className="font-display text-xl leading-none text-gold">Trash Talk</div>
+            <div className="mt-0.5 text-xs text-muted">Chat your group</div>
+          </div>
+        </Link>
+        <Link
+          href="/predict"
+          className="flex flex-col justify-between gap-5 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 active:scale-[0.98]"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/40">
+            <Target className="h-5 w-5 text-accent" strokeWidth={2.2} />
+          </span>
+          <div>
+            <div className="font-display text-xl leading-none text-accent">Score Predict</div>
+            <div className="mt-0.5 text-xs text-muted">Call the scores</div>
+          </div>
+        </Link>
+      </section>
+
+      {/* Quick jumps */}
+      <section className="reveal space-y-3" style={{ animationDelay: '270ms' }}>
+        <h2 className="text-center font-display text-xl text-muted">Jump to</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {JUMPS.map((j) => {
+            const Icon = j.icon;
+            return (
+              <Link
+                key={j.href}
+                href={j.href}
+                className="card flex flex-col gap-2 p-4 active:scale-[0.98]"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] ring-1 ring-edge">
+                  <Icon className="h-5 w-5 text-accent" strokeWidth={2.2} />
+                </span>
+                <div>
+                  <div className="font-display text-xl leading-none">{j.label}</div>
+                  <div className="mt-0.5 text-xs text-muted">{j.hint}</div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
-}
-
-function ordinal(n: number) {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }

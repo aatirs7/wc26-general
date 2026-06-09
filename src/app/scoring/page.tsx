@@ -1,4 +1,5 @@
 import { SCORING } from '@/lib/constants';
+import { PREDICT_EXACT_POINTS } from '@/lib/predict';
 
 export const dynamic = 'force-static';
 
@@ -58,6 +59,27 @@ export default function ScoringPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="mb-3 text-center font-display text-2xl">Bonus: score predictions</h2>
+        <div className="card flex items-center gap-3 p-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 font-display text-xl text-gold">
+            {PREDICT_EXACT_POINTS}
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-bold leading-tight">Exact scoreline</div>
+            <div className="text-xs text-muted">nail a match&apos;s exact final score, e.g. 2-1</div>
+          </div>
+        </div>
+        <p className="text-sm leading-relaxed text-muted">
+          Call the exact score of any match in the{' '}
+          <span className="text-foreground">Predict</span> tab. Spot on earns{' '}
+          <span className="text-foreground">{PREDICT_EXACT_POINTS} bonus points</span>; anything else
+          scores nothing. Predictions open 24h before kickoff and lock at kickoff. Bonus points are
+          separate from your bracket and add into your{' '}
+          <span className="text-foreground">combined</span> standings total.
+        </p>
       </section>
 
       <section className="space-y-4">
