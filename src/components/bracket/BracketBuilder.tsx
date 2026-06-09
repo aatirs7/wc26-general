@@ -54,7 +54,11 @@ export default function BracketBuilder({ bracket, teams }: Props) {
   const [predictions, dispatch] = useReducer(bracketReducer, bracket.predictions, (p) =>
     bracketReducer(p, { type: 'load', predictions: p }),
   );
-  const [step, setStep] = useState<StepKey>('groups');
+  // A finished bracket opens on the full knockout view; an unfinished one
+  // starts at the group stage so there is somewhere to begin.
+  const [step, setStep] = useState<StepKey>(() =>
+    isComplete(bracket.predictions) ? 'knockout' : 'groups',
+  );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [submitted, setSubmitted] = useState(bracket.submitted);
   const [submitting, setSubmitting] = useState(false);
