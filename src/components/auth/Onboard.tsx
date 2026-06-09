@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import InviteShare from '@/components/pools/InviteShare';
 
-type Mode = 'choose' | 'create' | 'join';
+type Mode = 'choose' | 'create' | 'join' | 'login';
 
 interface Created {
   poolId: string;
@@ -91,6 +91,28 @@ export default function Onboard({
     }
   }
 
+  // Returning player: sign in by name only. confirm is true because they
+  // are intentionally signing in as that existing name. The page then
+  // re-renders to show their groups to pick from.
+  async function login() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed, confirm: true }),
+      });
+      if (!res.ok) throw new Error('sign in failed');
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'sign in failed');
+      setBusy(false);
+    }
+  }
+
   const primary =
     'flex min-h-13 w-full items-center justify-center rounded-2xl bg-accent text-lg font-bold text-[var(--accent-ink)] shadow-lg shadow-accent/20 active:scale-95 disabled:opacity-40';
   const outline =
@@ -168,8 +190,61 @@ export default function Onboard({
         <p className="text-center text-xs text-muted">
           Start your own group and share the code, or join a friend&apos;s with theirs.
         </p>
+        <div className="border-t border-edge/60 pt-3 text-center text-xs text-muted">
+          Already playing?{' '}
+          <button
+            type="button"
+            onClick={() => setMode('login')}
+            className="font-bold text-accent underline"
+          >
+            Log in
+          </button>{' '}
+          to pick your group.
+        </div>
         {credit}
       </div>
+    );
+  }
+
+  // Returning player logs in by name, then sees their groups.
+  if (mode === 'login') {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          login();
+        }}
+        className="space-y-2"
+      >
+        <label className="block text-[0.7rem] font-bold uppercase tracking-[0.2em] text-muted">
+          {lastName ? `Welcome back, ${lastName}` : 'Log in with your name'}
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={40}
+          autoComplete="off"
+          placeholder="Your name"
+          className={input}
+        />
+        <button type="submit" disabled={busy || !name.trim()} className={primary}>
+          Log in
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setMode('choose');
+            setError(null);
+          }}
+          className="min-h-9 w-full text-center text-xs font-semibold text-muted active:scale-95"
+        >
+          Back
+        </button>
+        {error ? <p className="text-center text-sm text-live">{error}</p> : null}
+        {credit}
+      </form>
     );
   }
 
