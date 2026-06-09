@@ -138,6 +138,37 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     if (el) setDims({ w: el.scrollWidth, h: el.scrollHeight });
   }, [predictions]);
 
+  // Keep the tree pinned inside the viewport: centre it when it is smaller
+  // than the viewport on an axis, otherwise stop it being dragged past the
+  // edges (with a small margin). This is what removes the dead grey space.
+  function clampView(v: View): View {
+    const vp = viewportRef.current;
+    if (!vp || !dims.w) return v;
+    const m = 16;
+    const cw = dims.w * v.s;
+    const ch = dims.h * v.s;
+    let { x, y } = v;
+    if (cw + 2 * m <= vp.clientWidth) x = (vp.clientWidth - cw) / 2;
+    else x = Math.min(m, Math.max(vp.clientWidth - cw - m, x));
+    if (ch + 2 * m <= vp.clientHeight) y = (vp.clientHeight - ch) / 2;
+    else y = Math.min(m, Math.max(vp.clientHeight - ch - m, y));
+    return { s: v.s, x, y };
+  }
+
+  // First time we know the content size, fit it to the viewport width
+  // (capped at 1x) and pin it, so the bracket opens filling the space
+  // instead of floating top-left with empty room below.
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (didInit.current || !dims.w) return;
+    const vp = viewportRef.current;
+    if (!vp) return;
+    didInit.current = true;
+    const s = clampScale(Math.min(1, vp.clientWidth / dims.w));
+    setView(clampView({ s, x: 0, y: 0 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dims]);
+
   function vpPoint(e: React.PointerEvent): { x: number; y: number } {
     const r = viewportRef.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -148,7 +179,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     setView((p) => {
       const s = clampScale(targetScale);
       const k = s / p.s;
-      return { s, x: cx - (cx - p.x) * k, y: cy - (cy - p.y) * k };
+      return clampView({ s, x: cx - (cx - p.x) * k, y: cy - (cy - p.y) * k });
     });
   }
 
@@ -162,12 +193,11 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     const vp = viewportRef.current;
     if (!vp || !dims.w) return;
     const s = clampScale(Math.min(vp.clientWidth / dims.w, vp.clientHeight / dims.h));
-    const x = Math.max(0, (vp.clientWidth - dims.w * s) / 2);
-    setView({ s, x, y: 8 });
+    setView(clampView({ s, x: 0, y: 0 }));
   }
 
   function reset() {
-    setView({ s: 1, x: 0, y: 0 });
+    setView(clampView({ s: 1, x: 0, y: 0 }));
   }
 
   const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
@@ -205,7 +235,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
       setView((prev) => {
         const s = clampScale(prev.s * k);
         const ratio = s / prev.s;
-        return { s, x: nm.x - (m0.x - prev.x) * ratio, y: nm.y - (m0.y - prev.y) * ratio };
+        return clampView({ s, x: nm.x - (m0.x - prev.x) * ratio, y: nm.y - (m0.y - prev.y) * ratio });
       });
       pinch.current = { dist: nd, mid: nm };
       return;
@@ -227,7 +257,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
         const dx = p.x - lastPan.current.x;
         const dy = p.y - lastPan.current.y;
         lastPan.current = p;
-        setView((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+        setView((prev) => clampView({ ...prev, x: prev.x + dx, y: prev.y + dy }));
       }
     }
   }
@@ -302,7 +332,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="-mx-4 h-[68vh] touch-none select-none overflow-hidden rounded-xl border border-edge/60 bg-black/10"
+        className="-mx-4 h-[78vh] touch-none select-none overflow-hidden rounded-xl border border-edge/60 bg-black/10"
       >
         <div
           ref={contentRef}
