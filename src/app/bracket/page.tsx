@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { Lock } from 'lucide-react';
 import { brackets, poolMembers, pools, teams } from '@/lib/schema';
@@ -50,6 +50,16 @@ export default async function BracketPage({
     .where(and(eq(brackets.ownerId, userId), eq(brackets.poolId, activePoolId)))
     .limit(1);
 
+  // For the "reuse your picks" option when this group has no bracket yet:
+  // the user's brackets in their other groups.
+  const otherBrackets = !bracket
+    ? await db
+        .select({ id: brackets.id, poolName: pools.name, submitted: brackets.submitted })
+        .from(brackets)
+        .innerJoin(pools, eq(pools.id, brackets.poolId))
+        .where(and(eq(brackets.ownerId, userId), ne(brackets.poolId, activePoolId)))
+    : [];
+
   const allTeams = await db
     .select()
     .from(teams)
@@ -92,7 +102,7 @@ export default async function BracketPage({
             </p>
           </div>
         ) : (
-          <StartBracket poolId={activePoolId} />
+          <StartBracket poolId={activePoolId} sources={otherBrackets} />
         )
       ) : locked ? (
         <div className="space-y-4 py-2">
