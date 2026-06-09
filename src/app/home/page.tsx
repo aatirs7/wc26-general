@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { asc, eq, gt, inArray } from 'drizzle-orm';
-import { ClipboardList, CheckCircle2, ChevronRight, Lock, Timer, CalendarDays, Target } from 'lucide-react';
+import { ClipboardList, CheckCircle2, ChevronRight, Lock, Timer, CalendarDays, Target, MessageCircle } from 'lucide-react';
 import { db } from '@/lib/db';
 import { brackets, bracketScores, matches, poolMembers, pools, teams, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
@@ -277,7 +277,21 @@ export default async function HomePage({
       </section>
 
       <div className="reveal" style={{ animationDelay: '360ms' }}>
-        <InviteButton code={active.joinCode} groupName={active.poolName} />
+        <Link
+        href={`/chat?pool=${poolId}`}
+        className="reveal card flex items-center gap-3 p-4 active:scale-[0.99]"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-accent/30">
+          <MessageCircle className="h-6 w-6 text-accent" strokeWidth={2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-xl leading-none">Smack talk</div>
+          <div className="mt-1 text-sm text-muted">Trash talk the group chat</div>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-2" />
+      </Link>
+
+      <InviteButton code={active.joinCode} groupName={active.poolName} />
       </div>
     </div>
   );
