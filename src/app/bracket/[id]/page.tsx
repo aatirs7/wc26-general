@@ -5,6 +5,7 @@ import { bracketScores, teams, users } from '@/lib/schema';
 import { bracketAccess, loadBracket } from '@/lib/access';
 import { currentUserId } from '@/lib/auth';
 import BracketSummary from '@/components/brackets/BracketSummary';
+import ShareBracket from '@/components/brackets/ShareBracket';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,9 +53,12 @@ export default async function BracketViewPage({
             {bracket.submitted ? '' : ' · not submitted'}
           </p>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="font-display text-4xl leading-none text-accent">{bracket.totalPoints}</div>
-          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-muted">pts</div>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="text-right">
+            <div className="font-display text-4xl leading-none text-accent">{bracket.totalPoints}</div>
+            <div className="text-[0.65rem] font-bold uppercase tracking-wider text-muted">pts</div>
+          </div>
+          <ShareBracket title={`${owner?.displayName ?? ''}'s World Cup 2026 bracket`} />
         </div>
       </header>
 
