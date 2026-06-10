@@ -76,7 +76,7 @@ export default function WhatsNew() {
         type="button"
         onClick={start}
         aria-label="What's new"
-        className="fixed left-3 top-3 z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-edge-strong bg-surface-raised shadow-lg shadow-black/25 active:scale-90"
+        className="absolute left-3 top-3 z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-edge-strong bg-surface-raised shadow-lg shadow-black/25 active:scale-90"
       >
         <HelpCircle className="h-5 w-5 text-accent" strokeWidth={2.4} />
       </button>

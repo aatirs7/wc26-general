@@ -167,6 +167,59 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     });
   }
 
+  // Pinch to zoom (two fingers), anchored on the pinch centre; one finger
+  // still scrolls natively. Non-passive so we can preventDefault mid-pinch.
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  useEffect(() => {
+    const sc = scrollRef.current;
+    if (!sc) return;
+    let start: { dist: number; scale: number; cx: number; cy: number } | null = null;
+    const d = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const r = sc.getBoundingClientRect();
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        start = {
+          dist: d(e.touches),
+          scale: scaleRef.current,
+          cx: mx - r.left + sc.scrollLeft,
+          cy: my - r.top + sc.scrollTop,
+        };
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && start) {
+        e.preventDefault();
+        const r = sc.getBoundingClientRect();
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+        const next = clampScale(start.scale * (d(e.touches) / start.dist));
+        const ratio = next / start.scale;
+        const s0 = start;
+        setScale(next);
+        requestAnimationFrame(() => {
+          sc.scrollLeft = s0.cx * ratio - mx;
+          sc.scrollTop = s0.cy * ratio - my;
+        });
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) start = null;
+    };
+    sc.addEventListener('touchstart', onStart, { passive: false });
+    sc.addEventListener('touchmove', onMove, { passive: false });
+    sc.addEventListener('touchend', onEnd);
+    sc.addEventListener('touchcancel', onEnd);
+    return () => {
+      sc.removeEventListener('touchstart', onStart);
+      sc.removeEventListener('touchmove', onMove);
+      sc.removeEventListener('touchend', onEnd);
+      sc.removeEventListener('touchcancel', onEnd);
+    };
+  }, [fullscreen]);
+
   function Node({ id }: { id: number }) {
     const m = resolved.get(id);
     if (!m) return null;
@@ -194,89 +247,87 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
   const textBtn =
     'flex h-9 items-center gap-1 rounded-full px-3 text-xs font-bold text-foreground active:scale-90';
 
-  const board = (
-    <>
-      <div
-        ref={scrollRef}
-        className={
-          fullscreen
-            ? 'absolute inset-0 overflow-auto bg-black/10'
-            : 'h-[62vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
-        }
-        style={{ touchAction: 'pan-x pan-y' }}
-      >
-        {/* Sized to the scaled content so the container scrolls natively. */}
-        <div style={{ width: dims.w * scale, height: dims.h * scale }}>
+  const controls = (showFs: boolean) => (
+    <div className="flex items-center gap-1 rounded-full border border-edge bg-surface-raised p-1">
+      <button type="button" onClick={() => zoomBy(1 / 1.3)} className={roundBtn} aria-label="Zoom out">
+        <Minus className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+      <button type="button" onClick={fitNow} className={textBtn}>
+        <Scan className="h-4 w-4" strokeWidth={2.2} /> Fit
+      </button>
+      <button type="button" onClick={() => zoomBy(1.3)} className={roundBtn} aria-label="Zoom in">
+        <Plus className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+      {showFs ? (
+        <button type="button" onClick={() => setFullscreen(true)} className={textBtn}>
+          <Maximize2 className="h-4 w-4" strokeWidth={2.2} /> Full
+        </button>
+      ) : null}
+    </div>
+  );
+
+  // Rendered in exactly one place: inline, or in the full-screen portal.
+  const scrollEl = (
+    <div
+      ref={scrollRef}
+      className={
+        fullscreen
+          ? 'absolute inset-0 overflow-auto bg-black/10'
+          : 'h-[54vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
+      }
+      style={{ touchAction: 'pan-x pan-y' }}
+    >
+      {/* Sized to the scaled content (plus inline bottom clearance for the
+          fixed save bar) so it scrolls natively. */}
+      <div style={{ width: dims.w * scale, height: dims.h * scale + (fullscreen ? 0 : 120) }}>
+        <div
+          ref={contentRef}
+          className="flex w-max items-center p-3"
+          style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}
+        >
+          <Node id={ROOT_ID} />
+          <Connector />
           <div
-            ref={contentRef}
-            className="flex w-max items-center p-3"
-            style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}
+            className={`flex w-40 shrink-0 flex-col items-center gap-1 rounded-lg border p-3 text-center ${
+              champ ? 'border-gold/50 bg-gold/[0.08] ring-1' : 'border-edge bg-surface'
+            }`}
           >
-            <Node id={ROOT_ID} />
-            <Connector />
-            <div
-              className={`flex w-40 shrink-0 flex-col items-center gap-1 rounded-lg border p-3 text-center ${
-                champ ? 'border-gold/50 bg-gold/[0.08] ring-1' : 'border-edge bg-surface'
-              }`}
-            >
-              <Trophy className={`h-6 w-6 ${champ ? 'text-gold' : 'text-muted-2'}`} strokeWidth={2} />
-              {champ ? (
-                <>
-                  <span className="text-2xl leading-none">{champ.flag}</span>
-                  <span className="text-sm font-bold leading-tight">{champ.name}</span>
-                  <span className="text-[0.55rem] font-bold uppercase tracking-wider text-gold">
-                    Champion
-                  </span>
-                </>
-              ) : (
-                <span className="text-[0.65rem] font-medium leading-tight text-muted-2">Champion</span>
-              )}
-            </div>
+            <Trophy className={`h-6 w-6 ${champ ? 'text-gold' : 'text-muted-2'}`} strokeWidth={2} />
+            {champ ? (
+              <>
+                <span className="text-2xl leading-none">{champ.flag}</span>
+                <span className="text-sm font-bold leading-tight">{champ.name}</span>
+                <span className="text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                  Champion
+                </span>
+              </>
+            ) : (
+              <span className="text-[0.65rem] font-medium leading-tight text-muted-2">Champion</span>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Floating controls */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-edge bg-surface-raised/95 p-1 shadow-lg shadow-black/30 backdrop-blur">
-          <button type="button" onClick={() => zoomBy(1 / 1.3)} className={roundBtn} aria-label="Zoom out">
-            <Minus className="h-4 w-4" strokeWidth={2.5} />
-          </button>
-          <button type="button" onClick={fitNow} className={textBtn}>
-            <Scan className="h-4 w-4" strokeWidth={2.2} /> Fit
-          </button>
-          <button type="button" onClick={() => zoomBy(1.3)} className={roundBtn} aria-label="Zoom in">
-            <Plus className="h-4 w-4" strokeWidth={2.5} />
-          </button>
-          {!fullscreen ? (
-            <button type="button" onClick={() => setFullscreen(true)} className={textBtn}>
-              <Maximize2 className="h-4 w-4" strokeWidth={2.2} /> Full screen
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </>
+    </div>
   );
 
   return (
     <div className="relative">
-      <p className="mb-2 text-center text-[0.7rem] text-muted-2">
-        Swipe to move · use + / − or Fit · tap a team to pick them
-      </p>
-      {/* board renders in exactly one place: inline, or in the full-screen
-          portal. The placeholder keeps the page layout height while full. */}
-      {fullscreen ? (
-        <div className="flex h-[62vh] items-center justify-center rounded-xl border border-edge/60 bg-black/10 text-sm text-muted">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-[0.7rem] text-muted-2">Swipe or pinch · tap a team to pick</p>
+        {!fullscreen ? controls(true) : null}
+      </div>
+      {!fullscreen ? (
+        scrollEl
+      ) : (
+        <div className="flex h-[54vh] items-center justify-center rounded-xl border border-edge/60 bg-black/10 text-sm text-muted">
           Open in full screen
         </div>
-      ) : (
-        board
       )}
       {fullscreen
         ? createPortal(
             <div className="fixed inset-0 z-[100] flex flex-col bg-bg">
-              <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-                <span className="font-display text-lg leading-none">Your bracket</span>
+              <div className="flex items-center justify-between gap-2 border-b border-edge px-3 py-2.5">
+                {controls(false)}
                 <button
                   type="button"
                   onClick={() => setFullscreen(false)}
@@ -285,7 +336,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
                   <X className="h-4 w-4" /> Done
                 </button>
               </div>
-              <div className="relative flex-1">{board}</div>
+              <div className="relative flex-1">{scrollEl}</div>
             </div>,
             document.body,
           )

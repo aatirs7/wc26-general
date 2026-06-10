@@ -15,7 +15,7 @@ interface Props {
 
 export default function StickyProgressBar({ steps, activeKey, onSelect }: Props) {
   return (
-    <div className="sticky top-0 z-30 -mx-4 mb-1 px-4 pt-3 pb-2 glass">
+    <div className="-mx-4 mb-1 px-4 pt-3 pb-2 glass">
       <div className="flex gap-1.5 overflow-x-auto pb-0.5">
         {steps.map((step) => {
           const active = step.key === activeKey;

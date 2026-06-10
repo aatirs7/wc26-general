@@ -42,7 +42,7 @@ export default function ChatBox({ poolId }: { poolId: string }) {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 px-4">
+    <div className="fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 px-4">
       <div className="mx-auto flex max-w-md items-end gap-2 rounded-2xl border border-edge bg-surface-raised p-1.5 shadow-2xl shadow-black/30">
         <input
           value={body}
