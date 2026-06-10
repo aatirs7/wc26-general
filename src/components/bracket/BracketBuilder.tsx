@@ -316,18 +316,22 @@ export default function BracketBuilder({ bracket, teams, copySources = [] }: Pro
         )}
       </div>
 
-      <SaveSubmitBar
-        saveStatus={saveStatus}
-        canBack={stepIndex > 0}
-        canNext={stepIndex < STEP_ORDER.length - 1}
-        onBack={() => setStep(STEP_ORDER[stepIndex - 1])}
-        onNext={() => setStep(STEP_ORDER[stepIndex + 1])}
-        showSubmit={step === 'knockout'}
-        submitEnabled={complete}
-        submitted={submitted}
-        submitting={submitting}
-        onSubmit={submit}
-      />
+      {/* Once submitted the bar disappears; navigate via the step tabs up
+          top. Editing a pick clears submitted, so it comes back to re-submit. */}
+      {!submitted ? (
+        <SaveSubmitBar
+          saveStatus={saveStatus}
+          canBack={stepIndex > 0}
+          canNext={stepIndex < STEP_ORDER.length - 1}
+          onBack={() => setStep(STEP_ORDER[stepIndex - 1])}
+          onNext={() => setStep(STEP_ORDER[stepIndex + 1])}
+          showSubmit={step === 'knockout'}
+          submitEnabled={complete}
+          submitted={submitted}
+          submitting={submitting}
+          onSubmit={submit}
+        />
+      ) : null}
     </div>
   );
 }

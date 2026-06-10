@@ -167,46 +167,73 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     });
   }
 
-  // Pinch to zoom (two fingers), anchored on the pinch centre; one finger
-  // still scrolls natively. Non-passive so we can preventDefault mid-pinch.
+  // We fully own touch (touch-action: none): one finger pans by scrolling
+  // the container (auto-clamped, so it can never get stuck), two fingers
+  // pinch-zoom anchored on the pinch centre. Taps still fire clicks because
+  // we only preventDefault once a real drag/pinch starts.
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
   useEffect(() => {
     const sc = scrollRef.current;
     if (!sc) return;
-    let start: { dist: number; scale: number; cx: number; cy: number } | null = null;
-    const d = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    let mode: 'none' | 'pan' | 'pinch' = 'none';
+    let lastX = 0;
+    let lastY = 0;
+    let startDist = 0;
+    let startScale = 1;
+    let cx = 0;
+    let cy = 0;
+    const dist = (t: TouchList) =>
+      Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
     const onStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         const r = sc.getBoundingClientRect();
-        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        start = {
-          dist: d(e.touches),
-          scale: scaleRef.current,
-          cx: mx - r.left + sc.scrollLeft,
-          cy: my - r.top + sc.scrollTop,
-        };
+        mode = 'pinch';
+        startDist = dist(e.touches);
+        startScale = scaleRef.current;
+        cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left + sc.scrollLeft;
+        cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top + sc.scrollTop;
+      } else if (e.touches.length === 1) {
+        mode = 'pan';
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
       }
     };
     const onMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && start) {
+      if (mode === 'pinch' && e.touches.length === 2) {
         e.preventDefault();
         const r = sc.getBoundingClientRect();
         const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
         const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
-        const next = clampScale(start.scale * (d(e.touches) / start.dist));
-        const ratio = next / start.scale;
-        const s0 = start;
+        const next = clampScale(startScale * (dist(e.touches) / startDist));
+        const ratio = next / startScale;
         setScale(next);
         requestAnimationFrame(() => {
-          sc.scrollLeft = s0.cx * ratio - mx;
-          sc.scrollTop = s0.cy * ratio - my;
+          sc.scrollLeft = cx * ratio - mx;
+          sc.scrollTop = cy * ratio - my;
         });
+      } else if (mode === 'pan' && e.touches.length === 1) {
+        const x = e.touches[0].clientX;
+        const y = e.touches[0].clientY;
+        const dx = x - lastX;
+        const dy = y - lastY;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          e.preventDefault();
+          sc.scrollLeft -= dx;
+          sc.scrollTop -= dy;
+          lastX = x;
+          lastY = y;
+        }
       }
     };
     const onEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) start = null;
+      if (e.touches.length === 0) mode = 'none';
+      else if (e.touches.length === 1) {
+        mode = 'pan';
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+      }
     };
     sc.addEventListener('touchstart', onStart, { passive: false });
     sc.addEventListener('touchmove', onMove, { passive: false });
@@ -275,7 +302,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
           ? 'absolute inset-0 overflow-auto bg-black/10'
           : 'h-[54vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
       }
-      style={{ touchAction: 'pan-x pan-y' }}
+      style={{ touchAction: 'none' }}
     >
       {/* Sized to the scaled content (plus inline bottom clearance for the
           fixed save bar) so it scrolls natively. */}
