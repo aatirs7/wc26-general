@@ -171,11 +171,14 @@ body {
 .ring-4 { box-shadow: inset 0 0 0 1.5px var(--line-strong); }
 
 /* Animations */
+/* Opacity only: a translate/transform here would paint the element offset
+   from its real hit box mid-animation, so on touch you would have to tap
+   "above" the target to select it. Fade keeps tap targets pixel-aligned. */
 @keyframes reveal {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.reveal { animation: reveal 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.reveal { animation: reveal 0.4s ease-out both; }
 
 @keyframes livepulse {
   0%, 100% { opacity: 1; }

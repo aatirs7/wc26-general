@@ -41,7 +41,7 @@ function Slot({
       type="button"
       disabled={!onTap || !code}
       onClick={onTap}
-      className={`flex h-10 w-full items-center gap-2 px-2.5 text-left transition-colors ${
+      className={`flex h-11 w-full items-center gap-2 px-2.5 text-left transition-colors ${
         isWinner ? 'bg-accent/[0.12]' : ''
       } ${dim ? 'opacity-40' : ''} disabled:cursor-default`}
     >
@@ -263,7 +263,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     }
     return (
       <div className="flex items-center">
-        <div className="flex flex-col justify-center gap-3">
+        <div className="flex flex-col justify-center gap-4">
           <Node id={feeders[0]} />
           <Node id={feeders[1]} />
         </div>
