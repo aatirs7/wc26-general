@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -11,6 +12,7 @@ import BracketSummary from '@/components/brackets/BracketSummary';
 import StartBracket from '@/components/bracket/StartBracket';
 import PoolActions from '@/components/pools/PoolActions';
 import InviteButton from '@/components/pools/InviteButton';
+import RememberPool from '@/components/RememberPool';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +40,10 @@ export default async function BracketPage({
   }
 
   const { pool: requested } = await searchParams;
+  const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
   const activePoolId =
     memberships.find((m) => m.poolId === requested)?.poolId ??
-    memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID)?.poolId ??
+    memberships.find((m) => m.poolId === activePoolCookie)?.poolId ??
     memberships[0].poolId;
   const activePool = memberships.find((m) => m.poolId === activePoolId) ?? memberships[0];
 
@@ -73,6 +76,7 @@ export default async function BracketPage({
 
   return (
     <div className="py-4">
+      <RememberPool poolId={activePoolId} />
       {memberships.length > 1 ? (
         <div className="mb-3 flex justify-center gap-2 overflow-x-auto pb-1 pt-2">
           {memberships.map((m) => (

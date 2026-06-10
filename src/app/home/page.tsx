@@ -13,9 +13,11 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
+import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { brackets, bracketScores, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import RememberPool from '@/components/RememberPool';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
@@ -56,8 +58,10 @@ export default async function HomePage({
   if (memberships.length === 0) redirect('/');
 
   const { pool: requested } = await searchParams;
+  const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
   const active =
     memberships.find((m) => m.poolId === requested) ??
+    memberships.find((m) => m.poolId === activePoolCookie) ??
     memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
     memberships[0];
 
@@ -154,6 +158,7 @@ export default async function HomePage({
 
   return (
     <div className="space-y-6 py-4">
+      <RememberPool poolId={active.poolId} />
       <header className="reveal flex flex-col items-center gap-2 pt-2 text-center">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent font-display text-2xl text-[var(--accent-ink)]">
           {(me?.displayName ?? 'Y').slice(0, 1).toUpperCase()}

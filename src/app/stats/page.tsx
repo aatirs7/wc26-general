@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -8,6 +9,7 @@ import { attainablePoints, buildFacts } from '@/lib/scoring';
 import { GROUP_LETTERS, type RoundKey } from '@/lib/constants';
 import type { Predictions } from '@/types/bracket';
 import MemberList, { type Member } from '@/components/stats/MemberList';
+import RememberPool from '@/components/RememberPool';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +49,11 @@ export default async function StatsPage({
   }
 
   const { pool: requested } = await searchParams;
-  const active = memberships.find((m) => m.poolId === requested) ?? memberships[0];
+  const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
+  const active =
+    memberships.find((m) => m.poolId === requested) ??
+    memberships.find((m) => m.poolId === activePoolCookie) ??
+    memberships[0];
   const poolId = active.poolId;
 
   const members = await db
@@ -192,6 +198,7 @@ export default async function StatsPage({
 
   return (
     <div className="space-y-5 py-4">
+      <RememberPool poolId={poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Stats</h1>
         <p className="mt-1 text-sm text-muted">

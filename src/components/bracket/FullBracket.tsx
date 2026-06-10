@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Team } from '@/types/team';
 import type { Predictions } from '@/types/bracket';
 import {
@@ -143,9 +144,8 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dims]);
 
-  // Re-fit when entering full screen (the viewport just got bigger).
+  // Re-fit whenever the viewport size changes (entering/leaving full screen).
   useEffect(() => {
-    if (!fullscreen) return;
     const t = setTimeout(fitNow, 60);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,30 +258,38 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     </>
   );
 
-  if (fullscreen) {
-    return (
-      <div className="fixed inset-0 z-[90] flex flex-col bg-bg">
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <span className="font-display text-lg leading-none">Your bracket</span>
-          <button
-            type="button"
-            onClick={() => setFullscreen(false)}
-            className="flex items-center gap-1 rounded-xl border border-edge bg-surface px-3 py-1.5 text-sm font-bold active:scale-95"
-          >
-            <X className="h-4 w-4" /> Done
-          </button>
-        </div>
-        <div className="relative flex-1">{board}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative">
       <p className="mb-2 text-center text-[0.7rem] text-muted-2">
         Swipe to move · use + / − or Fit · tap a team to pick them
       </p>
-      {board}
+      {/* board renders in exactly one place: inline, or in the full-screen
+          portal. The placeholder keeps the page layout height while full. */}
+      {fullscreen ? (
+        <div className="flex h-[62vh] items-center justify-center rounded-xl border border-edge/60 bg-black/10 text-sm text-muted">
+          Open in full screen
+        </div>
+      ) : (
+        board
+      )}
+      {fullscreen
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex flex-col bg-bg">
+              <div className="flex items-center justify-between border-b border-edge px-4 py-3">
+                <span className="font-display text-lg leading-none">Your bracket</span>
+                <button
+                  type="button"
+                  onClick={() => setFullscreen(false)}
+                  className="flex items-center gap-1 rounded-xl border border-edge bg-surface px-3 py-1.5 text-sm font-bold active:scale-95"
+                >
+                  <X className="h-4 w-4" /> Done
+                </button>
+              </div>
+              <div className="relative flex-1">{board}</div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

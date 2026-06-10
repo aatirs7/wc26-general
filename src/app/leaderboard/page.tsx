@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -14,6 +15,7 @@ import {
 import { currentUserId } from '@/lib/auth';
 import InviteButton from '@/components/pools/InviteButton';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
+import RememberPool from '@/components/RememberPool';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +54,11 @@ export default async function LeaderboardPage({
   }
 
   const { pool: requested } = await searchParams;
-  const active = memberships.find((m) => m.poolId === requested) ?? memberships[0];
+  const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
+  const active =
+    memberships.find((m) => m.poolId === requested) ??
+    memberships.find((m) => m.poolId === activePoolCookie) ??
+    memberships[0];
 
   const members = await db
     .select({ userId: poolMembers.userId, displayName: users.displayName })
@@ -158,6 +164,7 @@ export default async function LeaderboardPage({
 
   return (
     <div className="space-y-4 py-4">
+      <RememberPool poolId={active.poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>
         <p className="mt-1 text-xs text-muted">{active.poolName} · bracket + bonus</p>
