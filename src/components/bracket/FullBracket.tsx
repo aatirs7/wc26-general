@@ -10,7 +10,7 @@ import {
   type FillKey,
   type ResolvedMatchup,
 } from '@/lib/knockout-bracket';
-import { Trophy, ChevronRight, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Trophy, ChevronRight, Minus, Plus, Maximize2, X, Scan } from 'lucide-react';
 
 interface Props {
   predictions: Predictions;
@@ -107,179 +107,66 @@ function Connector() {
   );
 }
 
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 1.6;
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 1.8;
 const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
-const DRAG_THRESHOLD = 8;
-
-interface View {
-  s: number;
-  x: number;
-  y: number;
-}
 
 export default function FullBracket({ predictions, teamsByCode, onPick }: Props) {
   const resolved = resolveById(predictions);
 
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<View>({ s: 1, x: 0, y: 0 });
   const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [scale, setScale] = useState(0.6);
+  const [fullscreen, setFullscreen] = useState(false);
+  const didInit = useRef(false);
 
-  // Pointer/gesture bookkeeping.
-  const ptrs = useRef(new Map<number, { x: number; y: number }>());
-  const startPt = useRef<{ x: number; y: number } | null>(null);
-  const panId = useRef<number | null>(null);
-  const lastPan = useRef<{ x: number; y: number } | null>(null);
-  const pinch = useRef<{ dist: number; mid: { x: number; y: number } } | null>(null);
-
+  // Natural (unscaled) content size; CSS transforms do not affect scrollWidth.
   useEffect(() => {
     const el = contentRef.current;
     if (el) setDims({ w: el.scrollWidth, h: el.scrollHeight });
   }, [predictions]);
 
-  // Keep the tree pinned inside the viewport: centre it when it is smaller
-  // than the viewport on an axis, otherwise stop it being dragged past the
-  // edges (with a small margin). This is what removes the dead grey space.
-  function clampView(v: View): View {
-    const vp = viewportRef.current;
-    if (!vp || !dims.w) return v;
-    const m = 16;
-    const cw = dims.w * v.s;
-    const ch = dims.h * v.s;
-    let { x, y } = v;
-    if (cw + 2 * m <= vp.clientWidth) x = (vp.clientWidth - cw) / 2;
-    else x = Math.min(m, Math.max(vp.clientWidth - cw - m, x));
-    if (ch + 2 * m <= vp.clientHeight) y = (vp.clientHeight - ch) / 2;
-    else y = Math.min(m, Math.max(vp.clientHeight - ch - m, y));
-    return { s: v.s, x, y };
+  function fitNow() {
+    const sc = scrollRef.current;
+    if (!sc || !dims.w) return;
+    const s = clampScale(Math.min((sc.clientWidth - 8) / dims.w, (sc.clientHeight - 8) / dims.h));
+    setScale(s);
+    requestAnimationFrame(() => sc.scrollTo({ left: 0, top: 0 }));
   }
 
-  // First time we know the content size, open at 1x pinned to the top-left.
-  // (Fitting to width shrank the tree until it fit vertically too, which
-  // made one-finger vertical panning do nothing. At 1x it overflows both
-  // axes, so you can drag up/down as well as side to side.)
-  const didInit = useRef(false);
+  // Fit to the screen the first time we know the size.
   useEffect(() => {
     if (didInit.current || !dims.w) return;
-    const vp = viewportRef.current;
-    if (!vp) return;
     didInit.current = true;
-    setView(clampView({ s: 1, x: 0, y: 0 }));
+    fitNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dims]);
 
-  function vpPoint(e: React.PointerEvent): { x: number; y: number } {
-    const r = viewportRef.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
+  // Re-fit when entering full screen (the viewport just got bigger).
+  useEffect(() => {
+    if (!fullscreen) return;
+    const t = setTimeout(fitNow, 60);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullscreen]);
 
-  // Scale around a viewport point, keeping that point fixed.
-  function zoomAround(targetScale: number, cx: number, cy: number) {
-    setView((p) => {
-      const s = clampScale(targetScale);
-      const k = s / p.s;
-      return clampView({ s, x: cx - (cx - p.x) * k, y: cy - (cy - p.y) * k });
+  // Zoom around the centre of the current view.
+  function zoomBy(factor: number) {
+    const sc = scrollRef.current;
+    if (!sc) return;
+    const next = clampScale(scale * factor);
+    if (next === scale) return;
+    const ratio = next / scale;
+    const cx = sc.scrollLeft + sc.clientWidth / 2;
+    const cy = sc.scrollTop + sc.clientHeight / 2;
+    setScale(next);
+    requestAnimationFrame(() => {
+      sc.scrollLeft = cx * ratio - sc.clientWidth / 2;
+      sc.scrollTop = cy * ratio - sc.clientHeight / 2;
     });
   }
 
-  function zoomByCenter(factor: number) {
-    const vp = viewportRef.current;
-    if (!vp) return;
-    zoomAround(view.s * factor, vp.clientWidth / 2, vp.clientHeight / 2);
-  }
-
-  function fit() {
-    const vp = viewportRef.current;
-    if (!vp || !dims.w) return;
-    const s = clampScale(Math.min(vp.clientWidth / dims.w, vp.clientHeight / dims.h));
-    setView(clampView({ s, x: 0, y: 0 }));
-  }
-
-  function reset() {
-    setView(clampView({ s: 1, x: 0, y: 0 }));
-  }
-
-  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
-    Math.hypot(a.x - b.x, a.y - b.y);
-  const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
-    x: (a.x + b.x) / 2,
-    y: (a.y + b.y) / 2,
-  });
-
-  function onPointerDown(e: React.PointerEvent) {
-    const p = vpPoint(e);
-    ptrs.current.set(e.pointerId, p);
-    if (ptrs.current.size === 1) {
-      startPt.current = p;
-      lastPan.current = p;
-      panId.current = null;
-    } else if (ptrs.current.size === 2) {
-      const [a, b] = [...ptrs.current.values()];
-      pinch.current = { dist: dist(a, b), mid: mid(a, b) };
-      panId.current = null;
-    }
-  }
-
-  function onPointerMove(e: React.PointerEvent) {
-    if (!ptrs.current.has(e.pointerId)) return;
-    const p = vpPoint(e);
-    ptrs.current.set(e.pointerId, p);
-
-    if (ptrs.current.size >= 2 && pinch.current) {
-      const [a, b] = [...ptrs.current.values()];
-      const nd = dist(a, b);
-      const nm = mid(a, b);
-      const k = nd / (pinch.current.dist || nd);
-      const m0 = pinch.current.mid;
-      setView((prev) => {
-        const s = clampScale(prev.s * k);
-        const ratio = s / prev.s;
-        return clampView({ s, x: nm.x - (m0.x - prev.x) * ratio, y: nm.y - (m0.y - prev.y) * ratio });
-      });
-      pinch.current = { dist: nd, mid: nm };
-      return;
-    }
-
-    if (ptrs.current.size === 1) {
-      if (panId.current === null) {
-        if (startPt.current && dist(p, startPt.current) > DRAG_THRESHOLD) {
-          panId.current = e.pointerId;
-          lastPan.current = p;
-          try {
-            viewportRef.current?.setPointerCapture(e.pointerId);
-          } catch {}
-        } else {
-          return;
-        }
-      }
-      if (panId.current === e.pointerId && lastPan.current) {
-        const dx = p.x - lastPan.current.x;
-        const dy = p.y - lastPan.current.y;
-        lastPan.current = p;
-        setView((prev) => clampView({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-      }
-    }
-  }
-
-  function onPointerUp(e: React.PointerEvent) {
-    ptrs.current.delete(e.pointerId);
-    if (panId.current === e.pointerId) {
-      try {
-        viewportRef.current?.releasePointerCapture(e.pointerId);
-      } catch {}
-      panId.current = null;
-    }
-    pinch.current = null;
-    const remaining = [...ptrs.current.values()];
-    if (remaining.length === 1) {
-      startPt.current = remaining[0];
-      lastPan.current = remaining[0];
-      panId.current = null;
-    }
-  }
-
-  // Renders a tie with its feeder subtrees to the left, connected.
   function Node({ id }: { id: number }) {
     const m = resolved.get(id);
     if (!m) return null;
@@ -302,69 +189,99 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
   const champCode = resolved.get(ROOT_ID)?.winner ?? null;
   const champ = champCode ? teamsByCode.get(champCode) : undefined;
 
-  const zoomBtn =
-    'flex h-8 w-8 items-center justify-center rounded-lg border border-edge bg-white/[0.03] text-muted active:scale-90';
+  const roundBtn =
+    'flex h-9 w-9 items-center justify-center rounded-full text-foreground active:scale-90 disabled:opacity-30';
+  const textBtn =
+    'flex h-9 items-center gap-1 rounded-full px-3 text-xs font-bold text-foreground active:scale-90';
 
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-1.5">
-        <span className="text-[0.65rem] text-muted-2">Pinch to zoom · drag to move</span>
-        <div className="flex items-center gap-1.5">
-          <button type="button" aria-label="Zoom out" onClick={() => zoomByCenter(1 / 1.25)} className={zoomBtn}>
-            <ZoomOut className="h-4 w-4" strokeWidth={2.2} />
-          </button>
-          <button type="button" onClick={fit} className="flex h-8 items-center gap-1 rounded-lg border border-edge bg-white/[0.03] px-2.5 text-xs font-semibold text-muted active:scale-90">
-            <Maximize2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-            Fit
-          </button>
-          <button type="button" onClick={reset} className="flex h-8 items-center rounded-lg border border-edge bg-white/[0.03] px-2.5 text-xs font-semibold text-muted active:scale-90">
-            1×
-          </button>
-          <button type="button" aria-label="Zoom in" onClick={() => zoomByCenter(1.25)} className={zoomBtn}>
-            <ZoomIn className="h-4 w-4" strokeWidth={2.2} />
-          </button>
-        </div>
-      </div>
-
+  const board = (
+    <>
       <div
-        ref={viewportRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        className="-mx-4 h-[78vh] touch-none select-none overflow-hidden rounded-xl border border-edge/60 bg-black/10"
+        ref={scrollRef}
+        className={
+          fullscreen
+            ? 'absolute inset-0 overflow-auto bg-black/10'
+            : 'h-[62vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
+        }
+        style={{ touchAction: 'pan-x pan-y' }}
       >
-        <div
-          ref={contentRef}
-          data-fullbracket
-          className="flex w-max items-center p-3"
-          style={{
-            transform: `translate(${view.x}px, ${view.y}px) scale(${view.s})`,
-            transformOrigin: '0 0',
-          }}
-        >
-          <Node id={ROOT_ID} />
-          <Connector />
+        {/* Sized to the scaled content so the container scrolls natively. */}
+        <div style={{ width: dims.w * scale, height: dims.h * scale }}>
           <div
-            className={`flex w-40 shrink-0 flex-col items-center gap-1 rounded-lg border p-3 text-center ${
-              champ ? 'border-gold/50 bg-gold/[0.08] ring-1' : 'border-edge bg-surface'
-            }`}
+            ref={contentRef}
+            className="flex w-max items-center p-3"
+            style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}
           >
-            <Trophy className={`h-6 w-6 ${champ ? 'text-gold' : 'text-muted-2'}`} strokeWidth={2} />
-            {champ ? (
-              <>
-                <span className="text-2xl leading-none">{champ.flag}</span>
-                <span className="text-sm font-bold leading-tight">{champ.name}</span>
-                <span className="text-[0.55rem] font-bold uppercase tracking-wider text-gold">
-                  Champion
-                </span>
-              </>
-            ) : (
-              <span className="text-[0.65rem] font-medium leading-tight text-muted-2">Champion</span>
-            )}
+            <Node id={ROOT_ID} />
+            <Connector />
+            <div
+              className={`flex w-40 shrink-0 flex-col items-center gap-1 rounded-lg border p-3 text-center ${
+                champ ? 'border-gold/50 bg-gold/[0.08] ring-1' : 'border-edge bg-surface'
+              }`}
+            >
+              <Trophy className={`h-6 w-6 ${champ ? 'text-gold' : 'text-muted-2'}`} strokeWidth={2} />
+              {champ ? (
+                <>
+                  <span className="text-2xl leading-none">{champ.flag}</span>
+                  <span className="text-sm font-bold leading-tight">{champ.name}</span>
+                  <span className="text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                    Champion
+                  </span>
+                </>
+              ) : (
+                <span className="text-[0.65rem] font-medium leading-tight text-muted-2">Champion</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Floating controls */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-edge bg-surface-raised/95 p-1 shadow-lg shadow-black/30 backdrop-blur">
+          <button type="button" onClick={() => zoomBy(1 / 1.3)} className={roundBtn} aria-label="Zoom out">
+            <Minus className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+          <button type="button" onClick={fitNow} className={textBtn}>
+            <Scan className="h-4 w-4" strokeWidth={2.2} /> Fit
+          </button>
+          <button type="button" onClick={() => zoomBy(1.3)} className={roundBtn} aria-label="Zoom in">
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+          {!fullscreen ? (
+            <button type="button" onClick={() => setFullscreen(true)} className={textBtn}>
+              <Maximize2 className="h-4 w-4" strokeWidth={2.2} /> Full screen
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[90] flex flex-col bg-bg">
+        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
+          <span className="font-display text-lg leading-none">Your bracket</span>
+          <button
+            type="button"
+            onClick={() => setFullscreen(false)}
+            className="flex items-center gap-1 rounded-xl border border-edge bg-surface px-3 py-1.5 text-sm font-bold active:scale-95"
+          >
+            <X className="h-4 w-4" /> Done
+          </button>
+        </div>
+        <div className="relative flex-1">{board}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <p className="mb-2 text-center text-[0.7rem] text-muted-2">
+        Swipe to move · use + / − or Fit · tap a team to pick them
+      </p>
+      {board}
     </div>
   );
 }
