@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Team } from '@/types/team';
 import type { Predictions } from '@/types/bracket';
@@ -115,7 +115,7 @@ const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
 export default function FullBracket({ predictions, teamsByCode, onPick }: Props) {
   const resolved = resolveById(predictions);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [scale, setScale] = useState(0.6);
@@ -173,8 +173,15 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
   // we only preventDefault once a real drag/pinch starts.
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
-  useEffect(() => {
-    const sc = scrollRef.current;
+  // Callback ref so the handlers re-attach to whichever node is mounted
+  // (inline OR the full-screen portal) without any effect-timing race.
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const attachScroll = useCallback((sc: HTMLDivElement | null) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+    scrollRef.current = sc;
     if (!sc) return;
     let mode: 'none' | 'pan' | 'pinch' = 'none';
     let lastX = 0;
@@ -239,13 +246,13 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
     sc.addEventListener('touchmove', onMove, { passive: false });
     sc.addEventListener('touchend', onEnd);
     sc.addEventListener('touchcancel', onEnd);
-    return () => {
+    cleanupRef.current = () => {
       sc.removeEventListener('touchstart', onStart);
       sc.removeEventListener('touchmove', onMove);
       sc.removeEventListener('touchend', onEnd);
       sc.removeEventListener('touchcancel', onEnd);
     };
-  }, [fullscreen]);
+  }, []);
 
   function Node({ id }: { id: number }) {
     const m = resolved.get(id);
@@ -296,7 +303,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
   // Rendered in exactly one place: inline, or in the full-screen portal.
   const scrollEl = (
     <div
-      ref={scrollRef}
+      ref={attachScroll}
       className={
         fullscreen
           ? 'absolute inset-0 overflow-auto bg-black/10'
