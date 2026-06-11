@@ -21,6 +21,14 @@ const body = Hanken_Grotesk({
 export const metadata: Metadata = {
   title: 'World Cup 2026 Bracket Pool',
   description: 'Rank the groups, call the knockouts, and see who knows ball.',
+  manifest: '/manifest.webmanifest',
+  // iOS "Add to Home Screen": launch standalone with the WC26 name.
+  // The icon itself comes from src/app/apple-icon.png.
+  appleWebApp: {
+    capable: true,
+    title: 'WC26 Bracket',
+    statusBarStyle: 'black-translucent',
+  },
 };
 
 export const viewport: Viewport = {
