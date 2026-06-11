@@ -7,6 +7,7 @@ import { isPoolMember } from '@/lib/access';
 import { currentUserId } from '@/lib/auth';
 import { isLocked } from '@/lib/lock';
 import { isComplete, pruneDownstream, validatePredictions } from '@/lib/predictions';
+import { normalizeKnockout } from '@/lib/knockout-bracket';
 import { emptyPredictions } from '@/types/bracket';
 
 const postSchema = z.discriminatedUnion('action', [
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
       const src = await loadOwned(body.copyFrom, userId);
       if (src) {
         try {
-          predictions = pruneDownstream(validatePredictions(src.predictions));
+          predictions = normalizeKnockout(pruneDownstream(validatePredictions(src.predictions)));
         } catch {
           predictions = emptyPredictions();
         }
@@ -122,8 +123,10 @@ export async function PATCH(req: Request) {
     } catch {
       return NextResponse.json({ error: 'invalid predictions' }, { status: 400 });
     }
-    // Defense in depth: never persist a structurally stale chain.
-    set.predictions = pruneDownstream(validated);
+    // Defense in depth: never persist a structurally stale chain, and
+    // normalize the knockout sets to the bracket's actual matchup winners
+    // so a stored orphan can never push a round over its size.
+    set.predictions = normalizeKnockout(pruneDownstream(validated));
     // Changing picks after submitting requires a fresh submit; the
     // tiebreaker rewards the final submit time.
     if (bracket.submitted) {

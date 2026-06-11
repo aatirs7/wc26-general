@@ -197,6 +197,28 @@ export function resolveById(p: Predictions): Map<number, ResolvedMatchup> {
   return out;
 }
 
+// Reconcile the stored knockout sets with what the bracket structure
+// actually shows: each round becomes exactly the winners of its matchups,
+// walked in feeder order. This drops "orphans" (teams a round still holds
+// after an upstream group/third change even though they no longer win any
+// tie) and can never exceed a round's size, so the predictions stay valid
+// no matter how the picks were edited.
+export function normalizeKnockout(p: Predictions): Predictions {
+  const resolved = resolveBracket(p);
+  const winnersOf = (key: KoRound['key']): string[] =>
+    resolved[key].map((m) => m.winner).filter((c): c is string => c != null);
+  return {
+    ...p,
+    knockout: {
+      r16: winnersOf('r32'),
+      qf: winnersOf('r16'),
+      sf: winnersOf('qf'),
+      final: winnersOf('sf'),
+      champion: resolved.final[0]?.winner ?? undefined,
+    },
+  };
+}
+
 export function resolveBracket(p: Predictions): ResolvedBracket {
   const thirds = assignThirds(p);
   const winnerById = new Map<number, string | null>();

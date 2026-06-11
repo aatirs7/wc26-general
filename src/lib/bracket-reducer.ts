@@ -13,7 +13,7 @@ import {
 } from './constants';
 import { pruneDownstream, qualifiersOf } from './predictions';
 
-import type { FillKey } from './knockout-bracket';
+import { normalizeKnockout, type FillKey } from './knockout-bracket';
 
 export type BracketAction =
   | { type: 'load'; predictions: Predictions }
@@ -24,6 +24,15 @@ export type BracketAction =
   | { type: 'pickWinner'; fills: FillKey; winner: string; loser: string | null }
   | { type: 'clearStep'; step: 'groups' | 'thirds' | 'knockout' };
 
+// Every mutation runs through this: prune picks invalidated by an upstream
+// change, then normalize the knockout sets to exactly what the bracket
+// structure shows. Normalizing drops "orphan" advancers a round can be left
+// holding after an upstream edit, so a round can never overflow its size and
+// the saved predictions always validate.
+function settle(p: Predictions): Predictions {
+  return normalizeKnockout(pruneDownstream(p));
+}
+
 export function poolForRound(p: Predictions, round: KnockoutRoundKey): Set<string> {
   const idx = KNOCKOUT_ROUNDS.indexOf(round);
   if (idx === 0) return qualifiersOf(p);
@@ -33,7 +42,7 @@ export function poolForRound(p: Predictions, round: KnockoutRoundKey): Set<strin
 export function bracketReducer(state: Predictions, action: BracketAction): Predictions {
   switch (action.type) {
     case 'load':
-      return pruneDownstream(action.predictions);
+      return settle(action.predictions);
 
     case 'rankGroupTeam': {
       // Tap an unranked team to give it the next open finishing spot
@@ -48,7 +57,7 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
         if (!free) return state;
         g[free] = code;
       }
-      return pruneDownstream({
+      return settle({
         ...state,
         groups: { ...state.groups, [letter]: g },
       });
@@ -57,7 +66,7 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
     case 'toggleThird': {
       const { code } = action;
       if (state.thirdPlace.includes(code)) {
-        return pruneDownstream({
+        return settle({
           ...state,
           thirdPlace: state.thirdPlace.filter((c) => c !== code),
         });
@@ -74,7 +83,7 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
       const { round, code } = action;
       const picks = state.knockout[round];
       if (picks.includes(code)) {
-        return pruneDownstream({
+        return settle({
           ...state,
           knockout: { ...state.knockout, [round]: picks.filter((c) => c !== code) },
         });
@@ -112,13 +121,13 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
       const set = state.knockout[fills];
       if (set.includes(winner)) {
         // Tapping the current winner again clears the tie.
-        return pruneDownstream({
+        return settle({
           ...state,
           knockout: { ...state.knockout, [fills]: set.filter((c) => c !== winner) },
         });
       }
       const next = [...set.filter((c) => c !== loser), winner];
-      return pruneDownstream({
+      return settle({
         ...state,
         knockout: { ...state.knockout, [fills]: next },
       });
@@ -130,9 +139,9 @@ export function bracketReducer(state: Predictions, action: BracketAction): Predi
       const empty = { r16: [], qf: [], sf: [], final: [], champion: undefined };
       switch (action.step) {
         case 'groups':
-          return pruneDownstream({ ...state, groups: {} });
+          return settle({ ...state, groups: {} });
         case 'thirds':
-          return pruneDownstream({ ...state, thirdPlace: [] });
+          return settle({ ...state, thirdPlace: [] });
         case 'knockout':
           return { ...state, knockout: empty };
       }
