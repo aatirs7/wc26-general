@@ -304,5 +304,48 @@ body {
   animation: shine 4s linear infinite;
 }
 
+/* Sweeping shine across the home feature cards; the two run at different
+   speeds/offsets so they never sync, for a lively randomized feel. */
+.shine-sweep,
+.shine-sweep-2 {
+  position: relative;
+  overflow: hidden;
+}
+.shine-sweep::after,
+.shine-sweep-2::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #ffffff 30%, transparent), transparent);
+  transform: translateX(-220%) skewX(-20deg);
+}
+@keyframes shine-sweep {
+  0% { transform: translateX(-220%) skewX(-20deg); }
+  16%, 100% { transform: translateX(340%) skewX(-20deg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .shine-sweep::after { animation: shine-sweep 6.5s ease-in-out 0.4s infinite; }
+  .shine-sweep-2::after { animation: shine-sweep 5.3s ease-in-out 2.6s infinite; }
+}
+
+/* Your own row on the leaderboard: a gentle pulsing accent outline so you
+   can spot yourself at a glance (outline, so it never fights the podium
+   box-shadows on a top-three row). */
+.me-pulse {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+@keyframes me-pulse {
+  0%, 100% { outline-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+  50% { outline-color: color-mix(in srgb, var(--accent) 90%, transparent); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .me-pulse { animation: me-pulse 2.2s ease-in-out infinite; }
+}
+
 ::-webkit-scrollbar { width: 0; height: 0; }
 * { scrollbar-width: none; }

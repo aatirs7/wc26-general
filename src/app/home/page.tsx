@@ -258,7 +258,7 @@ export default async function HomePage({
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-live/15 ring-1 ring-live/40">
           <Radio className="h-5 w-5 text-live" strokeWidth={2.2} />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-center">
           <div className="font-display text-xl leading-none text-live">Match Day</div>
           <div className="mt-0.5 text-xs text-muted">Live scores, your picks & next kickoff</div>
         </div>
@@ -327,7 +327,7 @@ export default async function HomePage({
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '210ms' }}>
         <Link
           href={`/chat${poolQ}`}
-          className="flex flex-col items-center gap-3 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 text-center active:scale-[0.98]"
+          className="shine-sweep flex flex-col items-center gap-3 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 text-center active:scale-[0.98]"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
             <MessageCircle className="h-5 w-5 text-gold" strokeWidth={2.2} />
@@ -339,7 +339,7 @@ export default async function HomePage({
         </Link>
         <Link
           href="/predict"
-          className="flex flex-col items-center gap-3 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 text-center active:scale-[0.98]"
+          className="shine-sweep-2 flex flex-col items-center gap-3 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 text-center active:scale-[0.98]"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/40">
             <Target className="h-5 w-5 text-accent" strokeWidth={2.2} />
