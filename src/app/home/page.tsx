@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, groupStandings, matches, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
+import { brackets, bracketScores, groupStandings, matchPredictions, matches, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import RememberPool from '@/components/RememberPool';
@@ -134,32 +134,44 @@ export default async function HomePage({
     }
 
     const bracketByOwner = new Map(poolBrackets.map((b) => [b.ownerId, b]));
-    const rows = members.map((m) => {
+    // Score-prediction bonus per user (global), so the rank and points here
+    // are the same combined total the leaderboard and daily snapshot use.
+    const memberIds = members.map((m) => m.userId);
+    const predRows = memberIds.length
+      ? await db
+          .select({ userId: matchPredictions.userId, points: matchPredictions.points })
+          .from(matchPredictions)
+          .where(inArray(matchPredictions.userId, memberIds))
+      : [];
+    const bonusByUser = new Map<string, number>();
+    for (const p of predRows) bonusByUser.set(p.userId, (bonusByUser.get(p.userId) ?? 0) + p.points);
+
+    // Combined standings, sorted and ranked exactly like the leaderboard and
+    // the saved snapshot the recap compares against.
+    const standings = members.map((m) => {
       const b = bracketByOwner.get(m.userId);
       return {
         ownerId: m.userId,
-        points: b?.totalPoints ?? 0,
-        tiebreak: b ? (tiebreakByBracket.get(b.id) ?? 0) : 0,
+        combined: (b?.totalPoints ?? 0) + (bonusByUser.get(m.userId) ?? 0),
         submitted: b?.submitted ?? false,
+        tiebreak: b ? tiebreakByBracket.get(b.id) ?? 0 : 0,
         lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
       };
     });
-    rows.sort((a, b) => {
+    standings.sort((a, b) => {
+      if (b.combined !== a.combined) return b.combined - a.combined;
       if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
-      if (b.points !== a.points) return b.points - a.points;
       if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
       return a.lockedAtMs - b.lockedAtMs;
     });
-    let rank = 0;
     const curRank = new Map<string, number>();
     const curPoints = new Map<string, number>();
-    for (const r of rows) {
-      curPoints.set(r.ownerId, r.points);
-      if (r.submitted) {
-        rank += 1;
-        curRank.set(r.ownerId, rank);
-        if (r.ownerId === userId) myRank = rank;
-      }
+    let rank = 0;
+    for (const s of standings) {
+      rank += 1;
+      curRank.set(s.ownerId, rank);
+      curPoints.set(s.ownerId, s.combined);
+      if (s.ownerId === userId) myRank = rank;
     }
 
     // Daily recap: movement since the morning snapshot. Only meaningful
@@ -240,7 +252,7 @@ export default async function HomePage({
         id: mine.id,
         name: mine.name,
         submitted: mine.submitted,
-        points: mine.totalPoints,
+        points: mine.totalPoints + (bonusByUser.get(userId) ?? 0),
         complete: isComplete(mine.predictions),
       };
 

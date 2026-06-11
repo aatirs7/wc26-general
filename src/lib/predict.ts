@@ -3,7 +3,7 @@
 // else scores nothing (kept deliberately simple).
 
 export const PREDICT_OPEN_MS = 24 * 60 * 60 * 1000;
-export const PREDICT_EXACT_POINTS = 3;
+export const PREDICT_EXACT_POINTS = 1;
 export const PREDICT_MAX_GOALS = 20;
 
 export type PredictState = 'upcoming' | 'open' | 'closed';
