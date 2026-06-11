@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Sparkles } from 'lucide-react';
-import InstallGuide from './me/InstallGuide';
+import Link from 'next/link';
+import { X, Sparkles, ArrowRight } from 'lucide-react';
 
 const KEY = 'wc26_install_prompt_dismissed';
 
@@ -61,22 +61,28 @@ export default function InstallPrompt() {
             </div>
             <h2 className="mt-1 font-display text-2xl leading-none">Add it to your home screen</h2>
             <p className="mt-1 text-sm text-muted">
-              Install the app for a full-screen, faster, app-like experience. Takes a few taps:
+              Install the app for a full-screen, faster, app-like experience.
             </p>
           </div>
         </div>
 
-        <div className="mt-3">
-          <InstallGuide />
+        <div className="mt-4 space-y-2">
+          <Link
+            href="/me#install"
+            onClick={dismiss}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent text-base font-bold text-[var(--accent-ink)] shadow-lg shadow-accent/20 active:scale-95"
+          >
+            Show me how
+            <ArrowRight className="h-5 w-5" strokeWidth={2.4} />
+          </Link>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="min-h-11 w-full rounded-xl border border-edge text-sm font-semibold text-muted active:scale-95"
+          >
+            Maybe later
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={dismiss}
-          className="mt-3 min-h-11 w-full rounded-xl border border-edge text-sm font-semibold text-muted active:scale-95"
-        >
-          Maybe later
-        </button>
       </div>
     </div>
   );

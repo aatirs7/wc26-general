@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Sparkles } from 'lucide-react';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { brackets, groupStandings, matches, poolMembers, pools, users } from '@/lib/schema';
@@ -161,8 +162,17 @@ export default async function MePage() {
 
       {badges.length > 0 ? <Achievements badges={badges} /> : null}
 
-      <section className="space-y-3">
-        <h2 className="text-center font-display text-xl text-muted">Add to home screen</h2>
+      <section id="install" className="scroll-mt-20 space-y-3">
+        <div className="space-y-1 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-accent">
+            <Sparkles className="h-4 w-4" strokeWidth={2.4} />
+            <span className="text-[0.7rem] font-bold uppercase tracking-[0.2em]">Best experience</span>
+          </div>
+          <h2 className="font-display text-2xl leading-none">Add it to your home screen</h2>
+          <p className="text-sm text-muted">
+            Install the app for a full-screen, faster, app-like experience. Takes a few taps:
+          </p>
+        </div>
         <InstallGuide />
       </section>
     </div>
