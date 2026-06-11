@@ -120,10 +120,6 @@ export default function Onboard({
   const input =
     'min-h-13 w-full rounded-2xl border border-edge bg-white/[0.03] px-4 text-center text-lg font-semibold outline-none focus:border-accent';
 
-  const credit = (
-    <p className="pt-1 text-center text-xs text-muted-2">Made by Aatir Siddiqui</p>
-  );
-
   // Post-create: show the invite code and link before continuing.
   if (created) {
     return (
@@ -145,7 +141,6 @@ export default function Onboard({
         >
           Continue to your bracket
         </button>
-        {credit}
       </div>
     );
   }
@@ -204,7 +199,6 @@ export default function Onboard({
         >
           Log in with your name
         </button>
-        {credit}
       </div>
     );
   }
@@ -246,7 +240,6 @@ export default function Onboard({
           Back
         </button>
         {error ? <p className="text-center text-sm text-live">{error}</p> : null}
-        {credit}
       </form>
     );
   }
@@ -314,7 +307,6 @@ export default function Onboard({
         </button>
       )}
       {error ? <p className="text-center text-sm text-live">{error}</p> : null}
-      {credit}
     </form>
   );
 }
