@@ -11,6 +11,7 @@ import {
   ArrowRight,
   MessageCircle,
   Target,
+  Radio,
   type LucideIcon,
 } from 'lucide-react';
 import { cookies } from 'next/headers';
@@ -244,6 +245,22 @@ export default async function HomePage({
           </>
         )}
       </section>
+
+      {/* Match Day live hub */}
+      <Link
+        href={`/live${poolQ}`}
+        className="reveal flex items-center gap-3 rounded-[1.1rem] border border-live/40 bg-live/[0.1] p-4 active:scale-[0.99]"
+        style={{ animationDelay: '100ms' }}
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-live/15 ring-1 ring-live/40">
+          <Radio className="h-5 w-5 text-live" strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-xl leading-none text-live">Match Day</div>
+          <div className="mt-0.5 text-xs text-muted">Live scores, your picks & next kickoff</div>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-live" />
+      </Link>
 
       {/* Overview: rank + points */}
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '120ms' }}>

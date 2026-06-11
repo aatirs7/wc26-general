@@ -12,6 +12,7 @@ import RenameSelf from '@/components/me/RenameSelf';
 import BracketControls from '@/components/me/BracketControls';
 import InstallGuide from '@/components/me/InstallGuide';
 import Achievements from '@/components/me/Achievements';
+import CollapsibleSection from '@/components/me/CollapsibleSection';
 import SwitchPlayer from '@/components/auth/SwitchPlayer';
 import InviteShare from '@/components/pools/InviteShare';
 
@@ -123,8 +124,7 @@ export default async function MePage() {
         <SwitchPlayer />
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-center font-display text-xl text-muted">My bracket</h2>
+      <CollapsibleSection title="My brackets" count={myBrackets.length}>
         {myBrackets.length === 0 ? (
           <p className="text-center text-sm text-muted">
             You are not in a group yet. Create or join one from the home screen.
@@ -157,7 +157,7 @@ export default async function MePage() {
             )}
           </div>
         ))}
-      </section>
+      </CollapsibleSection>
 
       {badges.length > 0 ? <Achievements badges={badges} /> : null}
 
