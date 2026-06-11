@@ -176,9 +176,19 @@ export default async function HomePage({
         .where(inArray(users.id, members.map((m) => m.userId)));
       const nameByUser = new Map(nameRows.map((n) => [n.id, n.name]));
 
-      let climber: RecapData['climber'] = null;
-      let faller: RecapData['faller'] = null;
-      let gainer: RecapData['gainer'] = null;
+      // Only call out a standout: a UNIQUE top mover. When lots of people move
+      // together (e.g. they all share one live group-leader point), there is no
+      // single "most", so we leave that line out instead of naming someone
+      // arbitrarily from the tie.
+      let climberName: string | null = null;
+      let climberUp = 0;
+      let climberTies = 0;
+      let fallerName: string | null = null;
+      let fallerDown = 0;
+      let fallerTies = 0;
+      let gainerName: string | null = null;
+      let gainerPts = 0;
+      let gainerTies = 0;
       for (const s of snaps) {
         if (s.userId === userId) continue; // the "you" line already covers the viewer
         const name = nameByUser.get(s.userId) ?? '?';
@@ -186,11 +196,32 @@ export default async function HomePage({
         const gained = (curPoints.get(s.userId) ?? 0) - s.points;
         if (s.rank != null && nowRank != null) {
           const up = s.rank - nowRank;
-          if (up > 0 && (!climber || up > climber.up)) climber = { name, up };
-          if (up < 0 && (!faller || -up > faller.down)) faller = { name, down: -up };
+          if (up > 0) {
+            if (up > climberUp) {
+              climberUp = up;
+              climberName = name;
+              climberTies = 1;
+            } else if (up === climberUp) climberTies += 1;
+          } else if (up < 0) {
+            const down = -up;
+            if (down > fallerDown) {
+              fallerDown = down;
+              fallerName = name;
+              fallerTies = 1;
+            } else if (down === fallerDown) fallerTies += 1;
+          }
         }
-        if (gained > 0 && (!gainer || gained > gainer.pts)) gainer = { name, pts: gained };
+        if (gained > 0) {
+          if (gained > gainerPts) {
+            gainerPts = gained;
+            gainerName = name;
+            gainerTies = 1;
+          } else if (gained === gainerPts) gainerTies += 1;
+        }
       }
+      const climber = climberTies === 1 && climberName ? { name: climberName, up: climberUp } : null;
+      const faller = fallerTies === 1 && fallerName ? { name: fallerName, down: fallerDown } : null;
+      const gainer = gainerTies === 1 && gainerName ? { name: gainerName, pts: gainerPts } : null;
       const mySnap = snaps.find((s) => s.userId === userId);
       const you =
         mySnap && myRank != null
