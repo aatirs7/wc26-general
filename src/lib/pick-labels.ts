@@ -1,10 +1,8 @@
 import type { Predictions } from '@/types/bracket';
-import { GROUP_LETTERS } from './constants';
+import { GROUP_LETTERS, type GroupLetter } from './constants';
 
 // Short tag for how far a bracket backs each team (furthest stage wins).
-// Used to highlight a viewer's picks on match lists; disambiguates a match
-// where both sides are in the bracket, e.g. one team to win its group and
-// the other as a best third.
+// Used for counting how many of a viewer's picks are in play.
 export function pickLabels(p: Predictions): Map<string, string> {
   const m = new Map<string, string>();
   const set = (code: string | undefined, label: string) => {
@@ -22,4 +20,31 @@ export function pickLabels(p: Predictions): Map<string, string> {
   }
   for (const c of p.thirdPlace) set(c, '3rd');
   return m;
+}
+
+// Plain-language description of what the bracket predicted for a team in a
+// given fixture. Group matches describe the group-finish call; knockout
+// matches describe how far the team is backed to go.
+export function pickNote(
+  p: Predictions,
+  code: string,
+  stage: string,
+  groupLetter: string | null,
+  teamName: string,
+): string | null {
+  if (stage === 'group') {
+    if (groupLetter) {
+      const g = p.groups[groupLetter as GroupLetter];
+      if (g?.first === code) return `You picked ${teamName} to win Group ${groupLetter}`;
+      if (g?.second === code) return `You picked ${teamName} to finish 2nd in Group ${groupLetter}`;
+    }
+    if (p.thirdPlace.includes(code)) return `You backed ${teamName} as a best third`;
+    return null;
+  }
+  if (p.knockout.champion === code) return `You picked ${teamName} to win it all`;
+  if (p.knockout.final.includes(code)) return `You picked ${teamName} to reach the Final`;
+  if (p.knockout.sf.includes(code)) return `You picked ${teamName} to reach the Semi-finals`;
+  if (p.knockout.qf.includes(code)) return `You picked ${teamName} to reach the Quarter-finals`;
+  if (p.knockout.r16.includes(code)) return `You picked ${teamName} to reach the Round of 16`;
+  return null;
 }

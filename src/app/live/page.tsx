@@ -139,10 +139,6 @@ export default async function LivePage({
         </div>
       </section>
 
-      <p className="text-center text-[0.7rem] text-muted-2">
-        Your picks are tagged with how far you backed them (1st, R16, Final…).
-      </p>
-
       {nextMatch ? (
         <section className="card space-y-3 p-4">
           <div className="flex items-center justify-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-gold">
@@ -169,7 +165,7 @@ export default async function LivePage({
             Live now
           </h2>
           {liveMatches.map((m) => (
-            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />
+            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} />
           ))}
         </section>
       ) : null}
@@ -177,7 +173,7 @@ export default async function LivePage({
       <section className="space-y-2">
         <h2 className="font-display text-2xl">Today</h2>
         {todayMatches.length > 0 ? (
-          todayMatches.map((m) => <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />)
+          todayMatches.map((m) => <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} />)
         ) : (
           <p className="card p-4 text-center text-sm text-muted">
             {liveMatches.length > 0 ? 'That is every match today.' : 'No matches today. The next kickoff is counting down above.'}

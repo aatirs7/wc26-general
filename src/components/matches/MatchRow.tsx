@@ -20,9 +20,8 @@ export interface MatchRowData {
 interface Props {
   match: MatchRowData;
   teamsByCode: Map<string, Team>;
-  // code -> short label for how far the viewer's bracket backs that team
-  // (e.g. "1st", "R16", "Final"). Shown as an accent tag.
-  pickLabels?: Map<string, string>;
+  // Plain-language notes about the viewer's picks in this match.
+  notes?: string[];
 }
 
 function Side({
@@ -32,7 +31,6 @@ function Side({
   isWinner,
   played,
   teamsByCode,
-  pickLabel,
 }: {
   code: string | null;
   placeholder: string | null;
@@ -40,7 +38,6 @@ function Side({
   isWinner: boolean;
   played: boolean;
   teamsByCode: Map<string, Team>;
-  pickLabel?: string;
 }) {
   const team = code ? teamsByCode.get(code) : undefined;
   return (
@@ -51,11 +48,6 @@ function Side({
       <span className="flex-1 truncate text-sm font-semibold">
         {team?.name ?? placeholder ?? 'TBD'}
       </span>
-      {pickLabel ? (
-        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-accent">
-          {pickLabel}
-        </span>
-      ) : null}
       {played ? (
         <span className={`font-display text-xl tabular-nums ${isWinner ? 'text-accent' : ''}`}>
           {score}
@@ -65,43 +57,51 @@ function Side({
   );
 }
 
-export default function MatchRow({ match, teamsByCode, pickLabels }: Props) {
+export default function MatchRow({ match, teamsByCode, notes }: Props) {
   const played = match.homeScore !== null && match.awayScore !== null;
-  const homeLabel = match.homeCode ? pickLabels?.get(match.homeCode) : undefined;
-  const awayLabel = match.awayCode ? pickLabels?.get(match.awayCode) : undefined;
+  const hasNotes = !!notes && notes.length > 0;
   return (
-    <div className={`card flex items-stretch gap-3 p-3 ${homeLabel || awayLabel ? 'border-accent/40' : ''}`}>
-      <div className="min-w-0 flex-1 space-y-2">
-        <Side
-          code={match.homeCode}
-          placeholder={match.homePlaceholder}
-          score={match.homeScore}
-          isWinner={match.winnerCode != null && match.winnerCode === match.homeCode}
-          played={played}
-          teamsByCode={teamsByCode}
-          pickLabel={homeLabel}
-        />
-        <Side
-          code={match.awayCode}
-          placeholder={match.awayPlaceholder}
-          score={match.awayScore}
-          isWinner={match.winnerCode != null && match.winnerCode === match.awayCode}
-          played={played}
-          teamsByCode={teamsByCode}
-          pickLabel={awayLabel}
-        />
-      </div>
-      <div className="flex w-16 flex-col items-end justify-between border-l border-edge pl-2.5 text-right">
-        <StatusPill status={match.status} />
-        {match.status === 'scheduled' ? (
-          <span className="font-display text-base leading-none text-foreground">
-            {matchTime(match.kickoffUtc)}
+    <div className={`card p-3 ${hasNotes ? 'border-accent/40' : ''}`}>
+      <div className="flex items-stretch gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <Side
+            code={match.homeCode}
+            placeholder={match.homePlaceholder}
+            score={match.homeScore}
+            isWinner={match.winnerCode != null && match.winnerCode === match.homeCode}
+            played={played}
+            teamsByCode={teamsByCode}
+          />
+          <Side
+            code={match.awayCode}
+            placeholder={match.awayPlaceholder}
+            score={match.awayScore}
+            isWinner={match.winnerCode != null && match.winnerCode === match.awayCode}
+            played={played}
+            teamsByCode={teamsByCode}
+          />
+        </div>
+        <div className="flex w-16 flex-col items-end justify-between border-l border-edge pl-2.5 text-right">
+          <StatusPill status={match.status} />
+          {match.status === 'scheduled' ? (
+            <span className="font-display text-base leading-none text-foreground">
+              {matchTime(match.kickoffUtc)}
+            </span>
+          ) : null}
+          <span className="text-[0.62rem] font-semibold uppercase tracking-wider text-muted-2">
+            {match.groupLetter ? `Group ${match.groupLetter}` : match.roundLabel}
           </span>
-        ) : null}
-        <span className="text-[0.62rem] font-semibold uppercase tracking-wider text-muted-2">
-          {match.groupLetter ? `Group ${match.groupLetter}` : match.roundLabel}
-        </span>
+        </div>
       </div>
+      {hasNotes ? (
+        <div className="mt-2 space-y-0.5 border-t border-edge/50 pt-2">
+          {notes!.map((n, i) => (
+            <p key={i} className="text-[0.72rem] font-semibold leading-snug text-accent">
+              {n}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

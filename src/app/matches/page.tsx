@@ -4,7 +4,8 @@ import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { brackets, groupStandings, matches, poolMembers, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { pickLabels } from '@/lib/pick-labels';
+import { pickNote } from '@/lib/pick-labels';
+import type { Predictions } from '@/types/bracket';
 import { GROUP_LETTERS } from '@/lib/constants';
 import { DISPLAY_TZ_LABEL, matchDayKey, matchDayLabel } from '@/lib/format-time';
 import MatchRow from '@/components/matches/MatchRow';
@@ -21,9 +22,9 @@ export default async function MatchesPage({
   const { view } = await searchParams;
   const showGroups = view === 'groups';
 
-  // Tag fixtures with the signed-in player's picks (from their active pool).
+  // Note fixtures with the signed-in player's picks (from their active pool).
   const userId = await currentUserId();
-  let labels: Map<string, string> | undefined;
+  let myPredictions: Predictions | null = null;
   if (userId) {
     const memberships = await db
       .select({ poolId: poolMembers.poolId })
@@ -40,7 +41,7 @@ export default async function MatchesPage({
         .from(brackets)
         .where(and(eq(brackets.ownerId, userId), eq(brackets.poolId, active.poolId)))
         .limit(1);
-      if (mine) labels = pickLabels(mine.predictions);
+      if (mine) myPredictions = mine.predictions;
     }
   }
 
@@ -48,6 +49,23 @@ export default async function MatchesPage({
   const teamsByCode = new Map(allTeams.map((t) => [t.code, t]));
 
   const allMatches = await db.select().from(matches).orderBy(asc(matches.kickoffUtc), asc(matches.id));
+
+  const notesByMatch = new Map<number, string[]>();
+  if (myPredictions) {
+    for (const m of allMatches) {
+      const ns: string[] = [];
+      if (m.homeCode) {
+        const n = pickNote(myPredictions, m.homeCode, m.stage, m.groupLetter, teamsByCode.get(m.homeCode)?.name ?? m.homeCode);
+        if (n) ns.push(n);
+      }
+      if (m.awayCode) {
+        const n = pickNote(myPredictions, m.awayCode, m.stage, m.groupLetter, teamsByCode.get(m.awayCode)?.name ?? m.awayCode);
+        if (n) ns.push(n);
+      }
+      if (ns.length) notesByMatch.set(m.id, ns);
+    }
+  }
+
   const anyLive = allMatches.some((m) => m.status === 'live' || m.status === 'ht');
   // Server component rendered per request (force-dynamic), so reading the
   // clock here is fine.
@@ -113,11 +131,6 @@ export default async function MatchesPage({
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
           <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
-          {labels && labels.size > 0 ? (
-            <p className="-mt-3 text-center text-[0.7rem] text-muted-2">
-              Your picks are tagged with how far you backed them.
-            </p>
-          ) : null}
           {[...upcoming, ...past].map((day) => (
             <section key={day}>
               <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur lg:top-16">
@@ -125,7 +138,7 @@ export default async function MatchesPage({
               </h2>
               <div className="space-y-2">
                 {byDay.get(day)!.map((m) => (
-                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />
+                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={notesByMatch.get(m.id)} />
                 ))}
               </div>
             </section>
