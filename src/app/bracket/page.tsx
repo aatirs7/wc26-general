@@ -109,10 +109,10 @@ export default async function BracketPage({
         )
       ) : locked ? (
         <div className="space-y-4 py-2">
-          <header>
+          <header className="text-center">
             <h1 className="font-display text-4xl leading-none">{bracket.name}</h1>
             <p className="mt-1 text-sm text-muted">
-              {bracket.submitted ? 'Locked in. Good luck.' : 'Not submitted before kickoff.'}
+              {bracket.submitted ? 'Locked in. May the best bracket win.' : 'Not submitted before kickoff.'}
             </p>
           </header>
           <BracketSummary predictions={bracket.predictions} teams={allTeams} />
