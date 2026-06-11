@@ -316,22 +316,24 @@ export default function BracketBuilder({ bracket, teams, copySources = [] }: Pro
         )}
       </div>
 
-      {/* Once submitted the bar disappears; navigate via the step tabs up
-          top. Editing a pick clears submitted, so it comes back to re-submit. */}
-      {!submitted ? (
-        <SaveSubmitBar
-          saveStatus={saveStatus}
-          canBack={stepIndex > 0}
-          canNext={stepIndex < STEP_ORDER.length - 1}
-          onBack={() => setStep(STEP_ORDER[stepIndex - 1])}
-          onNext={() => setStep(STEP_ORDER[stepIndex + 1])}
-          showSubmit={step === 'knockout'}
-          submitEnabled={complete}
-          submitted={submitted}
-          submitting={submitting}
-          onSubmit={submit}
-        />
-      ) : null}
+      {/* The bar stays visible at all times so the submit / re-submit action
+          is always reachable. Editing a pick clears submitted (server-side),
+          turning "Submitted" back into "Submit bracket". Once the bracket is
+          complete the submit button shows on every step so a change made on
+          the groups or thirds tab can still be re-submitted without hunting
+          for the knockout view. */}
+      <SaveSubmitBar
+        saveStatus={saveStatus}
+        canBack={stepIndex > 0}
+        canNext={stepIndex < STEP_ORDER.length - 1}
+        onBack={() => setStep(STEP_ORDER[stepIndex - 1])}
+        onNext={() => setStep(STEP_ORDER[stepIndex + 1])}
+        showSubmit={complete || step === 'knockout'}
+        submitEnabled={complete}
+        submitted={submitted}
+        submitting={submitting}
+        onSubmit={submit}
+      />
     </div>
   );
 }

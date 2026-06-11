@@ -21,16 +21,35 @@ export default function SaveSubmitBar(props: Props) {
     showSubmit, submitEnabled, submitted, submitting, onSubmit,
   } = props;
 
-  // Quiet by default: only speak up while saving or if a save failed.
+  // Quiet by default: speak up while saving, if a save failed, or when a
+  // complete bracket has changes that have not been submitted yet (so a
+  // post-submit edit does not silently leave the bracket off the board).
+  const tone =
+    saveStatus === 'saving'
+      ? 'saving'
+      : saveStatus === 'error'
+        ? 'error'
+        : showSubmit && submitEnabled && !submitted
+          ? 'unsubmitted'
+          : null;
+
   const note =
-    saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed' : '';
+    tone === 'saving'
+      ? 'Saving…'
+      : tone === 'error'
+        ? 'Save failed'
+        : tone === 'unsubmitted'
+          ? 'Not submitted'
+          : '';
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 px-4">
       <div className="glass mx-auto flex max-w-md items-center gap-2 rounded-2xl px-3 py-2.5 shadow-xl shadow-black/40">
         {note ? (
           <span
-            className={`text-[0.7rem] font-medium ${saveStatus === 'error' ? 'text-live' : 'text-muted'}`}
+            className={`text-[0.7rem] font-medium ${
+              tone === 'error' ? 'text-live' : tone === 'unsubmitted' ? 'text-accent' : 'text-muted'
+            }`}
           >
             {note}
           </span>
