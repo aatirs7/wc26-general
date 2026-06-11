@@ -5,6 +5,7 @@
 
 import { eq } from 'drizzle-orm';
 import type { Predictions } from '@/types/bracket';
+import { computeLiveStandings } from './standings';
 import {
   FINAL_STATUSES,
   GROUP_LETTERS,
@@ -23,6 +24,13 @@ export interface MatchFact {
   status: string;
   groupLetter: string | null;
   winnerCode: string | null;
+  // Optional live score so the engine can build a provisional group table
+  // from in-progress matches. Absent in older callers/tests, which then
+  // simply contribute no live points.
+  homeCode?: string | null;
+  awayCode?: string | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
 }
 
 export interface StandingFact {
@@ -39,6 +47,11 @@ export interface Facts {
   bestThirds: Set<string>;
   reached: Record<KnockoutRoundKey, Set<string>>;
   champion: string | null;
+  // Live (provisional) group stage: groups that have kicked off but are not
+  // yet decided, with their current top-2 derived from live match scores.
+  // These pay out provisionally and harden once the group finishes.
+  startedGroups: Set<string>;
+  liveTop2ByGroup: Map<string, Set<string>>;
 }
 
 const isFinal = (status: string) =>
@@ -82,6 +95,21 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (m.stage === 'final') champion = m.winnerCode;
   }
 
+  // Live group tables from the match scores (counts in-progress games), so
+  // a group that has kicked off but not finished still produces a current
+  // top-2. Decided groups keep using the provider's authoritative table.
+  const liveRows = computeLiveStandings(matchRows);
+  const liveTop2ByGroup = new Map<string, Set<string>>();
+  const liveGroups = new Set<string>();
+  for (const r of liveRows) {
+    liveGroups.add(r.groupLetter);
+    if (r.rank === 1 || r.rank === 2) {
+      if (!liveTop2ByGroup.has(r.groupLetter)) liveTop2ByGroup.set(r.groupLetter, new Set());
+      liveTop2ByGroup.get(r.groupLetter)!.add(r.teamCode);
+    }
+  }
+  const startedGroups = new Set([...liveGroups].filter((g) => !decidedGroups.has(g)));
+
   return {
     decidedGroups,
     allGroupsDecided: decidedGroups.size === GROUP_LETTERS.length,
@@ -89,6 +117,8 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     bestThirds,
     reached,
     champion,
+    startedGroups,
+    liveTop2ByGroup,
   };
 }
 
@@ -97,6 +127,18 @@ export function scoreBracket(p: Predictions, facts: Facts): Record<RoundKey, num
 
   for (const letter of facts.decidedGroups) {
     const actual = facts.top2ByGroup.get(letter);
+    if (!actual) continue;
+    const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
+    for (const pick of [g?.first, g?.second]) {
+      if (pick && actual.has(pick)) scores.groups += SCORING.groupTop2;
+    }
+  }
+
+  // Live (provisional) points: groups that have kicked off but are not yet
+  // decided pay out on their current top-2, so the leaderboard moves during
+  // matches. These shift as scores change and lock in when the group ends.
+  for (const letter of facts.startedGroups) {
+    const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
     for (const pick of [g?.first, g?.second]) {
@@ -129,6 +171,22 @@ export function totalOf(scores: Record<RoundKey, number>): number {
   return ROUND_KEYS.reduce((sum, k) => sum + scores[k], 0);
 }
 
+// The portion of a bracket's points that is still provisional: group points
+// from groups that have kicked off but not finished. Used to badge "live"
+// points in the UI. Already included in scoreBracket's total.
+export function provisionalPoints(p: Predictions, facts: Facts): number {
+  let pts = 0;
+  for (const letter of facts.startedGroups) {
+    const actual = facts.liveTop2ByGroup.get(letter);
+    if (!actual) continue;
+    const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
+    for (const pick of [g?.first, g?.second]) {
+      if (pick && actual.has(pick)) pts += SCORING.groupTop2;
+    }
+  }
+  return pts;
+}
+
 // Maximum points a perfect bracket could have banked given how far the
 // tournament has actually progressed. Used as the accuracy denominator.
 export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
@@ -138,6 +196,9 @@ export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
   let total = 0;
   // Each decided group: at best both top-2 picks correct.
   total += facts.decidedGroups.size * (SCORING.groupTop2 * 2);
+  // In-progress groups pay provisional top-2 points, so count them too or
+  // accuracy could read above 100% while a group is live.
+  total += facts.startedGroups.size * (SCORING.groupTop2 * 2);
   // Best-thirds only resolve once every group is in.
   if (facts.allGroupsDecided) total += SCORING.thirdPlace * THIRD_PLACE_PICKS;
   // Each completed knockout match yields one advancer worth the round weight.
@@ -160,6 +221,10 @@ export async function rescoreAll(): Promise<void> {
       status: matches.status,
       groupLetter: matches.groupLetter,
       winnerCode: matches.winnerCode,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
     })
     .from(matches);
   const standingRows = await db

@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
+import { brackets, bracketScores, groupStandings, matches, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import RememberPool from '@/components/RememberPool';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
@@ -82,6 +83,7 @@ export default async function HomePage({
   // leaderboard's ordering (submitted first, then points, then tiebreak).
   let myRank: number | null = null;
   let fieldSize = 0;
+  let myLive = 0;
   let myBracket:
     | { id: string; name: string; submitted: boolean; points: number; complete: boolean }
     | null = null;
@@ -192,6 +194,30 @@ export default async function HomePage({
         points: mine.totalPoints,
         complete: isComplete(mine.predictions),
       };
+
+      // Provisional (live) portion of my points: group positions that count
+      // now but harden when each group finishes.
+      const matchRows = await db
+        .select({
+          stage: matches.stage,
+          status: matches.status,
+          groupLetter: matches.groupLetter,
+          winnerCode: matches.winnerCode,
+          homeCode: matches.homeCode,
+          awayCode: matches.awayCode,
+          homeScore: matches.homeScore,
+          awayScore: matches.awayScore,
+        })
+        .from(matches);
+      const standingRows = await db
+        .select({
+          groupLetter: groupStandings.groupLetter,
+          teamCode: groupStandings.teamCode,
+          rank: groupStandings.rank,
+          isBestThird: groupStandings.isBestThird,
+        })
+        .from(groupStandings);
+      myLive = provisionalPoints(mine.predictions, buildFacts(matchRows, standingRows));
     }
   }
 
@@ -291,9 +317,15 @@ export default async function HomePage({
           <div className="mt-2 font-display text-4xl leading-none text-accent">
             {myBracket?.points ?? 0}
           </div>
-          <div className="mt-1 text-xs text-muted">
-            {locked ? 'Live scoring' : 'Scores once it starts'}
-          </div>
+          {myLive > 0 ? (
+            <div className="mt-1 text-[0.6rem] font-bold uppercase tracking-wider text-gold">
+              ● {myLive} live
+            </div>
+          ) : (
+            <div className="mt-1 text-xs text-muted">
+              {locked ? 'Live scoring' : 'Scores once it starts'}
+            </div>
+          )}
         </div>
       </section>
 

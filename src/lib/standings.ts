@@ -2,6 +2,87 @@
 // advance, plus the 8 best third-placed teams ranked across all groups
 // by points, then goal difference, then goals for.
 
+// Statuses that carry a usable score (a kicked-off match), so in-progress
+// games feed the live table the moment a goal lands.
+const COUNTED_STATUS = new Set(['live', 'ht', 'ft', 'et', 'pens']);
+
+export interface LiveStandingRow {
+  groupLetter: string;
+  teamCode: string;
+  played: number;
+  points: number;
+  gd: number;
+  gf: number;
+  rank: number;
+}
+
+export interface LiveMatchInput {
+  stage: string;
+  status: string;
+  groupLetter: string | null;
+  homeCode?: string | null;
+  awayCode?: string | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
+}
+
+// Builds the current group tables straight from the match scores, counting
+// live/half-time games at their score so far. This is what powers the live
+// rankings: the provider's own standings table only updates once a match is
+// final, but the match scores update on every goal. Ranking is points, then
+// goal difference, then goals for, then team code for a stable order (the
+// official head-to-head tiebreakers only matter once a group is final).
+export function computeLiveStandings(matchRows: LiveMatchInput[]): LiveStandingRow[] {
+  type Acc = { points: number; gf: number; ga: number; played: number };
+  const groups = new Map<string, Map<string, Acc>>();
+  const ensure = (g: string, t: string): Acc => {
+    if (!groups.has(g)) groups.set(g, new Map());
+    const gm = groups.get(g)!;
+    if (!gm.has(t)) gm.set(t, { points: 0, gf: 0, ga: 0, played: 0 });
+    return gm.get(t)!;
+  };
+
+  for (const m of matchRows) {
+    if (m.stage !== 'group' || !m.groupLetter) continue;
+    if (!COUNTED_STATUS.has(m.status)) continue;
+    if (m.homeCode == null || m.awayCode == null) continue;
+    if (m.homeScore == null || m.awayScore == null) continue;
+    const h = ensure(m.groupLetter, m.homeCode);
+    const a = ensure(m.groupLetter, m.awayCode);
+    h.played += 1;
+    a.played += 1;
+    h.gf += m.homeScore;
+    h.ga += m.awayScore;
+    a.gf += m.awayScore;
+    a.ga += m.homeScore;
+    if (m.homeScore > m.awayScore) h.points += 3;
+    else if (m.homeScore < m.awayScore) a.points += 3;
+    else {
+      h.points += 1;
+      a.points += 1;
+    }
+  }
+
+  const out: LiveStandingRow[] = [];
+  for (const [groupLetter, teams] of groups) {
+    const rows = [...teams.entries()]
+      .map(([teamCode, acc]) => ({
+        groupLetter,
+        teamCode,
+        played: acc.played,
+        points: acc.points,
+        gd: acc.gf - acc.ga,
+        gf: acc.gf,
+      }))
+      .sort(
+        (x, y) =>
+          y.points - x.points || y.gd - x.gd || y.gf - x.gf || x.teamCode.localeCompare(y.teamCode),
+      );
+    rows.forEach((r, i) => out.push({ ...r, rank: i + 1 }));
+  }
+  return out;
+}
+
 export interface StandingInput {
   groupLetter: string;
   teamCode: string;

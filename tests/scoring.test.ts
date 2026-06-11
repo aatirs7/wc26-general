@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildFacts, scoreBracket, totalOf, type MatchFact, type StandingFact } from '@/lib/scoring';
+import {
+  buildFacts,
+  provisionalPoints,
+  scoreBracket,
+  totalOf,
+  type MatchFact,
+  type StandingFact,
+} from '@/lib/scoring';
 import { deriveAdvancement, type StandingInput } from '@/lib/standings';
 import { emptyPredictions, type Predictions } from '@/types/bracket';
 import { GROUP_LETTERS } from '@/lib/constants';
@@ -155,6 +162,58 @@ describe('scoreBracket', () => {
     const a = scoreBracket(p, buildFacts(matches, standings));
     const b = scoreBracket(p, buildFacts(matches, standings));
     expect(a).toEqual(b);
+  });
+});
+
+describe('live provisional scoring', () => {
+  // A kicked-off group match with a current score.
+  const liveGroupMatch = (
+    letter: string,
+    homeN: number,
+    awayN: number,
+    hs: number,
+    as: number,
+    status = 'live',
+  ): MatchFact => ({
+    stage: 'group',
+    status,
+    groupLetter: letter,
+    winnerCode: null,
+    homeCode: T(letter, homeN),
+    awayCode: T(letter, awayN),
+    homeScore: hs,
+    awayScore: as,
+  });
+
+  it('marks a kicked-off, undecided group as started', () => {
+    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
+    expect(facts.startedGroups.has('A')).toBe(true);
+    expect(facts.decidedGroups.has('A')).toBe(false);
+  });
+
+  it('awards provisional top-2 points from the live table', () => {
+    // A: AAX beats ABX 1-0 live, so both are the current top 2.
+    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
+    const p = fullBracket(); // A.first = AAX, A.second = ABX
+    const scores = scoreBracket(p, facts);
+    expect(scores.groups).toBe(6); // two correct current top-2 picks, 3 each
+    expect(provisionalPoints(p, facts)).toBe(6);
+  });
+
+  it('moves as the score changes', () => {
+    // ACX leads its match, so it displaces a picked team out of the top 2.
+    const facts = buildFacts(
+      [liveGroupMatch('A', 2, 0, 2, 0), liveGroupMatch('A', 1, 3, 0, 0)],
+      fullStandings([]),
+    );
+    // Live top 2: ACX (3 pts) and one of the 0-pt teams by tiebreak.
+    expect(facts.liveTop2ByGroup.get('A')!.has(T('A', 2))).toBe(true);
+  });
+
+  it('gives no provisional points before kickoff', () => {
+    const facts = buildFacts([liveGroupMatch('A', 0, 1, 0, 0, 'scheduled')], fullStandings([]));
+    expect(facts.startedGroups.size).toBe(0);
+    expect(scoreBracket(fullBracket(), facts).groups).toBe(0);
   });
 });
 

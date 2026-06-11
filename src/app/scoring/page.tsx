@@ -62,6 +62,20 @@ export default function ScoringPage() {
       </section>
 
       <section className="space-y-2">
+        <h2 className="mb-3 text-center font-display text-2xl">Live group points</h2>
+        <div className="card border-gold/30 bg-gold/[0.06] p-3">
+          <p className="text-sm leading-relaxed text-muted">
+            <span className="font-bold text-gold">During the group stage your points are live.</span>{' '}
+            As soon as a match kicks off, whoever is currently 1st or 2nd in a group counts toward
+            your score, so the table moves in real time. These points are{' '}
+            <span className="text-foreground">provisional</span> — they go up and down as results
+            change, and <span className="text-foreground">lock in once each group finishes</span>.
+            Best-third points only count once every group is done.
+          </p>
+        </div>
+      </section>
+
+      <section className="space-y-2">
         <h2 className="mb-3 text-center font-display text-2xl">Bonus: score predictions</h2>
         <div className="card flex items-center gap-3 p-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 font-display text-xl text-gold">

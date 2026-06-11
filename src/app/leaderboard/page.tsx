@@ -6,13 +6,16 @@ import { db } from '@/lib/db';
 import {
   brackets,
   bracketScores,
+  groupStandings,
   matchPredictions,
+  matches,
   poolMembers,
   pools,
   standingSnapshots,
   users,
 } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
 import RememberPool from '@/components/RememberPool';
 
@@ -68,6 +71,33 @@ export default async function LeaderboardPage({
 
   const poolBrackets = await db.select().from(brackets).where(eq(brackets.poolId, active.poolId));
 
+  // Live group-stage facts, so we can flag the provisional portion of each
+  // player's points (group points that update as live tables move).
+  const matchRows = await db
+    .select({
+      stage: matches.stage,
+      status: matches.status,
+      groupLetter: matches.groupLetter,
+      winnerCode: matches.winnerCode,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+    })
+    .from(matches);
+  const standingRows = await db
+    .select({
+      groupLetter: groupStandings.groupLetter,
+      teamCode: groupStandings.teamCode,
+      rank: groupStandings.rank,
+      isBestThird: groupStandings.isBestThird,
+    })
+    .from(groupStandings);
+  const facts = buildFacts(matchRows, standingRows);
+  const groupStageLive = facts.startedGroups.size > 0;
+  const liveByOwner = new Map<string, number>();
+  for (const b of poolBrackets) liveByOwner.set(b.ownerId, provisionalPoints(b.predictions, facts));
+
   const scoreRows = poolBrackets.length
     ? await db
         .select()
@@ -119,6 +149,7 @@ export default async function LeaderboardPage({
       bracketTotal,
       bonus,
       combined: bracketTotal + bonus,
+      live: liveByOwner.get(m.userId) ?? 0,
       submitted: b?.submitted ?? false,
       tiebreak: b ? tiebreakByBracket.get(b.id) ?? 0 : 0,
       lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
@@ -147,6 +178,7 @@ export default async function LeaderboardPage({
       combined: c.combined,
       bracketTotal: c.bracketTotal,
       bonus: c.bonus,
+      live: c.live,
       submitted: c.submitted,
       rounds: c.rounds,
       rankDelta,
@@ -201,6 +233,18 @@ export default async function LeaderboardPage({
               {m.poolName}
             </Link>
           ))}
+        </div>
+      ) : null}
+
+      {groupStageLive ? (
+        <div className="rounded-xl border border-gold/30 bg-gold/[0.08] px-3 py-2 text-center">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.15em] text-gold">
+            ● Live group points
+          </p>
+          <p className="mt-0.5 text-[0.7rem] leading-snug text-muted">
+            Points for current group positions count live and shift as scores change. They lock in
+            when each group finishes.
+          </p>
         </div>
       ) : null}
 

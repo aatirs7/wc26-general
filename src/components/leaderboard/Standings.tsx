@@ -13,6 +13,8 @@ export interface PlayerRow {
   combined: number;
   bracketTotal: number;
   bonus: number;
+  // Provisional points from in-progress groups (already inside `combined`).
+  live: number;
   submitted: boolean;
   rounds: { label: string; pts: number }[];
   rankDelta: number;
@@ -71,7 +73,14 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                     {row.gained > 0 ? <span className="text-muted">+{row.gained}</span> : null}
                   </div>
                 ) : null}
-                <span className="font-display text-2xl leading-none text-accent">{row.combined}</span>
+                <div className="flex shrink-0 flex-col items-end leading-none">
+                  <span className="font-display text-2xl text-accent">{row.combined}</span>
+                  {row.live > 0 ? (
+                    <span className="mt-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                      {row.live} live
+                    </span>
+                  ) : null}
+                </div>
                 <ChevronDown
                   className={`h-4 w-4 shrink-0 text-muted-2 transition-transform ${open ? 'rotate-180' : ''}`}
                 />
