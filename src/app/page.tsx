@@ -8,6 +8,7 @@ import { currentUserId, LAST_NAME_COOKIE } from '@/lib/auth';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import Onboard from '@/components/auth/Onboard';
+import SwitchName from '@/components/auth/SwitchName';
 import PoolActions from '@/components/pools/PoolActions';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export default async function LandingPage() {
   const userId = await currentUserId();
   const locked = isLocked();
   const kickoff = kickoffUtc();
-  const lastName = userId ? null : (await cookies()).get(LAST_NAME_COOKIE)?.value ?? null;
+  const lastName = (await cookies()).get(LAST_NAME_COOKIE)?.value ?? null;
   const groups = userId
     ? await db
         .select({ id: poolMembers.poolId, name: pools.name })
@@ -99,6 +100,7 @@ export default async function LandingPage() {
               </p>
               <PoolActions />
             </section>
+            <SwitchName name={lastName} />
           </div>
         )}
       </div>
