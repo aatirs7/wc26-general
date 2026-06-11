@@ -66,11 +66,14 @@ export default function ScoringPage() {
         <div className="card border-gold/30 bg-gold/[0.06] p-3">
           <p className="text-sm leading-relaxed text-muted">
             <span className="font-bold text-gold">During the group stage your points are live.</span>{' '}
-            As soon as a match kicks off, whoever is currently 1st or 2nd in a group counts toward
-            your score, so the table moves in real time. These points are{' '}
-            <span className="text-foreground">provisional</span> — they go up and down as results
-            change, and <span className="text-foreground">lock in once each group finishes</span>.
-            Best-third points only count once every group is done.
+            At any given moment your total is an{' '}
+            <span className="text-foreground">accurate snapshot of the standings right now</span>:
+            every team you picked that is <span className="text-foreground">currently</span> 1st or
+            2nd in its group is worth its full points this second. As goals go in and positions
+            swap, your points move with them. They are{' '}
+            <span className="text-foreground">provisional</span> and{' '}
+            <span className="text-foreground">lock in when each group finishes</span>. Best-third
+            points only count once every group is done.
           </p>
         </div>
       </section>
