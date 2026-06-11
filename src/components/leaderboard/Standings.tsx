@@ -47,8 +47,8 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                 >
                   {row.rank}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
+                <div className="min-w-0 flex-1 text-center">
+                  <div className="flex items-center justify-center gap-1.5">
                     <span className="truncate text-sm font-bold">{row.name}</span>
                     {isMe ? (
                       <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-[var(--accent-ink)]">

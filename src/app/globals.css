@@ -171,30 +171,84 @@ body {
 .medal-3 { background: linear-gradient(135deg, #f4ad7c, var(--bronze)); color: #2a1607; }
 .medal-4 { background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); }
 
-/* Podium outlines for the top three: a crisp metal border plus a soft
-   radiating glow so first/second/third feel special. Named podium-* (not
-   ring-*) so they don't collide with Tailwind's ring-1 utility, which was
-   overriding the gold first-place outline. */
+/* Podium styling for the top three: a full metallic-tinted fill, a crisp
+   metal border, a soft radiating glow, and a sweeping shine so first/second/
+   third really pop. Named podium-* (not ring-*) so they don't collide with
+   Tailwind's ring-1 utility. */
+.podium-1,
+.podium-2,
+.podium-3 {
+  position: relative;
+  overflow: hidden;
+}
 .podium-1 {
   --podium-color: var(--gold);
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--gold) 30%, var(--surface)),
+    color-mix(in srgb, var(--gold) 9%, var(--surface)) 50%,
+    color-mix(in srgb, var(--gold) 22%, var(--surface))
+  );
   box-shadow:
     inset 0 0 0 1.6px var(--gold),
-    0 0 12px -3px color-mix(in srgb, var(--gold) 65%, transparent);
+    0 0 14px -3px color-mix(in srgb, var(--gold) 70%, transparent);
 }
 .podium-2 {
   --podium-color: var(--silver);
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--silver) 28%, var(--surface)),
+    color-mix(in srgb, var(--silver) 8%, var(--surface)) 50%,
+    color-mix(in srgb, var(--silver) 20%, var(--surface))
+  );
   box-shadow:
     inset 0 0 0 1.6px var(--silver),
-    0 0 12px -3px color-mix(in srgb, var(--silver) 65%, transparent);
+    0 0 14px -3px color-mix(in srgb, var(--silver) 70%, transparent);
 }
 .podium-3 {
   --podium-color: var(--bronze);
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--bronze) 30%, var(--surface)),
+    color-mix(in srgb, var(--bronze) 9%, var(--surface)) 50%,
+    color-mix(in srgb, var(--bronze) 22%, var(--surface))
+  );
   box-shadow:
     inset 0 0 0 1.6px var(--bronze),
-    0 0 12px -3px color-mix(in srgb, var(--bronze) 65%, transparent);
+    0 0 14px -3px color-mix(in srgb, var(--bronze) 70%, transparent);
 }
 .podium-4 { box-shadow: inset 0 0 0 1.5px var(--line-strong); }
 
+/* Sweeping glare across the medal rows. */
+.podium-1::before,
+.podium-2::before,
+.podium-3::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #ffffff 55%, transparent),
+    transparent
+  );
+  transform: translateX(-160%) skewX(-18deg);
+}
+/* Keep the row content above the sweeping glare. */
+.podium-1 > *,
+.podium-2 > *,
+.podium-3 > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes podium-sheen {
+  0% { transform: translateX(-160%) skewX(-18deg); }
+  55%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
 /* Gentle radiating pulse around the medal positions. */
 @keyframes podium-radiate {
   0%, 100% { filter: drop-shadow(0 0 1px color-mix(in srgb, var(--podium-color) 35%, transparent)); }
@@ -204,6 +258,9 @@ body {
   .podium-1 { animation: podium-radiate 2.8s ease-in-out infinite; }
   .podium-2 { animation: podium-radiate 3.1s ease-in-out infinite; }
   .podium-3 { animation: podium-radiate 3.4s ease-in-out infinite; }
+  .podium-1::before { animation: podium-sheen 4s ease-in-out infinite; }
+  .podium-2::before { animation: podium-sheen 4.3s ease-in-out infinite 0.4s; }
+  .podium-3::before { animation: podium-sheen 4.6s ease-in-out infinite 0.8s; }
 }
 
 /* Animations */
