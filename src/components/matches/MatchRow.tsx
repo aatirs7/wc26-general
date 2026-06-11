@@ -20,8 +20,9 @@ export interface MatchRowData {
 interface Props {
   match: MatchRowData;
   teamsByCode: Map<string, Team>;
-  // Teams the viewer's bracket is backing; highlighted as "your pick".
-  backed?: Set<string>;
+  // code -> short label for how far the viewer's bracket backs that team
+  // (e.g. "1st", "R16", "Final"). Shown as an accent tag.
+  pickLabels?: Map<string, string>;
 }
 
 function Side({
@@ -31,7 +32,7 @@ function Side({
   isWinner,
   played,
   teamsByCode,
-  backed,
+  pickLabel,
 }: {
   code: string | null;
   placeholder: string | null;
@@ -39,7 +40,7 @@ function Side({
   isWinner: boolean;
   played: boolean;
   teamsByCode: Map<string, Team>;
-  backed: boolean;
+  pickLabel?: string;
 }) {
   const team = code ? teamsByCode.get(code) : undefined;
   return (
@@ -50,9 +51,9 @@ function Side({
       <span className="flex-1 truncate text-sm font-semibold">
         {team?.name ?? placeholder ?? 'TBD'}
       </span>
-      {backed ? (
-        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-accent">
-          Your pick
+      {pickLabel ? (
+        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-accent">
+          {pickLabel}
         </span>
       ) : null}
       {played ? (
@@ -64,12 +65,12 @@ function Side({
   );
 }
 
-export default function MatchRow({ match, teamsByCode, backed }: Props) {
+export default function MatchRow({ match, teamsByCode, pickLabels }: Props) {
   const played = match.homeScore !== null && match.awayScore !== null;
-  const homeBacked = match.homeCode != null && (backed?.has(match.homeCode) ?? false);
-  const awayBacked = match.awayCode != null && (backed?.has(match.awayCode) ?? false);
+  const homeLabel = match.homeCode ? pickLabels?.get(match.homeCode) : undefined;
+  const awayLabel = match.awayCode ? pickLabels?.get(match.awayCode) : undefined;
   return (
-    <div className={`card flex items-stretch gap-3 p-3 ${homeBacked || awayBacked ? 'border-accent/40' : ''}`}>
+    <div className={`card flex items-stretch gap-3 p-3 ${homeLabel || awayLabel ? 'border-accent/40' : ''}`}>
       <div className="min-w-0 flex-1 space-y-2">
         <Side
           code={match.homeCode}
@@ -78,7 +79,7 @@ export default function MatchRow({ match, teamsByCode, backed }: Props) {
           isWinner={match.winnerCode != null && match.winnerCode === match.homeCode}
           played={played}
           teamsByCode={teamsByCode}
-          backed={homeBacked}
+          pickLabel={homeLabel}
         />
         <Side
           code={match.awayCode}
@@ -87,7 +88,7 @@ export default function MatchRow({ match, teamsByCode, backed }: Props) {
           isWinner={match.winnerCode != null && match.winnerCode === match.awayCode}
           played={played}
           teamsByCode={teamsByCode}
-          backed={awayBacked}
+          pickLabel={awayLabel}
         />
       </div>
       <div className="flex w-16 flex-col items-end justify-between border-l border-edge pl-2.5 text-right">

@@ -1,7 +1,10 @@
 import Link from 'next/link';
-import { asc } from 'drizzle-orm';
+import { cookies } from 'next/headers';
+import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { groupStandings, matches, teams } from '@/lib/schema';
+import { brackets, groupStandings, matches, poolMembers, teams } from '@/lib/schema';
+import { currentUserId } from '@/lib/auth';
+import { pickLabels } from '@/lib/pick-labels';
 import { GROUP_LETTERS } from '@/lib/constants';
 import { DISPLAY_TZ_LABEL, matchDayKey, matchDayLabel } from '@/lib/format-time';
 import MatchRow from '@/components/matches/MatchRow';
@@ -17,6 +20,29 @@ export default async function MatchesPage({
 }) {
   const { view } = await searchParams;
   const showGroups = view === 'groups';
+
+  // Tag fixtures with the signed-in player's picks (from their active pool).
+  const userId = await currentUserId();
+  let labels: Map<string, string> | undefined;
+  if (userId) {
+    const memberships = await db
+      .select({ poolId: poolMembers.poolId })
+      .from(poolMembers)
+      .where(eq(poolMembers.userId, userId));
+    if (memberships.length > 0) {
+      const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
+      const active =
+        memberships.find((m) => m.poolId === activePoolCookie) ??
+        memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
+        memberships[0];
+      const [mine] = await db
+        .select()
+        .from(brackets)
+        .where(and(eq(brackets.ownerId, userId), eq(brackets.poolId, active.poolId)))
+        .limit(1);
+      if (mine) labels = pickLabels(mine.predictions);
+    }
+  }
 
   const allTeams = await db.select().from(teams);
   const teamsByCode = new Map(allTeams.map((t) => [t.code, t]));
@@ -87,6 +113,11 @@ export default async function MatchesPage({
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
           <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
+          {labels && labels.size > 0 ? (
+            <p className="-mt-3 text-center text-[0.7rem] text-muted-2">
+              Your picks are tagged with how far you backed them.
+            </p>
+          ) : null}
           {[...upcoming, ...past].map((day) => (
             <section key={day}>
               <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur lg:top-16">
@@ -94,7 +125,7 @@ export default async function MatchesPage({
               </h2>
               <div className="space-y-2">
                 {byDay.get(day)!.map((m) => (
-                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} />
+                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />
                 ))}
               </div>
             </section>

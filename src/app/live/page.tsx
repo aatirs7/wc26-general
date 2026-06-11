@@ -7,8 +7,7 @@ import { db } from '@/lib/db';
 import { brackets, groupStandings, matches, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, scoreBracket, totalOf } from '@/lib/scoring';
-import { qualifiersOf } from '@/lib/predictions';
-import type { Predictions } from '@/types/bracket';
+import { pickLabels } from '@/lib/pick-labels';
 import { DISPLAY_TZ_LABEL, matchDayKey, matchDayLabel, matchTime } from '@/lib/format-time';
 import MatchRow from '@/components/matches/MatchRow';
 import LivePoller from '@/components/matches/LivePoller';
@@ -17,17 +16,6 @@ import RememberPool from '@/components/RememberPool';
 import type { Team } from '@/types/team';
 
 export const dynamic = 'force-dynamic';
-
-// Every team the bracket has a stake in: group top-two, best-third picks,
-// and the whole knockout chain plus the champion.
-function backedTeams(p: Predictions): Set<string> {
-  const s = qualifiersOf(p);
-  for (const round of ['r16', 'qf', 'sf', 'final'] as const) {
-    for (const code of p.knockout[round]) s.add(code);
-  }
-  if (p.knockout.champion) s.add(p.knockout.champion);
-  return s;
-}
 
 function TeamMini({ code, placeholder, teamsByCode }: { code: string | null; placeholder: string | null; teamsByCode: Map<string, Team> }) {
   const team = code ? teamsByCode.get(code) : undefined;
@@ -85,7 +73,7 @@ export default async function LivePage({
     .from(brackets)
     .where(and(eq(brackets.ownerId, userId), eq(brackets.poolId, active.poolId)))
     .limit(1);
-  const backed = mine ? backedTeams(mine.predictions) : new Set<string>();
+  const labels = mine ? pickLabels(mine.predictions) : new Map<string, string>();
   const livePoints = mine ? totalOf(scoreBracket(mine.predictions, facts)) : 0;
 
   // eslint-disable-next-line react-hooks/purity
@@ -103,7 +91,7 @@ export default async function LivePage({
   const nextMatch = allMatches.find((m) => m.status === 'scheduled' && m.kickoffUtc.getTime() > now) ?? null;
 
   const inPlay = [...liveMatches, ...todayMatches].filter(
-    (m) => (m.homeCode && backed.has(m.homeCode)) || (m.awayCode && backed.has(m.awayCode)),
+    (m) => (m.homeCode && labels.has(m.homeCode)) || (m.awayCode && labels.has(m.awayCode)),
   ).length;
 
   const statCard = 'card flex flex-col items-center justify-center gap-1 p-4 text-center';
@@ -151,6 +139,10 @@ export default async function LivePage({
         </div>
       </section>
 
+      <p className="text-center text-[0.7rem] text-muted-2">
+        Your picks are tagged with how far you backed them (1st, R16, Final…).
+      </p>
+
       {nextMatch ? (
         <section className="card space-y-3 p-4">
           <div className="flex items-center justify-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-gold">
@@ -177,7 +169,7 @@ export default async function LivePage({
             Live now
           </h2>
           {liveMatches.map((m) => (
-            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} backed={backed} />
+            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />
           ))}
         </section>
       ) : null}
@@ -185,7 +177,7 @@ export default async function LivePage({
       <section className="space-y-2">
         <h2 className="font-display text-2xl">Today</h2>
         {todayMatches.length > 0 ? (
-          todayMatches.map((m) => <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} backed={backed} />)
+          todayMatches.map((m) => <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} pickLabels={labels} />)
         ) : (
           <p className="card p-4 text-center text-sm text-muted">
             {liveMatches.length > 0 ? 'That is every match today.' : 'No matches today. The next kickoff is counting down above.'}
