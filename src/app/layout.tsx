@@ -5,6 +5,7 @@ import BottomTabBar from '@/components/nav/BottomTabBar';
 import DesktopNav from '@/components/nav/DesktopNav';
 import ThemeButton from '@/components/theme/ThemeButton';
 import WhatsNew from '@/components/WhatsNew';
+import InstallPrompt from '@/components/InstallPrompt';
 import './globals.css';
 
 const display = Bebas_Neue({
@@ -60,6 +61,7 @@ export default async function RootLayout({
         <ThemeButton initial={theme} />
         <DesktopNav />
         {signedIn ? <WhatsNew /> : null}
+        {signedIn ? <InstallPrompt /> : null}
         <main className="mx-auto w-full max-w-md flex-1 px-4 pt-14 lg:max-w-6xl lg:px-8 lg:pt-24">
           {children}
         </main>
