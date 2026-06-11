@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, eq } from 'drizzle-orm';
 import { Radio, ArrowRight, Timer } from 'lucide-react';
 import { db } from '@/lib/db';
-import { brackets, groupStandings, matches, poolMembers, pools, teams } from '@/lib/schema';
+import { brackets, groupStandings, matchPredictions, matches, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, scoreBracket, totalOf } from '@/lib/scoring';
 import { pickLabels } from '@/lib/pick-labels';
@@ -64,7 +64,16 @@ export default async function LivePage({
     })
     .from(groupStandings);
   const facts = buildFacts(
-    allMatches.map((m) => ({ stage: m.stage, status: m.status, groupLetter: m.groupLetter, winnerCode: m.winnerCode })),
+    allMatches.map((m) => ({
+      stage: m.stage,
+      status: m.status,
+      groupLetter: m.groupLetter,
+      winnerCode: m.winnerCode,
+      homeCode: m.homeCode,
+      awayCode: m.awayCode,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+    })),
     standingRows,
   );
 
@@ -75,6 +84,21 @@ export default async function LivePage({
     .limit(1);
   const labels = mine ? pickLabels(mine.predictions) : new Map<string, string>();
   const livePoints = mine ? totalOf(scoreBracket(mine.predictions, facts)) : 0;
+
+  // The viewer's score predictions, shown on each match card.
+  const preds = await db
+    .select()
+    .from(matchPredictions)
+    .where(eq(matchPredictions.userId, userId));
+  const predByMatch = new Map(preds.map((p) => [p.matchId, p]));
+  const predNote = (m: (typeof allMatches)[number]): string[] | undefined => {
+    const p = predByMatch.get(m.id);
+    if (!p) return undefined;
+    let winner = '';
+    if (p.homeScore > p.awayScore) winner = teamsByCode.get(m.homeCode ?? '')?.name ?? '';
+    else if (p.awayScore > p.homeScore) winner = teamsByCode.get(m.awayCode ?? '')?.name ?? '';
+    return [`You predict ${p.homeScore}–${p.awayScore}${winner ? ` ${winner}` : ''}`];
+  };
 
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
@@ -165,7 +189,7 @@ export default async function LivePage({
             Live now
           </h2>
           {liveMatches.map((m) => (
-            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} />
+            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={predNote(m)} />
           ))}
         </section>
       ) : null}
@@ -173,7 +197,9 @@ export default async function LivePage({
       <section className="space-y-2">
         <h2 className="font-display text-2xl">Today</h2>
         {todayMatches.length > 0 ? (
-          todayMatches.map((m) => <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} />)
+          todayMatches.map((m) => (
+            <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={predNote(m)} />
+          ))
         ) : (
           <p className="card p-4 text-center text-sm text-muted">
             {liveMatches.length > 0 ? 'That is every match today.' : 'No matches today. The next kickoff is counting down above.'}
