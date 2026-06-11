@@ -104,8 +104,8 @@ export default async function LandingPage() {
         className="reveal text-xs text-muted-2"
         style={{ animationDelay: '240ms' }}
       >
-        World Cup 2026 Bracket Pool ·{' '}
-        <span className="text-muted">2026</span>
+        Made by Aatir Siddiqui ·{' '}
+        <span className="text-muted">World Cup 2026</span>
       </p>
     </div>
   );
