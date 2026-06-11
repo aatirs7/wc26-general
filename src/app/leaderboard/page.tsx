@@ -12,10 +12,13 @@ import {
   poolMembers,
   pools,
   standingSnapshots,
+  teams,
   users,
 } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, provisionalPoints } from '@/lib/scoring';
+import { computeLiveStandings } from '@/lib/standings';
+import { pointsBreakdown } from '@/lib/points-breakdown';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
 import RememberPool from '@/components/RememberPool';
 
@@ -98,6 +101,29 @@ export default async function LeaderboardPage({
   const liveByOwner = new Map<string, number>();
   for (const b of poolBrackets) liveByOwner.set(b.ownerId, provisionalPoints(b.predictions, facts));
 
+  // Per-pick breakdown ("Mexico — 1st in Group A · +3") so the expanded row
+  // explains where every point comes from. Ranks come from the live table
+  // while a group is in progress, the provider table once it is decided.
+  const teamRows = await db.select({ code: teams.code, name: teams.name, flag: teams.flag }).from(teams);
+  const teamByCode = new Map(teamRows.map((t) => [t.code, t]));
+  const teamName = (code: string) => ({
+    name: teamByCode.get(code)?.name ?? code,
+    flag: teamByCode.get(code)?.flag ?? '⚽',
+  });
+  const liveRows = computeLiveStandings(matchRows);
+  const rankByKey = new Map<string, number>();
+  for (const r of liveRows) rankByKey.set(`${r.groupLetter}:${r.teamCode}`, r.rank);
+  for (const s of standingRows) {
+    if (s.rank != null && !rankByKey.has(`${s.groupLetter}:${s.teamCode}`)) {
+      rankByKey.set(`${s.groupLetter}:${s.teamCode}`, s.rank);
+    }
+  }
+  const rankOf = (group: string, code: string) => rankByKey.get(`${group}:${code}`) ?? null;
+  const detailByOwner = new Map<string, ReturnType<typeof pointsBreakdown>>();
+  for (const b of poolBrackets) {
+    detailByOwner.set(b.ownerId, pointsBreakdown(b.predictions, facts, rankOf, teamName));
+  }
+
   const scoreRows = poolBrackets.length
     ? await db
         .select()
@@ -150,6 +176,7 @@ export default async function LeaderboardPage({
       bonus,
       combined: bracketTotal + bonus,
       live: liveByOwner.get(m.userId) ?? 0,
+      detail: detailByOwner.get(m.userId) ?? [],
       submitted: b?.submitted ?? false,
       tiebreak: b ? tiebreakByBracket.get(b.id) ?? 0 : 0,
       lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
@@ -179,6 +206,7 @@ export default async function LeaderboardPage({
       bracketTotal: c.bracketTotal,
       bonus: c.bonus,
       live: c.live,
+      detail: c.detail,
       submitted: c.submitted,
       rounds: c.rounds,
       rankDelta,

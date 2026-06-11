@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   Trophy,
   ListOrdered,
@@ -24,6 +24,7 @@ import { isLocked, kickoffUtc } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import Countdown from '@/components/home/Countdown';
+import AutofillNotice from '@/components/AutofillNotice';
 import DailyRecap, { type RecapData } from '@/components/home/DailyRecap';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,15 @@ export default async function HomePage({
 
   // No group yet: send them to the landing chooser.
   if (memberships.length === 0) redirect('/');
+
+  // Pools where this player's bracket was auto-filled at lock, for the
+  // one-time "your bracket was auto-filled" popup.
+  const autofilledRows = await db
+    .select({ name: pools.name })
+    .from(brackets)
+    .innerJoin(pools, eq(pools.id, brackets.poolId))
+    .where(and(eq(brackets.ownerId, userId), eq(brackets.autofilled, true)));
+  const autofilledPools = autofilledRows.map((r) => r.name);
 
   const { pool: requested } = await searchParams;
   const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
@@ -232,6 +242,7 @@ export default async function HomePage({
 
   return (
     <div className="space-y-6 py-4 lg:mx-auto lg:max-w-5xl lg:space-y-8 lg:pt-2">
+      <AutofillNotice pools={autofilledPools} />
       <RememberPool poolId={active.poolId} />
       <header className="reveal flex flex-col items-center gap-2 pt-2 text-center">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent font-display text-2xl text-[var(--accent-ink)]">

@@ -15,6 +15,8 @@ export interface PlayerRow {
   bonus: number;
   // Provisional points from in-progress groups (already inside `combined`).
   live: number;
+  // Per-pick explanation of where the points come from.
+  detail: { flag: string; name: string; reason: string; pts: number; live: boolean }[];
   submitted: boolean;
   rounds: { label: string; pts: number }[];
   rankDelta: number;
@@ -92,20 +94,31 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                 <div className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted-2">
                   Where the points come from
                 </div>
-                {row.rounds.length === 0 && row.bonus === 0 ? (
+                {row.detail.length === 0 && row.bonus === 0 ? (
                   <p className="text-xs text-muted">No points scored yet.</p>
                 ) : (
-                  <dl className="mx-auto max-w-[16rem] space-y-1 text-left">
-                    {row.rounds.map((r) => (
-                      <div key={r.label} className="flex justify-between">
-                        <dt className="text-muted">{r.label}</dt>
-                        <dd className="font-semibold">{r.pts}</dd>
+                  <dl className="mx-auto max-w-[19rem] space-y-1 text-left">
+                    {row.detail.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="shrink-0 text-base leading-none">{d.flag}</span>
+                        <dt className="min-w-0 flex-1 truncate">
+                          <span className="font-semibold">{d.name}</span>
+                          <span className="text-muted"> — {d.reason}</span>
+                          {d.live ? (
+                            <span className="ml-1 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                              live
+                            </span>
+                          ) : null}
+                        </dt>
+                        <dd className={`shrink-0 font-semibold ${d.live ? 'text-gold' : 'text-accent'}`}>
+                          +{d.pts}
+                        </dd>
                       </div>
                     ))}
                     {row.bonus > 0 ? (
-                      <div className="flex justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <dt className="text-gold">Score-prediction bonus</dt>
-                        <dd className="font-semibold text-gold">{row.bonus}</dd>
+                        <dd className="shrink-0 font-semibold text-gold">+{row.bonus}</dd>
                       </div>
                     ) : null}
                     <div className="mt-1 flex justify-between border-t border-edge/60 pt-1.5">

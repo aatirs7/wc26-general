@@ -91,6 +91,9 @@ export const brackets = pgTable(
     totalPoints: integer('total_points').notNull().default(0),
     lockedAt: timestamp('locked_at', { withTimezone: true }),
     submitted: boolean('submitted').notNull().default(false),
+    // Set when the bracket was randomly completed at lock because the owner
+    // never finished it; drives a one-time "your bracket was auto-filled" note.
+    autofilled: boolean('autofilled').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
