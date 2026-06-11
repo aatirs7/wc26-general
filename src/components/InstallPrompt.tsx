@@ -45,9 +45,17 @@ export default function InstallPrompt() {
         className="glass max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl p-4 shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-accent">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Close"
+            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-muted active:scale-90"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="px-6 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-accent">
               <Sparkles className="h-4 w-4" strokeWidth={2.4} />
               <span className="text-[0.7rem] font-bold uppercase tracking-[0.2em]">Best experience</span>
             </div>
@@ -56,14 +64,6 @@ export default function InstallPrompt() {
               Install the app for a full-screen, faster, app-like experience. Takes a few taps:
             </p>
           </div>
-          <button
-            type="button"
-            onClick={dismiss}
-            aria-label="Close"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted active:scale-90"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="mt-3">
