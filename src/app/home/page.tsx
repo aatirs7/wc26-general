@@ -258,6 +258,24 @@ export default async function HomePage({
         </div>
       </header>
 
+      {memberships.length > 1 ? (
+        <div className="reveal flex justify-center gap-2 overflow-x-auto pb-1">
+          {memberships.map((m) => (
+            <Link
+              key={m.poolId}
+              href={`/home?pool=${m.poolId}`}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                m.poolId === active.poolId
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-edge bg-white/[0.02] text-muted'
+              }`}
+            >
+              {m.poolName}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
       <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       <div className="space-y-6">
       {/* Kickoff / lock banner */}
