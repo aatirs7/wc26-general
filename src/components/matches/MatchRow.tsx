@@ -51,8 +51,8 @@ function Side({
         {team?.name ?? placeholder ?? 'TBD'}
       </span>
       {backed ? (
-        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wider text-accent">
-          Pick
+        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-accent">
+          Your pick
         </span>
       ) : null}
       {played ? (
