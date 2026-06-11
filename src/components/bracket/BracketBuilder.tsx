@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import type { Team } from '@/types/team';
@@ -85,9 +85,48 @@ export default function BracketBuilder({ bracket, teams, copySources = [] }: Pro
   const teamsByCode = useMemo(() => new Map(teams.map((t) => [t.code, t])), [teams]);
 
   // Debounced optimistic persistence. Local state is the source of truth;
-  // the server write trails it by 800ms.
+  // the server write trails it by 800ms. Saves retry through a dropped
+  // request (common on flaky phone connections) so a brief blip heals
+  // itself instead of stalling on "save failed".
   const firstRender = useRef(true);
   const saveSeq = useRef(0);
+  const latest = useRef(predictions);
+  latest.current = predictions;
+
+  const persist = useCallback(
+    async (seq: number) => {
+      // Back off and retry transient failures (a network drop or a 5xx). A
+      // 4xx is deterministic, so stop and surface it. A newer edit bumps the
+      // sequence and supersedes this attempt.
+      const backoff = [0, 1000, 2500, 5000];
+      for (let attempt = 0; attempt < backoff.length; attempt++) {
+        if (seq !== saveSeq.current) return;
+        if (backoff[attempt]) await new Promise((r) => setTimeout(r, backoff[attempt]));
+        if (seq !== saveSeq.current) return;
+        try {
+          const res = await fetch('/api/bracket', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: bracket.id, predictions: latest.current }),
+          });
+          if (seq !== saveSeq.current) return;
+          if (res.ok) {
+            const data = await res.json();
+            setSubmitted(data.bracket.submitted);
+            setSaveStatus('saved');
+            return;
+          }
+          // 4xx will not get better on retry; stop and show the failure.
+          if (res.status >= 400 && res.status < 500) break;
+        } catch {
+          // Network error: fall through and retry after the backoff.
+        }
+      }
+      if (seq === saveSeq.current) setSaveStatus('error');
+    },
+    [bracket.id],
+  );
+
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -95,24 +134,22 @@ export default function BracketBuilder({ bracket, teams, copySources = [] }: Pro
     }
     setSaveStatus('saving');
     const seq = ++saveSeq.current;
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/bracket', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: bracket.id, predictions }),
-        });
-        if (seq !== saveSeq.current) return;
-        if (!res.ok) throw new Error('save failed');
-        const data = await res.json();
-        setSubmitted(data.bracket.submitted);
-        setSaveStatus('saved');
-      } catch {
-        if (seq === saveSeq.current) setSaveStatus('error');
-      }
-    }, 800);
+    const timer = setTimeout(() => void persist(seq), 800);
     return () => clearTimeout(timer);
-  }, [predictions, bracket.id]);
+  }, [predictions, bracket.id, persist]);
+
+  // When a phone regains connectivity, re-flush the latest picks if the last
+  // save had failed, so nothing is left unsaved after a tunnel or dead spot.
+  useEffect(() => {
+    function flush() {
+      if (saveStatus === 'error') {
+        setSaveStatus('saving');
+        void persist(++saveSeq.current);
+      }
+    }
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, [saveStatus, persist]);
 
   const koDecided =
     predictions.knockout.r16.length +
