@@ -13,7 +13,6 @@ import {
   users,
 } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import InviteButton from '@/components/pools/InviteButton';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
 import RememberPool from '@/components/RememberPool';
 
@@ -39,7 +38,7 @@ export default async function LeaderboardPage({
   if (!userId) redirect('/');
 
   const memberships = await db
-    .select({ poolId: poolMembers.poolId, poolName: pools.name, joinCode: pools.joinCode })
+    .select({ poolId: poolMembers.poolId, poolName: pools.name })
     .from(poolMembers)
     .innerJoin(pools, eq(pools.id, poolMembers.poolId))
     .where(eq(poolMembers.userId, userId));
@@ -169,8 +168,6 @@ export default async function LeaderboardPage({
         <h1 className="font-display text-4xl leading-none">Standings</h1>
         <p className="mt-1 text-xs text-muted">{active.poolName} · bracket + bonus</p>
       </header>
-
-      <InviteButton code={active.joinCode} groupName={active.poolName} />
 
       {me ? (
         <div className="card flex items-center justify-between px-4 py-3">
