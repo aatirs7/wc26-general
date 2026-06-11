@@ -142,12 +142,14 @@ export default async function HomePage({
       }
     }
 
-    // Daily recap: movement since the morning snapshot.
+    // Daily recap: movement since the morning snapshot. Only meaningful
+    // once games are scoring; before kickoff "movement" is just submissions
+    // reshuffling the order, which reads as noise.
     const snaps = await db
       .select({ userId: standingSnapshots.userId, points: standingSnapshots.points, rank: standingSnapshots.rank })
       .from(standingSnapshots)
       .where(eq(standingSnapshots.poolId, active.poolId));
-    if (snaps.length > 0) {
+    if (locked && snaps.length > 0) {
       const nameRows = await db
         .select({ id: users.id, name: users.displayName })
         .from(users)
@@ -158,6 +160,7 @@ export default async function HomePage({
       let faller: RecapData['faller'] = null;
       let gainer: RecapData['gainer'] = null;
       for (const s of snaps) {
+        if (s.userId === userId) continue; // the "you" line already covers the viewer
         const name = nameByUser.get(s.userId) ?? '?';
         const nowRank = curRank.get(s.userId);
         const gained = (curPoints.get(s.userId) ?? 0) - s.points;

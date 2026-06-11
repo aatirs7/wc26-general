@@ -1,5 +1,11 @@
 import { TrendingUp, TrendingDown, Flame, ArrowUp, ArrowDown } from 'lucide-react';
 
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+
 export interface RecapData {
   climber: { name: string; up: number } | null;
   faller: { name: string; down: number } | null;
@@ -58,13 +64,21 @@ export default function DailyRecap({ data }: { data: RecapData }) {
             <span className="min-w-0 flex-1 truncate">
               You{' '}
               {you.rankDelta > 0
-                ? `moved up ${you.rankDelta}`
+                ? `climbed to ${ordinal(you.rank)}`
                 : you.rankDelta < 0
-                  ? `dropped ${-you.rankDelta}`
-                  : 'held steady'}
+                  ? `slipped to ${ordinal(you.rank)}`
+                  : `held ${ordinal(you.rank)}`}
               {you.gained > 0 ? `, +${you.gained} pts` : ''}
             </span>
-            <span className="shrink-0 font-display text-lg text-foreground">{you.rank}</span>
+            <span
+              className={`shrink-0 font-display text-lg ${you.rankDelta < 0 ? 'text-live' : 'text-accent'}`}
+            >
+              {you.rankDelta > 0
+                ? `+${you.rankDelta}`
+                : you.rankDelta < 0
+                  ? `${you.rankDelta}`
+                  : `+${you.gained}`}
+            </span>
           </li>
         ) : null}
       </ul>
