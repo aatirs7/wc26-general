@@ -21,12 +21,13 @@ import { currentUserId } from '@/lib/auth';
 import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import RememberPool from '@/components/RememberPool';
 import PoolSwitcher from '@/components/PoolSwitcher';
-import { isLocked, kickoffUtc } from '@/lib/lock';
+import { isLocked, kickoffUtc, poolUnlockUntil } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import Countdown from '@/components/home/Countdown';
 import AutofillNotice from '@/components/AutofillNotice';
 import DailyRecap, { type RecapData } from '@/components/home/DailyRecap';
+import UnlockBanner from '@/components/home/UnlockBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,12 @@ export default async function HomePage({
   // This app is multi-pool: bracket and standings are pool-scoped, so carry
   // the active pool through their links. Matches and stats are global.
   const poolQ = active ? `?pool=${active.poolId}` : '';
+
+  // Pools of this player re-opened past kickoff (timed unlock), for the
+  // notification banner + countdown.
+  const unlocks = memberships
+    .map((m) => ({ poolId: m.poolId, poolName: m.poolName, until: poolUnlockUntil(m.poolId) }))
+    .filter((u): u is { poolId: string; poolName: string; until: Date } => u.until !== null);
 
   const JUMPS: { href: string; label: string; hint: string; icon: LucideIcon }[] = [
     { href: `/bracket${poolQ}`, label: 'Bracket', hint: 'Build & view', icon: Trophy },
@@ -262,6 +269,10 @@ export default async function HomePage({
       {memberships.length > 1 ? (
         <PoolSwitcher pools={memberships} activeId={active.poolId} />
       ) : null}
+
+      {unlocks.map((u) => (
+        <UnlockBanner key={u.poolId} poolName={u.poolName} poolId={u.poolId} untilMs={u.until.getTime()} />
+      ))}
 
       <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       <div className="space-y-6">

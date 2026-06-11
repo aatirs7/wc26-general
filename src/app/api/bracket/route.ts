@@ -127,6 +127,9 @@ export async function PATCH(req: Request) {
     // normalize the knockout sets to the bracket's actual matchup winners
     // so a stored orphan can never push a round over its size.
     set.predictions = normalizeKnockout(pruneDownstream(validated));
+    // Editing the picks means the player has taken it over, so it is no
+    // longer an untouched auto-fill.
+    set.autofilled = false;
     // Changing picks after submitting requires a fresh submit; the
     // tiebreaker rewards the final submit time.
     if (bracket.submitted) {

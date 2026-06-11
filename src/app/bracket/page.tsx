@@ -8,6 +8,7 @@ import { brackets, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLockedForPool } from '@/lib/lock';
 import BracketBuilder from '@/components/bracket/BracketBuilder';
+import AutofillRestart from '@/components/bracket/AutofillRestart';
 import BracketSummary from '@/components/brackets/BracketSummary';
 import StartBracket from '@/components/bracket/StartBracket';
 import PoolActions from '@/components/pools/PoolActions';
@@ -117,20 +118,23 @@ export default async function BracketPage({
           <BracketSummary predictions={bracket.predictions} teams={allTeams} />
         </div>
       ) : (
-        <BracketBuilder
-          bracket={{
-            id: bracket.id,
-            name: bracket.name,
-            predictions: bracket.predictions,
-            submitted: bracket.submitted,
-          }}
-          teams={allTeams}
-          copySources={otherBrackets.map((o) => ({
-            id: o.id,
-            poolName: o.poolName,
-            predictions: o.predictions,
-          }))}
-        />
+        <>
+          {bracket.autofilled ? <AutofillRestart bracketId={bracket.id} /> : null}
+          <BracketBuilder
+            bracket={{
+              id: bracket.id,
+              name: bracket.name,
+              predictions: bracket.predictions,
+              submitted: bracket.submitted,
+            }}
+            teams={allTeams}
+            copySources={otherBrackets.map((o) => ({
+              id: o.id,
+              poolName: o.poolName,
+              predictions: o.predictions,
+            }))}
+          />
+        </>
       )}
     </div>
   );
