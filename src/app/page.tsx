@@ -48,6 +48,9 @@ export default async function LandingPage() {
             Rank every group, call the knockouts, and see who has the best ball knowledge...
             May the best bracket win.
           </p>
+          <p className="text-xs text-muted-2">
+            Developed by Aatir Siddiqui
+          </p>
         </div>
       </div>
 
