@@ -74,7 +74,7 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                     )}
                   </div>
                 ) : null}
-                <div className="flex shrink-0 flex-col items-end leading-none">
+                <div className="flex shrink-0 flex-col items-center leading-none">
                   <span className="font-display text-2xl text-accent">{row.combined}</span>
                   {row.live > 0 ? (
                     <span className="mt-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
