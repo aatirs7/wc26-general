@@ -191,23 +191,22 @@ describe('live provisional scoring', () => {
     expect(facts.decidedGroups.has('A')).toBe(false);
   });
 
-  it('awards provisional top-2 points from the live table', () => {
-    // A: AAX beats ABX 1-0 live, so both are the current top 2.
+  it('awards provisional top-2 from the standings table, not who is on the pitch', () => {
+    // Group A has kicked off; the standings rank AAX 1st and ABX 2nd.
     const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
     const p = fullBracket(); // A.first = AAX, A.second = ABX
     const scores = scoreBracket(p, facts);
-    expect(scores.groups).toBe(6); // two correct current top-2 picks, 3 each
+    expect(scores.groups).toBe(6); // both standings top-2 picks correct, 3 each
     expect(provisionalPoints(p, facts)).toBe(6);
   });
 
-  it('moves as the score changes', () => {
-    // ACX leads its match, so it displaces a picked team out of the top 2.
-    const facts = buildFacts(
-      [liveGroupMatch('A', 2, 0, 2, 0), liveGroupMatch('A', 1, 3, 0, 0)],
-      fullStandings([]),
-    );
-    // Live top 2: ACX (3 pts) and one of the 0-pt teams by tiebreak.
-    expect(facts.liveTop2ByGroup.get('A')!.has(T('A', 2))).toBe(true);
+  it('does not credit a team the standings rank below 2nd', () => {
+    // ACX/ADX are ranked 3rd/4th in the standings, so picking them as a
+    // group's top 2 earns nothing even while the group is live.
+    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
+    const p = fullBracket();
+    p.groups.A = { first: T('A', 2), second: T('A', 3) }; // 3rd and 4th
+    expect(scoreBracket(p, facts).groups).toBe(0);
   });
 
   it('gives no provisional points before kickoff', () => {

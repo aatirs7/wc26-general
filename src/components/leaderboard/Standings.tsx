@@ -65,21 +65,20 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                     {!row.submitted ? ' · not locked' : ''}
                   </div>
                 </div>
-                {row.rankDelta !== 0 || row.gained > 0 ? (
+                {row.rankDelta !== 0 ? (
                   <div className="flex shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
                     {row.rankDelta > 0 ? (
                       <span className="text-accent">▲{row.rankDelta}</span>
-                    ) : row.rankDelta < 0 ? (
+                    ) : (
                       <span className="text-live">▼{-row.rankDelta}</span>
-                    ) : null}
-                    {row.gained > 0 ? <span className="text-muted">+{row.gained}</span> : null}
+                    )}
                   </div>
                 ) : null}
                 <div className="flex shrink-0 flex-col items-end leading-none">
                   <span className="font-display text-2xl text-accent">{row.combined}</span>
                   {row.live > 0 ? (
                     <span className="mt-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
-                      {row.live} live
+                      live
                     </span>
                   ) : null}
                 </div>

@@ -5,7 +5,6 @@
 
 import { eq } from 'drizzle-orm';
 import type { Predictions } from '@/types/bracket';
-import { computeLiveStandings } from './standings';
 import {
   FINAL_STATUSES,
   GROUP_LETTERS,
@@ -95,20 +94,31 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (m.stage === 'final') champion = m.winnerCode;
   }
 
-  // Live group tables from the match scores (counts in-progress games), so
-  // a group that has kicked off but not finished still produces a current
-  // top-2. Decided groups keep using the provider's authoritative table.
-  const liveRows = computeLiveStandings(matchRows);
-  const liveTop2ByGroup = new Map<string, Set<string>>();
-  const liveGroups = new Set<string>();
-  for (const r of liveRows) {
-    liveGroups.add(r.groupLetter);
-    if (r.rank === 1 || r.rank === 2) {
-      if (!liveTop2ByGroup.has(r.groupLetter)) liveTop2ByGroup.set(r.groupLetter, new Set());
-      liveTop2ByGroup.get(r.groupLetter)!.add(r.teamCode);
+  // Live group points use the SAME standings table the Matches > Groups view
+  // shows (provider rank over all four teams), so the two never disagree. A
+  // group counts as "started" once any of its matches has kicked off; its
+  // current top-2 is then read from the provider table (top2ByGroup above),
+  // which ranks every team -- a played-but-losing team correctly sits below
+  // teams that have not conceded.
+  const COUNTED_STATUS = new Set(['live', 'ht', 'ft', 'et', 'pens']);
+  const startedSet = new Set<string>();
+  for (const m of matchRows) {
+    if (
+      m.stage === 'group' &&
+      m.groupLetter &&
+      COUNTED_STATUS.has(m.status) &&
+      m.homeScore != null &&
+      m.awayScore != null
+    ) {
+      startedSet.add(m.groupLetter);
     }
   }
-  const startedGroups = new Set([...liveGroups].filter((g) => !decidedGroups.has(g)));
+  const startedGroups = new Set([...startedSet].filter((g) => !decidedGroups.has(g)));
+  const liveTop2ByGroup = new Map<string, Set<string>>();
+  for (const g of startedGroups) {
+    const s = top2ByGroup.get(g);
+    if (s) liveTop2ByGroup.set(g, new Set(s));
+  }
 
   return {
     decidedGroups,

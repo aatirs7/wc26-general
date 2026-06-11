@@ -33,7 +33,9 @@ export interface SyncReport {
   notes: string[];
 }
 
-const STANDINGS_FLOOR_MS = 30 * 60 * 1000;
+// Standings power both the Matches > Groups view and live group points, so
+// refresh them often during live windows (provider reflects live results).
+const STANDINGS_FLOOR_MS = 2 * 60 * 1000;
 
 type MatchRow = typeof matches.$inferSelect;
 
