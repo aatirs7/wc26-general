@@ -171,10 +171,40 @@ body {
 .medal-3 { background: linear-gradient(135deg, #f4ad7c, var(--bronze)); color: #2a1607; }
 .medal-4 { background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); }
 
-.ring-1 { box-shadow: inset 0 0 0 1.5px var(--gold); }
-.ring-2 { box-shadow: inset 0 0 0 1.5px var(--silver); }
-.ring-3 { box-shadow: inset 0 0 0 1.5px var(--bronze); }
-.ring-4 { box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+/* Podium outlines for the top three: a crisp metal border plus a soft
+   radiating glow so first/second/third feel special. Named podium-* (not
+   ring-*) so they don't collide with Tailwind's ring-1 utility, which was
+   overriding the gold first-place outline. */
+.podium-1 {
+  --podium-color: var(--gold);
+  box-shadow:
+    inset 0 0 0 1.6px var(--gold),
+    0 0 12px -3px color-mix(in srgb, var(--gold) 65%, transparent);
+}
+.podium-2 {
+  --podium-color: var(--silver);
+  box-shadow:
+    inset 0 0 0 1.6px var(--silver),
+    0 0 12px -3px color-mix(in srgb, var(--silver) 65%, transparent);
+}
+.podium-3 {
+  --podium-color: var(--bronze);
+  box-shadow:
+    inset 0 0 0 1.6px var(--bronze),
+    0 0 12px -3px color-mix(in srgb, var(--bronze) 65%, transparent);
+}
+.podium-4 { box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+
+/* Gentle radiating pulse around the medal positions. */
+@keyframes podium-radiate {
+  0%, 100% { filter: drop-shadow(0 0 1px color-mix(in srgb, var(--podium-color) 35%, transparent)); }
+  50% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--podium-color) 80%, transparent)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .podium-1 { animation: podium-radiate 2.8s ease-in-out infinite; }
+  .podium-2 { animation: podium-radiate 3.1s ease-in-out infinite; }
+  .podium-3 { animation: podium-radiate 3.4s ease-in-out infinite; }
+}
 
 /* Animations */
 /* Opacity only: a translate/transform here would paint the element offset

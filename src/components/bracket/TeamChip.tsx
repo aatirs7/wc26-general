@@ -28,7 +28,7 @@ export default function TeamChip({ team, rank, badge, selected, disabled, onTap 
         active
           ? 'border-accent/50 bg-accent/[0.07]'
           : 'border-edge bg-white/[0.02] hover:border-edge-strong'
-      } ${disabled ? 'opacity-35' : ''} ${rank ? `ring-${rank}` : ''}`}
+      } ${disabled ? 'opacity-35' : ''} ${rank ? `podium-${rank}` : ''}`}
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/30 text-xl">
         {team.flag}

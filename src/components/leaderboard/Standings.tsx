@@ -37,8 +37,8 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
             >
               <div
                 className={`card flex min-h-14 items-center gap-3 px-3 py-2.5 ${
-                  isMe ? 'border-accent bg-accent/[0.06]' : row.rank <= 3 ? `ring-${row.rank}` : ''
-                }`}
+                  isMe ? 'border-accent bg-accent/[0.06]' : ''
+                } ${row.rank <= 3 ? `podium-${row.rank}` : ''}`}
               >
                 <span
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-lg ${
