@@ -94,7 +94,7 @@ export default function MatchRow({ match, teamsByCode, notes }: Props) {
         </div>
       </div>
       {hasNotes ? (
-        <div className="mt-2 space-y-0.5 border-t border-edge/50 pt-2">
+        <div className="mt-2 space-y-0.5 border-t border-edge/50 pt-2 text-center">
           {notes!.map((n, i) => (
             <p key={i} className="text-[0.72rem] font-semibold leading-snug text-accent">
               {n}
