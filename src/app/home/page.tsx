@@ -157,7 +157,7 @@ export default async function HomePage({
       : 'View your bracket';
 
   return (
-    <div className="space-y-6 py-4">
+    <div className="space-y-6 py-4 lg:mx-auto lg:max-w-5xl lg:space-y-8 lg:pt-2">
       <RememberPool poolId={active.poolId} />
       <header className="reveal flex flex-col items-center gap-2 pt-2 text-center">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent font-display text-2xl text-[var(--accent-ink)]">
@@ -173,6 +173,8 @@ export default async function HomePage({
         </div>
       </header>
 
+      <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-6">
       {/* Kickoff / lock banner */}
       <section
         className="reveal card space-y-3 p-4 text-center"
@@ -251,7 +253,9 @@ export default async function HomePage({
           </span>
         </Link>
       </section>
+      </div>
 
+      <div className="space-y-6">
       {/* Trash talk + Score predict */}
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '210ms' }}>
         <Link
@@ -304,6 +308,8 @@ export default async function HomePage({
           })}
         </div>
       </section>
+      </div>
+      </div>
     </div>
   );
 }

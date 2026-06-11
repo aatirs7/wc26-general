@@ -73,7 +73,7 @@ export default async function BracketPage({
   const locked = isLocked();
 
   return (
-    <div className="py-4">
+    <div className="py-4 lg:mx-auto lg:max-w-3xl">
       <RememberPool poolId={activePoolId} />
       {memberships.length > 1 ? (
         <div className="mb-3 flex justify-center gap-2 overflow-x-auto pb-1 pt-2">

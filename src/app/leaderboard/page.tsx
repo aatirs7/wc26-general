@@ -163,7 +163,7 @@ export default async function LeaderboardPage({
   const me = rows.find((r) => r.ownerId === userId);
 
   return (
-    <div className="space-y-4 py-4">
+    <div className="space-y-4 py-4 lg:mx-auto lg:max-w-2xl">
       <RememberPool poolId={active.poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>

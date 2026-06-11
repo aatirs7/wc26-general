@@ -49,7 +49,7 @@ export default async function ChatPage({
   const feed = rows.reverse();
 
   return (
-    <div className="flex min-h-[calc(100vh-9rem)] flex-col pb-36 pt-4">
+    <div className="flex min-h-[calc(100vh-9rem)] flex-col pb-36 pt-4 lg:mx-auto lg:max-w-2xl">
       <RememberPool poolId={active.poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Smack talk</h1>

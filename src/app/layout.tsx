@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Bebas_Neue, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
 import BottomTabBar from '@/components/nav/BottomTabBar';
+import DesktopNav from '@/components/nav/DesktopNav';
 import ThemeButton from '@/components/theme/ThemeButton';
 import WhatsNew from '@/components/WhatsNew';
 import './globals.css';
@@ -49,8 +50,11 @@ export default async function RootLayout({
         <div className="bg-pitch" aria-hidden />
         <div className="bg-grain" aria-hidden />
         <ThemeButton initial={theme} />
+        <DesktopNav />
         {signedIn ? <WhatsNew /> : null}
-        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-14">{children}</main>
+        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-14 lg:max-w-6xl lg:px-8 lg:pt-24">
+          {children}
+        </main>
         <BottomTabBar />
       </body>
     </html>

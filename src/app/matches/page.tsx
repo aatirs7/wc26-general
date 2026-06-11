@@ -74,7 +74,7 @@ export default async function MatchesPage({
       </header>
 
       {showGroups ? (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
           {GROUP_LETTERS.map((letter) => (
             <GroupStandingsTable
               key={letter}
@@ -85,11 +85,11 @@ export default async function MatchesPage({
           ))}
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
           <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
           {[...upcoming, ...past].map((day) => (
             <section key={day}>
-              <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur">
+              <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur lg:top-16">
                 {matchDayLabel(new Date(`${day}T12:00:00Z`))}
               </h2>
               <div className="space-y-2">

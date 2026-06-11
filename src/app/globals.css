@@ -141,9 +141,15 @@ body {
   font-weight: 400;
 }
 
-/* Room for the floating bottom nav plus iOS safe area. */
+/* Room for the floating bottom nav plus iOS safe area. The bottom bar is
+   hidden at lg (a top nav takes over), so drop the reserved space there. */
 .pb-tabbar {
   padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .pb-tabbar {
+    padding-bottom: 2.5rem;
+  }
 }
 
 /* Surfaces */

@@ -307,7 +307,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
       className={
         fullscreen
           ? 'absolute inset-0 overflow-auto bg-black/10'
-          : 'h-[54vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
+          : 'h-[54vh] lg:h-[70vh] overflow-auto rounded-xl border border-edge/60 bg-black/10'
       }
       style={{ touchAction: 'none' }}
     >
@@ -353,7 +353,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
       {!fullscreen ? (
         scrollEl
       ) : (
-        <div className="flex h-[54vh] items-center justify-center rounded-xl border border-edge/60 bg-black/10 text-sm text-muted">
+        <div className="flex h-[54vh] lg:h-[70vh] items-center justify-center rounded-xl border border-edge/60 bg-black/10 text-sm text-muted">
           Open in full screen
         </div>
       )}

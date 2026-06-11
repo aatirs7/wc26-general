@@ -27,21 +27,21 @@ export default async function LandingPage() {
     : [];
 
   return (
-    <div className="flex min-h-[88vh] flex-col items-center justify-center gap-8 py-12 text-center">
-      <div className="reveal space-y-4">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-accent/30">
+    <div className="flex min-h-[88vh] flex-col items-center justify-center gap-8 py-12 text-center lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:text-left">
+      <div className="reveal space-y-4 lg:space-y-6">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-accent/30 lg:mx-0">
           <Trophy className="h-10 w-10 text-accent" strokeWidth={2} />
         </div>
         <div>
           <p className="font-display text-lg tracking-[0.45em] text-accent">FIFA</p>
-          <h1 className="font-display text-7xl leading-[0.82] tracking-tight">
+          <h1 className="font-display text-7xl leading-[0.82] tracking-tight lg:text-8xl">
             World Cup
-            <span className="block shine text-8xl">2026</span>
+            <span className="block shine text-8xl lg:text-9xl">2026</span>
           </h1>
           <p className="mt-1 font-display text-2xl tracking-[0.3em] text-muted">Bracket Pool</p>
         </div>
 
-        <div className="mx-auto max-w-xs space-y-1">
+        <div className="mx-auto max-w-xs space-y-1 lg:mx-0 lg:max-w-md">
           <p className="font-display text-2xl tracking-wide text-foreground">
             World Cup 2026 Bracket Pool
           </p>
@@ -55,8 +55,9 @@ export default async function LandingPage() {
         </div>
       </div>
 
+      <div className="flex w-full flex-col items-center gap-8 lg:items-stretch">
       <div
-        className={`reveal inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
+        className={`reveal inline-flex items-center gap-2 self-center rounded-full border px-4 py-2 text-sm font-semibold lg:self-start ${
           locked ? 'border-live/30 bg-live/10 text-live' : 'border-gold/30 bg-gold/10 text-gold'
         }`}
         style={{ animationDelay: '80ms' }}
@@ -67,7 +68,7 @@ export default async function LandingPage() {
           : `Locks ${matchDayLabel(kickoff)}, ${matchTime(kickoff)} ${DISPLAY_TZ_LABEL}`}
       </div>
 
-      <div className="reveal w-full max-w-sm" style={{ animationDelay: '160ms' }}>
+      <div className="reveal w-full max-w-sm lg:max-w-md" style={{ animationDelay: '160ms' }}>
         {!userId ? (
           <Onboard lastName={lastName} />
         ) : (
@@ -103,6 +104,7 @@ export default async function LandingPage() {
             <SwitchName name={lastName} />
           </div>
         )}
+      </div>
       </div>
     </div>
   );

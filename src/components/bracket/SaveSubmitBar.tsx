@@ -57,7 +57,7 @@ export default function SaveSubmitBar(props: Props) {
         type="button"
         onClick={() => setHidden(false)}
         aria-label="Show bracket controls"
-        className={`glass fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-9 w-9 items-center justify-center rounded-full shadow-lg shadow-black/40 active:scale-95 ${
+        className={`glass fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 lg:bottom-6 flex h-9 w-9 items-center justify-center rounded-full shadow-lg shadow-black/40 active:scale-95 ${
           needsAttention ? 'text-accent ring-1 ring-accent' : 'text-muted'
         }`}
       >
@@ -67,7 +67,7 @@ export default function SaveSubmitBar(props: Props) {
   }
 
   return (
-    <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30">
+    <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 lg:bottom-6">
       <div className="glass flex items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-2 shadow-xl shadow-black/40">
         <button
           type="button"

@@ -42,7 +42,7 @@ export default async function MePage() {
   );
 
   return (
-    <div className="space-y-7 py-4">
+    <div className="space-y-7 py-4 lg:mx-auto lg:max-w-2xl">
       <header className="flex flex-col items-center gap-2 pt-2 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent font-display text-3xl text-[var(--accent-ink)]">
           {(me?.displayName ?? 'Y').slice(0, 1).toUpperCase()}

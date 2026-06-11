@@ -44,7 +44,7 @@ export default async function BracketViewPage({
   const scored = scores.filter((s) => s.points > 0);
 
   return (
-    <div className="space-y-5 py-4">
+    <div className="space-y-5 py-4 lg:mx-auto lg:max-w-3xl">
       <header className="card flex items-center justify-between p-4 pt-4">
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl leading-none">{bracket.name}</h1>

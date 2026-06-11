@@ -29,7 +29,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 export default function ScoringPage() {
   return (
-    <div className="space-y-7 py-4">
+    <div className="space-y-7 py-4 lg:mx-auto lg:max-w-2xl">
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">How it&apos;s scored</h1>
         <p className="mt-1 text-sm text-muted">Read this before you argue about it.</p>

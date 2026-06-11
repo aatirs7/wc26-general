@@ -2,23 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Trophy, CalendarDays, ListOrdered, BarChart3, User, type LucideIcon } from 'lucide-react';
-
-const TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/bracket', label: 'Bracket', icon: Trophy },
-  { href: '/matches', label: 'Matches', icon: CalendarDays },
-  { href: '/leaderboard', label: 'Table', icon: ListOrdered },
-  { href: '/stats', label: 'Stats', icon: BarChart3 },
-  { href: '/me', label: 'Me', icon: User },
-];
+import { TABS } from './tabs';
 
 export default function BottomTabBar() {
   const pathname = usePathname();
   if (pathname === '/') return null;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-surface pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-edge bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-md px-2 pt-1">
         {TABS.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(tab.href + '/');
