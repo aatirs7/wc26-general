@@ -148,7 +148,18 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
       ? resolveProviderTeam(f.winnerTla, f.winnerName ?? '')
       : null;
 
-    if (!isFinal(target.status) && isFinal(f.status)) anyFinishedNow = true;
+    // The free provider tier flaps started matches back to 'scheduled'/
+    // 'timed', which would make live points flicker. Never regress a match
+    // that has already kicked off: once started, keep our status/score
+    // unless the provider has something at least as advanced.
+    const started = (s: string) => ['live', 'ht', 'ft', 'et', 'pens'].includes(s);
+    const regress = started(target.status) && !started(f.status);
+    const nextStatus = regress ? target.status : f.status;
+    const nextHome = regress ? target.homeScore : f.homeScore;
+    const nextAway = regress ? target.awayScore : f.awayScore;
+    const nextWinner = regress ? target.winnerCode : winnerCode;
+
+    if (!isFinal(target.status) && isFinal(nextStatus)) anyFinishedNow = true;
 
     await db
       .update(matches)
@@ -156,10 +167,10 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
         providerFixtureId: f.providerId,
         homeCode,
         awayCode,
-        homeScore: f.homeScore,
-        awayScore: f.awayScore,
-        status: f.status,
-        winnerCode,
+        homeScore: nextHome,
+        awayScore: nextAway,
+        status: nextStatus,
+        winnerCode: nextWinner,
         // Trust the provider's kickoff time once known; openfootball
         // times are provisional.
         kickoffUtc: f.kickoffUtc,
