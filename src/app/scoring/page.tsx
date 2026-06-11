@@ -65,15 +65,18 @@ export default function ScoringPage() {
         <h2 className="mb-3 text-center font-display text-2xl">Live group points</h2>
         <div className="card border-gold/30 bg-gold/[0.06] p-3">
           <p className="text-sm leading-relaxed text-muted">
-            <span className="font-bold text-gold">During the group stage your points are live.</span>{' '}
-            At any given moment your total is an{' '}
-            <span className="text-foreground">accurate snapshot of the standings right now</span>:
-            every team you picked that is <span className="text-foreground">currently</span> 1st or
-            2nd in its group is worth its full points this second. As goals go in and positions
-            swap, your points move with them. They are{' '}
-            <span className="text-foreground">provisional</span> and{' '}
-            <span className="text-foreground">lock in when each group finishes</span>. Best-third
-            points only count once every group is done.
+            <span className="font-bold text-gold">
+              Group points go live the moment a group kicks off, but only for the leader.
+            </span>{' '}
+            While a group is in progress, the team you picked that is{' '}
+            <span className="text-foreground">currently sitting 1st</span> earns its{' '}
+            {SCORING.groupTop2} points right now, and that total moves as goals go in and the table
+            reshuffles. The <span className="text-foreground">runner-up&apos;s points are held back</span>{' '}
+            until the group is over, since 2nd place swings around too much mid-group to pay out
+            live. When the group finishes, <span className="text-foreground">both your top-2 picks
+            lock in</span> at {SCORING.groupTop2} each. Best-third points only count once{' '}
+            <span className="text-foreground">all 12 groups are done</span>. The leaderboard tags
+            this still-moving portion as <span className="text-gold">live</span>.
           </p>
         </div>
       </section>
@@ -119,8 +122,9 @@ export default function ScoringPage() {
           round.&quot;
         </Step>
         <Step n={4} title="Points land as results come in">
-          Group points arrive when a group finishes, third-place points once all 12 groups are done,
-          and each knockout round as it completes.
+          The current group leader scores live as soon as a group kicks off; the full top-2 locks in
+          when that group finishes, third-place points once all 12 groups are done, and each knockout
+          round as it completes.
         </Step>
       </section>
 
