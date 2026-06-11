@@ -201,8 +201,8 @@ export default async function StatsPage({
       <RememberPool poolId={poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Stats</h1>
-        <p className="mt-1 text-sm text-muted">
-          {active.poolName} ·{' '}
+        <p className="mt-1 text-sm text-muted">{active.poolName}</p>
+        <p className="mt-0.5 text-xs text-muted">
           <Link href="/scoring" className="font-semibold text-accent underline">
             How it&apos;s scored
           </Link>
