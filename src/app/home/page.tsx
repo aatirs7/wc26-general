@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, poolMembers, pools, users } from '@/lib/schema';
+import { brackets, bracketScores, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import RememberPool from '@/components/RememberPool';
 import { isLocked, kickoffUtc } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import Countdown from '@/components/home/Countdown';
+import DailyRecap, { type RecapData } from '@/components/home/DailyRecap';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,6 +84,7 @@ export default async function HomePage({
   let myBracket:
     | { id: string; name: string; submitted: boolean; points: number; complete: boolean }
     | null = null;
+  let recap: RecapData = { climber: null, faller: null, gainer: null, you: null };
 
   if (active) {
     const members = await db
@@ -128,11 +130,53 @@ export default async function HomePage({
       return a.lockedAtMs - b.lockedAtMs;
     });
     let rank = 0;
+    const curRank = new Map<string, number>();
+    const curPoints = new Map<string, number>();
     for (const r of rows) {
+      curPoints.set(r.ownerId, r.points);
       if (r.submitted) {
         rank += 1;
+        curRank.set(r.ownerId, rank);
         if (r.ownerId === userId) myRank = rank;
       }
+    }
+
+    // Daily recap: movement since the morning snapshot.
+    const snaps = await db
+      .select({ userId: standingSnapshots.userId, points: standingSnapshots.points, rank: standingSnapshots.rank })
+      .from(standingSnapshots)
+      .where(eq(standingSnapshots.poolId, active.poolId));
+    if (snaps.length > 0) {
+      const nameRows = await db
+        .select({ id: users.id, name: users.displayName })
+        .from(users)
+        .where(inArray(users.id, members.map((m) => m.userId)));
+      const nameByUser = new Map(nameRows.map((n) => [n.id, n.name]));
+
+      let climber: RecapData['climber'] = null;
+      let faller: RecapData['faller'] = null;
+      let gainer: RecapData['gainer'] = null;
+      for (const s of snaps) {
+        const name = nameByUser.get(s.userId) ?? '?';
+        const nowRank = curRank.get(s.userId);
+        const gained = (curPoints.get(s.userId) ?? 0) - s.points;
+        if (s.rank != null && nowRank != null) {
+          const up = s.rank - nowRank;
+          if (up > 0 && (!climber || up > climber.up)) climber = { name, up };
+          if (up < 0 && (!faller || -up > faller.down)) faller = { name, down: -up };
+        }
+        if (gained > 0 && (!gainer || gained > gainer.pts)) gainer = { name, pts: gained };
+      }
+      const mySnap = snaps.find((s) => s.userId === userId);
+      const you =
+        mySnap && myRank != null
+          ? {
+              rankDelta: mySnap.rank != null ? mySnap.rank - myRank : 0,
+              gained: (curPoints.get(userId) ?? 0) - mySnap.points,
+              rank: myRank,
+            }
+          : null;
+      recap = { climber, faller, gainer, you };
     }
 
     const mine = bracketByOwner.get(userId);
@@ -232,6 +276,9 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+
+      {/* Daily recap (self-hides until there is movement) */}
+      <DailyRecap data={recap} />
 
       {/* Bracket status headline */}
       <section className="reveal" style={{ animationDelay: '180ms' }}>

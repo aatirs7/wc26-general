@@ -2,13 +2,16 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, poolMembers, pools, users } from '@/lib/schema';
+import { brackets, groupStandings, matches, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLocked } from '@/lib/lock';
+import { buildFacts, scoreBracket } from '@/lib/scoring';
+import { computeBadges, type Badge } from '@/lib/achievements';
 import RenameBracket from '@/components/me/RenameBracket';
 import RenameSelf from '@/components/me/RenameSelf';
 import BracketControls from '@/components/me/BracketControls';
 import InstallGuide from '@/components/me/InstallGuide';
+import Achievements from '@/components/me/Achievements';
 import SwitchPlayer from '@/components/auth/SwitchPlayer';
 import InviteShare from '@/components/pools/InviteShare';
 
@@ -40,6 +43,72 @@ export default async function MePage() {
       return { pool: p, bracket: b ?? null };
     }),
   );
+
+  // Achievements: a personal trophy case merged across the user's brackets
+  // (a badge counts as earned if it's earned in any of their groups).
+  const matchRows = await db
+    .select({ stage: matches.stage, status: matches.status, groupLetter: matches.groupLetter, winnerCode: matches.winnerCode })
+    .from(matches);
+  const standingRows = await db
+    .select({ groupLetter: groupStandings.groupLetter, teamCode: groupStandings.teamCode, rank: groupStandings.rank, isBestThird: groupStandings.isBestThird })
+    .from(groupStandings);
+  const facts = buildFacts(matchRows, standingRows);
+
+  const perPool: Badge[][] = [];
+  for (const p of myPools) {
+    const poolBrackets = await db.select().from(brackets).where(eq(brackets.poolId, p.poolId));
+    const mineB = poolBrackets.find((b) => b.ownerId === userId);
+    if (!mineB) continue;
+    const scores = scoreBracket(mineB.predictions, facts);
+    const ranked = poolBrackets
+      .map((b) => {
+        const sc = scoreBracket(b.predictions, facts);
+        return {
+          ownerId: b.ownerId,
+          points: b.totalPoints,
+          tb: sc.final + sc.champion,
+          submitted: b.submitted,
+          lockedAtMs: b.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
+        };
+      })
+      .sort((a, b) => {
+        if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.tb !== a.tb) return b.tb - a.tb;
+        return a.lockedAtMs - b.lockedAtMs;
+      });
+    let rank: number | null = null;
+    let r = 0;
+    for (const x of ranked) {
+      if (x.submitted) {
+        r += 1;
+        if (x.ownerId === userId) rank = r;
+      }
+    }
+    const champ = mineB.predictions.knockout.champion;
+    const sharers = champ
+      ? poolBrackets.filter((b) => b.predictions.knockout.champion === champ).length
+      : 0;
+    perPool.push(
+      computeBadges({
+        predictions: mineB.predictions,
+        scores,
+        facts,
+        totalPoints: mineB.totalPoints,
+        rank,
+        fieldSize: poolBrackets.length,
+        loneWolfChampion: !!champ && sharers === 1,
+      }),
+    );
+  }
+
+  const badges: Badge[] = perPool.length
+    ? perPool[0].map((b, i) => {
+        const earned = perPool.some((pb) => pb[i].earned);
+        const hint = earned ? undefined : perPool.find((pb) => pb[i].hint)?.[i].hint ?? b.hint;
+        return { ...b, earned, hint };
+      })
+    : [];
 
   return (
     <div className="space-y-7 py-4 lg:mx-auto lg:max-w-2xl">
@@ -89,6 +158,8 @@ export default async function MePage() {
           </div>
         ))}
       </section>
+
+      {badges.length > 0 ? <Achievements badges={badges} /> : null}
 
       <section className="space-y-3">
         <h2 className="text-center font-display text-xl text-muted">Add to home screen</h2>

@@ -20,6 +20,8 @@ export interface MatchRowData {
 interface Props {
   match: MatchRowData;
   teamsByCode: Map<string, Team>;
+  // Teams the viewer's bracket is backing; highlighted as "your pick".
+  backed?: Set<string>;
 }
 
 function Side({
@@ -29,6 +31,7 @@ function Side({
   isWinner,
   played,
   teamsByCode,
+  backed,
 }: {
   code: string | null;
   placeholder: string | null;
@@ -36,6 +39,7 @@ function Side({
   isWinner: boolean;
   played: boolean;
   teamsByCode: Map<string, Team>;
+  backed: boolean;
 }) {
   const team = code ? teamsByCode.get(code) : undefined;
   return (
@@ -46,6 +50,11 @@ function Side({
       <span className="flex-1 truncate text-sm font-semibold">
         {team?.name ?? placeholder ?? 'TBD'}
       </span>
+      {backed ? (
+        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wider text-accent">
+          Pick
+        </span>
+      ) : null}
       {played ? (
         <span className={`font-display text-xl tabular-nums ${isWinner ? 'text-accent' : ''}`}>
           {score}
@@ -55,10 +64,12 @@ function Side({
   );
 }
 
-export default function MatchRow({ match, teamsByCode }: Props) {
+export default function MatchRow({ match, teamsByCode, backed }: Props) {
   const played = match.homeScore !== null && match.awayScore !== null;
+  const homeBacked = match.homeCode != null && (backed?.has(match.homeCode) ?? false);
+  const awayBacked = match.awayCode != null && (backed?.has(match.awayCode) ?? false);
   return (
-    <div className="card flex items-stretch gap-3 p-3">
+    <div className={`card flex items-stretch gap-3 p-3 ${homeBacked || awayBacked ? 'border-accent/40' : ''}`}>
       <div className="min-w-0 flex-1 space-y-2">
         <Side
           code={match.homeCode}
@@ -67,6 +78,7 @@ export default function MatchRow({ match, teamsByCode }: Props) {
           isWinner={match.winnerCode != null && match.winnerCode === match.homeCode}
           played={played}
           teamsByCode={teamsByCode}
+          backed={homeBacked}
         />
         <Side
           code={match.awayCode}
@@ -75,6 +87,7 @@ export default function MatchRow({ match, teamsByCode }: Props) {
           isWinner={match.winnerCode != null && match.winnerCode === match.awayCode}
           played={played}
           teamsByCode={teamsByCode}
+          backed={awayBacked}
         />
       </div>
       <div className="flex w-16 flex-col items-end justify-between border-l border-edge pl-2.5 text-right">
