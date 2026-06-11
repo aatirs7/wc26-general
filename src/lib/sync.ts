@@ -16,7 +16,7 @@ import {
   standingSnapshots,
   syncMeta,
 } from './schema';
-import { footballDataProvider, type ProviderFixture } from './scores-provider';
+import { activeProvider, type ProviderFixture } from './scores-provider';
 import { resolveProviderTeam } from './team-map';
 import { deriveAdvancement } from './standings';
 import { rescoreAll } from './scoring';
@@ -92,7 +92,7 @@ async function getMetaMs(key: string): Promise<number> {
 export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport> {
   const dry = opts.dry ?? false;
   const notes: string[] = [];
-  const provider = footballDataProvider;
+  const provider = activeProvider;
 
   const fixtures = await provider.fetchFixtures();
 

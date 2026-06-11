@@ -152,4 +152,119 @@ export const footballDataProvider: ScoresProvider = {
     return out;
   },
 };
+
+// ESPN's unofficial public JSON feed (no API key). The scoreboard +
+// standings for the FIFA World Cup (league slug fifa.world) actually serve
+// live status, scores and group tables, unlike the free football-data tier.
+const ESPN_SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world';
+const ESPN_WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer/fifa.world';
+
+// ESPN season.type id -> our stage code (sampled across the 2026 schedule).
+const ESPN_STAGE: Record<number, string> = {
+  13802: 'group',
+  13801: 'r32',
+  13800: 'r16',
+  13799: 'qf',
+  13798: 'sf',
+  13797: 'third',
+  13803: 'final',
+};
+
+function espnStatus(state: string | undefined, name: string | undefined): string {
+  const n = (name ?? '').toUpperCase();
+  if (state === 'pre') return 'scheduled';
+  if (state === 'in') return n.includes('HALFTIME') || n.includes('HALF_TIME') ? 'ht' : 'live';
+  // 'post' / finished
+  if (n.includes('PEN') || n.includes('SHOOTOUT')) return 'pens';
+  if (n.includes('AET') || n.includes('EXTRA')) return 'et';
+  if (n.includes('POSTPON') || n.includes('ABANDON') || n.includes('CANCEL')) return 'scheduled';
+  return 'ft';
+}
+
+async function espnGet(url: string): Promise<any> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0', accept: 'application/json' },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`ESPN ${url} failed: ${res.status}`);
+  return res.json();
+}
+
+const toScore = (s: any): number | null => {
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+
+export const espnProvider: ScoresProvider = {
+  async fetchFixtures() {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = Date.now();
+    const out = new Map<number, ProviderFixture>();
+    // ESPN's scoreboard is per-day; pull a window around now so we catch
+    // just-finished, live, and imminent fixtures.
+    for (let off = -2; off <= 2; off++) {
+      const dt = new Date(now + off * 86400000);
+      const ymd = `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}`;
+      let data: any;
+      try {
+        data = await espnGet(`${ESPN_SITE}/scoreboard?dates=${ymd}`);
+      } catch {
+        continue; // skip a bad day, keep the rest
+      }
+      for (const e of (data.events as any[]) ?? []) {
+        const c = e.competitions?.[0];
+        if (!c) continue;
+        const competitors = (c.competitors ?? []) as any[];
+        const home = competitors.find((x) => x.homeAway === 'home');
+        const away = competitors.find((x) => x.homeAway === 'away');
+        const status = espnStatus(e.status?.type?.state, e.status?.type?.name);
+        const started = status !== 'scheduled';
+        const winner = competitors.find((x) => x.winner === true) ?? null;
+        const id = Number(e.id);
+        if (!Number.isFinite(id)) continue;
+        out.set(id, {
+          providerId: id,
+          stage: ESPN_STAGE[e.season?.type as number] ?? null,
+          groupLetter: null,
+          homeName: home?.team?.displayName ?? '',
+          awayName: away?.team?.displayName ?? '',
+          homeTla: home?.team?.abbreviation ?? null,
+          awayTla: away?.team?.abbreviation ?? null,
+          homeScore: started ? toScore(home?.score) : null,
+          awayScore: started ? toScore(away?.score) : null,
+          status,
+          kickoffUtc: new Date(e.date),
+          winnerName: winner?.team?.displayName ?? null,
+          winnerTla: winner?.team?.abbreviation ?? null,
+        });
+      }
+    }
+    return [...out.values()];
+  },
+
+  async fetchStandings() {
+    const data = await espnGet(`${ESPN_WEB}/standings?season=2026`);
+    const out: ProviderStanding[] = [];
+    for (const group of (data.children as any[]) ?? []) {
+      const groupName = group.name ?? group.abbreviation ?? '';
+      for (const e of (group.standings?.entries as any[]) ?? []) {
+        const stat = (k: string) => (e.stats as any[])?.find((s) => s.name === k)?.value;
+        out.push({
+          groupName,
+          teamName: e.team?.displayName ?? '',
+          teamTla: e.team?.abbreviation ?? null,
+          played: Number(stat('gamesPlayed')) || 0,
+          points: Number(stat('points')) || 0,
+          gd: Number(stat('pointDifferential')) || 0,
+          gf: Number(stat('pointsFor')) || 0,
+          rank: Number(stat('rank')) || 0,
+        });
+      }
+    }
+    return out;
+  },
+};
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+// Active results provider. Swap this one line to change data sources.
+export const activeProvider: ScoresProvider = espnProvider;
