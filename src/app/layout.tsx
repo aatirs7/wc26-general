@@ -6,6 +6,7 @@ import DesktopNav from '@/components/nav/DesktopNav';
 import ThemeButton from '@/components/theme/ThemeButton';
 import WhatsNew from '@/components/WhatsNew';
 import InstallPrompt from '@/components/InstallPrompt';
+import AutoRefresh from '@/components/AutoRefresh';
 import './globals.css';
 
 const display = Bebas_Neue({
@@ -58,6 +59,7 @@ export default async function RootLayout({
         <div className="bg-atmosphere" aria-hidden />
         <div className="bg-pitch" aria-hidden />
         <div className="bg-grain" aria-hidden />
+        <AutoRefresh />
         <ThemeButton initial={theme} />
         <DesktopNav />
         {signedIn ? <WhatsNew /> : null}
