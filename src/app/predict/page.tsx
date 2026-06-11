@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';
 import { Target } from 'lucide-react';
@@ -11,9 +12,18 @@ import MatchPredict from '@/components/predict/MatchPredict';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PredictPage() {
+export default async function PredictPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string }>;
+}) {
   const userId = await currentUserId();
   if (!userId) redirect('/');
+
+  // Optional group filter (?group=A), so you can set a whole group's
+  // predictions on one focused screen instead of scrolling everything.
+  const { group } = await searchParams;
+  const activeGroup = group && /^[A-L]$/i.test(group) ? group.toUpperCase() : null;
 
   const allMatches = await db
     .select()
@@ -51,6 +61,23 @@ export default async function PredictPage() {
     .filter((m) => predByMatch.has(m.id) && m.kickoffUtc.getTime() <= now)
     .reverse();
 
+  // Group switcher: offer a pill per group that has any match on this page.
+  const groupsAvailable = [
+    ...new Set(
+      [...open, ...upcomingShow, ...results]
+        .map((m) => m.groupLetter)
+        .filter((g): g is string => !!g),
+    ),
+  ].sort();
+  const inGroup = (m: (typeof allMatches)[number]) => !activeGroup || m.groupLetter === activeGroup;
+  const openShown = open.filter(inGroup);
+  const upcomingFiltered = upcomingShow.filter(inGroup);
+  const resultsFiltered = results.filter(inGroup);
+  const pill = (on: boolean) =>
+    `shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+      on ? 'border-accent bg-accent/10 text-accent' : 'border-edge bg-white/[0.02] text-muted'
+    }`;
+
   return (
     <div className="space-y-5 py-4 lg:mx-auto lg:max-w-2xl">
       <header className="pt-2 text-center">
@@ -75,15 +102,30 @@ export default async function PredictPage() {
         </div>
       </div>
 
+      {groupsAvailable.length >= 2 ? (
+        <div className="flex justify-center gap-2 overflow-x-auto pb-1">
+          <Link href="/predict" className={pill(!activeGroup)}>
+            All
+          </Link>
+          {groupsAvailable.map((g) => (
+            <Link key={g} href={`/predict?group=${g}`} className={pill(activeGroup === g)}>
+              Group {g}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
       <section>
         <h2 className="mb-2 text-center font-display text-2xl">Open now</h2>
-        {open.length === 0 ? (
+        {openShown.length === 0 ? (
           <p className="card p-4 text-sm text-muted">
-            Nothing open to predict yet. Matches open 24h before kickoff, so check back soon.
+            {activeGroup
+              ? `Nothing open to predict in Group ${activeGroup} right now.`
+              : 'Nothing open to predict yet. Matches open 24h before kickoff, so check back soon.'}
           </p>
         ) : (
           <div className="space-y-3">
-            {open.map((m) => {
+            {openShown.map((m) => {
               const h = label(m.homeCode, m.homePlaceholder);
               const a = label(m.awayCode, m.awayPlaceholder);
               const p = predByMatch.get(m.id);
@@ -108,11 +150,11 @@ export default async function PredictPage() {
         )}
       </section>
 
-      {results.length > 0 ? (
+      {resultsFiltered.length > 0 ? (
         <section>
           <h2 className="mb-2 text-center font-display text-2xl">Your results</h2>
           <ul className="space-y-2">
-            {results.map((m) => {
+            {resultsFiltered.map((m) => {
               const h = label(m.homeCode, m.homePlaceholder);
               const a = label(m.awayCode, m.awayPlaceholder);
               const p = predByMatch.get(m.id)!;
@@ -141,11 +183,11 @@ export default async function PredictPage() {
         </section>
       ) : null}
 
-      {upcomingShow.length > 0 ? (
+      {upcomingFiltered.length > 0 ? (
         <section>
           <h2 className="mb-2 text-center font-display text-2xl text-muted">Opening soon</h2>
           <ul className="space-y-2">
-            {upcomingShow.map((m) => {
+            {upcomingFiltered.map((m) => {
               const h = label(m.homeCode, m.homePlaceholder);
               const a = label(m.awayCode, m.awayPlaceholder);
               return (
