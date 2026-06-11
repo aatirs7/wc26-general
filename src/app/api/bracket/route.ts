@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { bracketScores, brackets } from '@/lib/schema';
 import { isPoolMember } from '@/lib/access';
 import { currentUserId } from '@/lib/auth';
-import { isLocked } from '@/lib/lock';
+import { isLockedForPool } from '@/lib/lock';
 import { isComplete, pruneDownstream, validatePredictions } from '@/lib/predictions';
 import { normalizeKnockout } from '@/lib/knockout-bracket';
 import { emptyPredictions } from '@/types/bracket';
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const body = parsed.data;
 
   if (body.action === 'create') {
-    if (isLocked()) {
+    if (isLockedForPool(body.poolId)) {
       // Late joiners can view and follow the leaderboard but not enter.
       return NextResponse.json({ error: 'did not lock' }, { status: 403 });
     }
@@ -85,9 +85,9 @@ export async function POST(req: Request) {
   }
 
   // submit
-  if (isLocked()) return NextResponse.json({ error: 'locked' }, { status: 403 });
   const bracket = await loadOwned(body.id, userId);
   if (!bracket) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (isLockedForPool(bracket.poolId)) return NextResponse.json({ error: 'locked' }, { status: 403 });
   if (!isComplete(bracket.predictions)) {
     return NextResponse.json({ error: 'bracket is incomplete' }, { status: 400 });
   }
@@ -116,7 +116,7 @@ export async function PATCH(req: Request) {
   if (name) set.name = name;
 
   if (predictions !== undefined) {
-    if (isLocked()) return NextResponse.json({ error: 'locked' }, { status: 403 });
+    if (isLockedForPool(bracket.poolId)) return NextResponse.json({ error: 'locked' }, { status: 403 });
     let validated;
     try {
       validated = validatePredictions(predictions);
@@ -154,10 +154,9 @@ export async function DELETE(req: Request) {
   const parsed = deleteSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'invalid body' }, { status: 400 });
 
-  if (isLocked()) return NextResponse.json({ error: 'locked' }, { status: 403 });
-
   const bracket = await loadOwned(parsed.data.id, userId);
   if (!bracket) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (isLockedForPool(bracket.poolId)) return NextResponse.json({ error: 'locked' }, { status: 403 });
 
   await db.delete(bracketScores).where(eq(bracketScores.bracketId, bracket.id));
   await db.delete(brackets).where(eq(brackets.id, bracket.id));

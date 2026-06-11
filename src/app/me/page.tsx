@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { brackets, groupStandings, matches, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { isLocked } from '@/lib/lock';
+import { isLockedForPool } from '@/lib/lock';
 import { buildFacts, scoreBracket } from '@/lib/scoring';
 import { computeBadges, type Badge } from '@/lib/achievements';
 import RenameBracket from '@/components/me/RenameBracket';
@@ -148,10 +148,10 @@ export default async function MePage() {
             {bracket ? (
               <>
                 <RenameBracket bracketId={bracket.id} currentName={bracket.name} />
-                {!bracket.submitted && !isLocked() ? (
+                {!bracket.submitted && !isLockedForPool(pool.poolId) ? (
                   <p className="text-xs font-semibold text-gold">Not submitted yet</p>
                 ) : null}
-                {!isLocked() ? <BracketControls bracketId={bracket.id} /> : null}
+                {!isLockedForPool(pool.poolId) ? <BracketControls bracketId={bracket.id} /> : null}
               </>
             ) : (
               <p className="text-xs text-muted">No bracket yet</p>

@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { Lock } from 'lucide-react';
 import { brackets, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { isLocked } from '@/lib/lock';
+import { isLockedForPool } from '@/lib/lock';
 import BracketBuilder from '@/components/bracket/BracketBuilder';
 import BracketSummary from '@/components/brackets/BracketSummary';
 import StartBracket from '@/components/bracket/StartBracket';
@@ -70,7 +70,7 @@ export default async function BracketPage({
     .from(teams)
     .orderBy(asc(teams.groupLetter), asc(teams.name));
 
-  const locked = isLocked();
+  const locked = isLockedForPool(activePoolId);
 
   return (
     <div className="py-4 lg:mx-auto lg:max-w-3xl">

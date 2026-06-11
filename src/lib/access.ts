@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from './db';
 import { brackets, poolMembers } from './schema';
-import { isLocked } from './lock';
+import { isLockedForPool } from './lock';
 
 export async function isPoolMember(userId: string, poolId: string): Promise<boolean> {
   const row = await db
@@ -26,7 +26,7 @@ export async function bracketAccess(
 ): Promise<BracketAccess> {
   if (!viewerId) return { canView: false, canEdit: false };
   if (viewerId === bracket.ownerId) {
-    return { canView: true, canEdit: !isLocked() };
+    return { canView: true, canEdit: !isLockedForPool(bracket.poolId) };
   }
   const member = await isPoolMember(viewerId, bracket.poolId);
   return { canView: member, canEdit: false };
