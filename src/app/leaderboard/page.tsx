@@ -20,6 +20,7 @@ import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import { pointsBreakdown } from '@/lib/points-breakdown';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
 import RememberPool from '@/components/RememberPool';
+import PullToRefresh from '@/components/PullToRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -220,6 +221,7 @@ export default async function LeaderboardPage({
 
   return (
     <div className="space-y-4 py-4 lg:mx-auto lg:max-w-2xl">
+      <PullToRefresh />
       <RememberPool poolId={active.poolId} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Standings</h1>

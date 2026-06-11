@@ -19,7 +19,17 @@ interface Props {
 }
 
 export default function GroupStandingsTable({ letter, rows, teamsByCode }: Props) {
-  const sorted = [...rows].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+  // Sort by the provider rank, then a deterministic tiebreak so teams level
+  // on rank (e.g. two sides yet to play, both rank 2) always appear in the
+  // same order across databases instead of arbitrary insertion order.
+  const sorted = [...rows].sort(
+    (a, b) =>
+      (a.rank ?? 99) - (b.rank ?? 99) ||
+      b.points - a.points ||
+      b.gd - a.gd ||
+      b.gf - a.gf ||
+      a.teamCode.localeCompare(b.teamCode),
+  );
   return (
     <section className="card p-3">
       <h3 className="mb-2 font-display text-2xl leading-none">

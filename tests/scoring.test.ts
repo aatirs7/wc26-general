@@ -166,53 +166,43 @@ describe('scoreBracket', () => {
 });
 
 describe('live provisional scoring', () => {
-  // A kicked-off group match with a current score.
-  const liveGroupMatch = (
-    letter: string,
-    homeN: number,
-    awayN: number,
-    hs: number,
-    as: number,
-    status = 'live',
-  ): MatchFact => ({
+  const liveGroupMatch = (letter: string, status = 'live'): MatchFact => ({
     stage: 'group',
     status,
     groupLetter: letter,
     winnerCode: null,
-    homeCode: T(letter, homeN),
-    awayCode: T(letter, awayN),
-    homeScore: hs,
-    awayScore: as,
   });
 
-  it('marks a kicked-off, undecided group as started', () => {
-    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
+  it('starts a group as soon as it kicks off', () => {
+    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
     expect(facts.startedGroups.has('A')).toBe(true);
-    expect(facts.decidedGroups.has('A')).toBe(false);
+    expect(facts.startedGroups.has('B')).toBe(false);
   });
 
-  it('awards provisional top-2 from the standings table, not who is on the pitch', () => {
-    // Group A has kicked off; the standings rank AAX 1st and ABX 2nd.
-    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
-    const p = fullBracket(); // A.first = AAX, A.second = ABX
-    const scores = scoreBracket(p, facts);
-    expect(scores.groups).toBe(6); // both standings top-2 picks correct, 3 each
-    expect(provisionalPoints(p, facts)).toBe(6);
+  it('awards only the current group leader (1st place), not 2nd', () => {
+    const facts = buildFacts([liveGroupMatch('A')], fullStandings([])); // A leader = AAX
+    const p = fullBracket(); // A.first = AAX (leader), A.second = ABX
+    expect(scoreBracket(p, facts).groups).toBe(3); // only the leader counts live
+    expect(provisionalPoints(p, facts)).toBe(3);
   });
 
-  it('does not credit a team the standings rank below 2nd', () => {
-    // ACX/ADX are ranked 3rd/4th in the standings, so picking them as a
-    // group's top 2 earns nothing even while the group is live.
-    const facts = buildFacts([liveGroupMatch('A', 0, 1, 1, 0)], fullStandings([]));
+  it('credits the leader whether picked 1st or 2nd', () => {
+    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
     const p = fullBracket();
-    p.groups.A = { first: T('A', 2), second: T('A', 3) }; // 3rd and 4th
+    p.groups.A = { first: T('A', 1), second: T('A', 0) }; // leader AAX picked 2nd
+    expect(scoreBracket(p, facts).groups).toBe(3);
+  });
+
+  it('does not credit non-leaders while the group is live', () => {
+    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
+    const p = fullBracket();
+    p.groups.A = { first: T('A', 1), second: T('A', 2) }; // 2nd and 3rd, no leader
     expect(scoreBracket(p, facts).groups).toBe(0);
   });
 
-  it('gives no provisional points before kickoff', () => {
-    const facts = buildFacts([liveGroupMatch('A', 0, 1, 0, 0, 'scheduled')], fullStandings([]));
+  it('gives no live points before kickoff', () => {
+    const facts = buildFacts([liveGroupMatch('A', 'scheduled')], fullStandings([]));
     expect(facts.startedGroups.size).toBe(0);
-    expect(scoreBracket(fullBracket(), facts).groups).toBe(0);
   });
 });
 

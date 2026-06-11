@@ -225,7 +225,6 @@ export default async function HomePage({
           groupLetter: groupStandings.groupLetter,
           teamCode: groupStandings.teamCode,
           rank: groupStandings.rank,
-          played: groupStandings.played,
           isBestThird: groupStandings.isBestThird,
         })
         .from(groupStandings);

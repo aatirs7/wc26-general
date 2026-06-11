@@ -94,30 +94,28 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (m.stage === 'final') champion = m.winnerCode;
   }
 
-  // Live group points use the SAME standings table the Matches > Groups view
-  // shows (provider rank over all four teams), so the two never disagree. A
-  // group counts as "started" once any of its matches has kicked off; its
-  // current top-2 is then read from the provider table (top2ByGroup above),
-  // which ranks every team -- a played-but-losing team correctly sits below
-  // teams that have not conceded.
+  // Live group points: as soon as a group kicks off, award ONLY the team
+  // currently in 1st place (the leader, from the same provider standings the
+  // Matches > Groups view shows). Second place is deliberately left out while
+  // the group is in progress -- before everyone has played it is a volatile
+  // tie -- so only the clear leader pays out live. Decided groups still pay
+  // the full top 2 (see scoreBracket).
   const COUNTED_STATUS = new Set(['live', 'ht', 'ft', 'et', 'pens']);
   const startedSet = new Set<string>();
   for (const m of matchRows) {
-    if (
-      m.stage === 'group' &&
-      m.groupLetter &&
-      COUNTED_STATUS.has(m.status) &&
-      m.homeScore != null &&
-      m.awayScore != null
-    ) {
+    if (m.stage === 'group' && m.groupLetter && COUNTED_STATUS.has(m.status)) {
       startedSet.add(m.groupLetter);
     }
   }
   const startedGroups = new Set([...startedSet].filter((g) => !decidedGroups.has(g)));
+  const leaderByGroup = new Map<string, string>();
+  for (const row of standingRows) {
+    if (row.rank === 1) leaderByGroup.set(row.groupLetter, row.teamCode);
+  }
   const liveTop2ByGroup = new Map<string, Set<string>>();
   for (const g of startedGroups) {
-    const s = top2ByGroup.get(g);
-    if (s) liveTop2ByGroup.set(g, new Set(s));
+    const leader = leaderByGroup.get(g);
+    if (leader) liveTop2ByGroup.set(g, new Set([leader]));
   }
 
   return {
@@ -206,9 +204,9 @@ export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
   let total = 0;
   // Each decided group: at best both top-2 picks correct.
   total += facts.decidedGroups.size * (SCORING.groupTop2 * 2);
-  // In-progress groups pay provisional top-2 points, so count them too or
-  // accuracy could read above 100% while a group is live.
-  total += facts.startedGroups.size * (SCORING.groupTop2 * 2);
+  // In-progress groups pay only the current leader (1 team), so count one
+  // group-top-2 unit each, or accuracy could read above 100% while live.
+  total += facts.startedGroups.size * SCORING.groupTop2;
   // Best-thirds only resolve once every group is in.
   if (facts.allGroupsDecided) total += SCORING.thirdPlace * THIRD_PLACE_PICKS;
   // Each completed knockout match yields one advancer worth the round weight.
