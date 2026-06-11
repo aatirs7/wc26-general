@@ -17,6 +17,8 @@ export default function PoolSwitcher({
 
   function select(id: string) {
     if (id === activeId) return;
+    // Persist immediately so the other pages read the new pool on next view.
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = `wc26_active_pool=${id}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     router.push(`/home?pool=${id}`);
     router.refresh();
