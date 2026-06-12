@@ -325,11 +325,11 @@ body {
 }
 @keyframes shine-sweep {
   0% { transform: translateX(-220%) skewX(-20deg); }
-  16%, 100% { transform: translateX(340%) skewX(-20deg); }
+  28%, 100% { transform: translateX(340%) skewX(-20deg); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .shine-sweep::after { animation: shine-sweep 6.5s ease-in-out 0.4s infinite; }
-  .shine-sweep-2::after { animation: shine-sweep 5.3s ease-in-out 2.6s infinite; }
+  .shine-sweep::after { animation: shine-sweep 11s ease-in-out 0.6s infinite; }
+  .shine-sweep-2::after { animation: shine-sweep 9.5s ease-in-out 3.5s infinite; }
 }
 
 /* Your own row on the leaderboard: a gentle pulsing accent outline so you
