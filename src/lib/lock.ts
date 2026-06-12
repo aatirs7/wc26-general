@@ -24,7 +24,6 @@ const EXEMPT_POOL_IDS = new Set(
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
-    '894978dd-9ccd-44de-94e5-57c4a6c040aa', // Cousins — extra time after kickoff
   ],
 );
 
@@ -36,7 +35,8 @@ export function isPoolLockExempt(poolId: string | null | undefined): boolean {
 // time. The pool is editable (and submittable) again until that moment, then
 // relocks automatically.
 const TIMED_UNLOCKS: Record<string, string> = {
-  '4897ca9f-e3d2-487f-b2ff-72a5d537d204': '2026-06-11T22:45:00Z', // Ba-Kamal: 2-hour grant
+  '894978dd-9ccd-44de-94e5-57c4a6c040aa': '2026-06-12T16:30:00Z', // Cousins: 15-hour grant
+  '28ee9f94-4749-4fd4-bfdc-eeb347d7eb43': '2026-06-12T16:30:00Z', // NED 84-84: 15-hour grant
 };
 
 // The moment a pool's timed unlock ends, or null if it has none / it passed.
