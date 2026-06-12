@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
+import { SCORING } from '@/lib/constants';
 
 export interface PlayerRow {
   ownerId: string;
@@ -16,7 +17,7 @@ export interface PlayerRow {
   // Provisional points from in-progress groups (already inside `combined`).
   live: number;
   // Per-pick explanation of where the points come from.
-  detail: { flag: string; name: string; reason: string; pts: number; live: boolean }[];
+  detail: { flag: string; name: string; reason: string; pts: number; live: boolean; exact?: boolean }[];
   submitted: boolean;
   rounds: { label: string; pts: number }[];
   rankDelta: number;
@@ -106,12 +107,17 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                           <span className="w-24 shrink-0 truncate font-semibold">{d.name}</span>
                           <span className="min-w-0 flex-1 truncate text-muted">
                             <span className="text-muted-2">·</span> {d.reason}
-                            {d.live ? (
-                              <span className="ml-1 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
-                                live
-                              </span>
-                            ) : null}
                           </span>
+                          {d.exact ? (
+                            <span className="shrink-0 rounded-full bg-gold/20 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wider text-gold">
+                              +{SCORING.groupExactRank} exact
+                            </span>
+                          ) : null}
+                          {d.live ? (
+                            <span className="shrink-0 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                              live
+                            </span>
+                          ) : null}
                         </dt>
                         <dd className={`shrink-0 font-semibold ${d.live ? 'text-gold' : 'text-accent'}`}>
                           +{d.pts}

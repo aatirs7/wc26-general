@@ -16,6 +16,8 @@ export interface BreakdownLine {
   reason: string;
   pts: number;
   live: boolean;
+  // Group pick that also matched its exact position (shown as a badge).
+  exact?: boolean;
 }
 
 const ordinal = (n: number) => {
@@ -38,14 +40,15 @@ export function pointsBreakdown(
   // and points to that line.
   const groupLine = (letter: string, code: string, live: boolean, exact: boolean) => {
     const r = rankOf(letter, code);
-    const base = r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`;
+    const reason = r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`;
     const { name, flag } = t(code);
     lines.push({
       flag,
       name,
-      reason: exact ? `${base} · exact spot +${SCORING.groupExactRank}` : base,
+      reason,
       pts: SCORING.groupTop2 + (exact ? SCORING.groupExactRank : 0),
       live,
+      exact,
     });
   };
   for (const letter of facts.decidedGroups) {
