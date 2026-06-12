@@ -38,6 +38,7 @@ const TIMED_UNLOCKS: Record<string, string> = {
   '894978dd-9ccd-44de-94e5-57c4a6c040aa': '2026-06-12T16:30:00Z', // Cousins: 15-hour grant
   '28ee9f94-4749-4fd4-bfdc-eeb347d7eb43': '2026-06-12T16:30:00Z', // NED 84-84: 15-hour grant
   '641f808c-b62f-439b-b871-d4fd63675cba': '2026-06-13T03:45:00Z', // LPA World Cup Bracket: 24-hour grant
+  '5b020daf-2282-4182-ae9f-d2229caa6060': '2026-06-13T21:30:00Z', // PESSJ: 24-hour grant
 };
 
 // The moment a pool's timed unlock ends, or null if it has none / it passed.
