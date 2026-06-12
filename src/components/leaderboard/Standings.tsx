@@ -65,15 +65,15 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                     {!row.submitted ? ' · not locked' : ''}
                   </div>
                 </div>
-                {row.rankDelta !== 0 ? (
-                  <div className="flex shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
-                    {row.rankDelta > 0 ? (
-                      <span className="text-accent">▲{row.rankDelta}</span>
-                    ) : (
-                      <span className="text-live">▼{-row.rankDelta}</span>
-                    )}
-                  </div>
-                ) : null}
+                {/* Always reserve this column so a movement badge never shifts the
+                    centered name; rows with and without movement line up. */}
+                <div className="flex w-8 shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
+                  {row.rankDelta > 0 ? (
+                    <span className="text-accent">▲{row.rankDelta}</span>
+                  ) : row.rankDelta < 0 ? (
+                    <span className="text-live">▼{-row.rankDelta}</span>
+                  ) : null}
+                </div>
                 <div className="flex shrink-0 flex-col items-center leading-none">
                   <span className="font-display text-2xl text-accent">{row.combined}</span>
                   {row.live > 0 ? (
@@ -100,14 +100,18 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                     {row.detail.map((d, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <span className="shrink-0 text-base leading-none">{d.flag}</span>
-                        <dt className="min-w-0 flex-1 truncate">
-                          <span className="font-semibold">{d.name}</span>
-                          <span className="text-muted"> — {d.reason}</span>
-                          {d.live ? (
-                            <span className="ml-1 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
-                              live
-                            </span>
-                          ) : null}
+                        {/* Fixed-width name column so the separator and reason line
+                            up across rows regardless of how long the team name is. */}
+                        <dt className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <span className="w-24 shrink-0 truncate font-semibold">{d.name}</span>
+                          <span className="min-w-0 flex-1 truncate text-muted">
+                            <span className="text-muted-2">·</span> {d.reason}
+                            {d.live ? (
+                              <span className="ml-1 text-[0.55rem] font-bold uppercase tracking-wider text-gold">
+                                live
+                              </span>
+                            ) : null}
+                          </span>
                         </dt>
                         <dd className={`shrink-0 font-semibold ${d.live ? 'text-gold' : 'text-accent'}`}>
                           +{d.pts}
