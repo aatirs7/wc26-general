@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { and, asc, eq } from 'drizzle-orm';
 import { Radio, ArrowRight, Timer } from 'lucide-react';
 import { db } from '@/lib/db';
-import { brackets, groupStandings, matchPredictions, matches, poolMembers, pools, teams } from '@/lib/schema';
+import { brackets, groupStandings, matchPredictions, matches, poolMembers, pools, standingSnapshots, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, scoreBracket, totalOf } from '@/lib/scoring';
 import { pickLabels } from '@/lib/pick-labels';
@@ -91,6 +91,17 @@ export default async function LivePage({
     .from(matchPredictions)
     .where(eq(matchPredictions.userId, userId));
   const predByMatch = new Map(preds.map((p) => [p.matchId, p]));
+
+  // Points won today = current combined total minus this morning's snapshot
+  // (the same baseline the home daily recap uses).
+  const [snap] = await db
+    .select({ points: standingSnapshots.points })
+    .from(standingSnapshots)
+    .where(and(eq(standingSnapshots.poolId, active.poolId), eq(standingSnapshots.userId, userId)))
+    .limit(1);
+  const predictionBonus = preds.reduce((s, p) => s + p.points, 0);
+  const combinedTotal = livePoints + predictionBonus;
+  const pointsToday = snap ? combinedTotal - snap.points : 0;
   const predNote = (m: (typeof allMatches)[number]): string[] | undefined => {
     const p = predByMatch.get(m.id);
     if (!p) return undefined;
@@ -153,8 +164,10 @@ export default async function LivePage({
 
       <section className="grid grid-cols-2 gap-3">
         <div className={statCard}>
-          <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">Your points</div>
-          <div className="font-display text-4xl leading-none text-accent">{livePoints}</div>
+          <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">Your points today</div>
+          <div className="font-display text-4xl leading-none text-accent">
+            {pointsToday > 0 ? `+${pointsToday}` : pointsToday}
+          </div>
         </div>
         <div className={statCard}>
           <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted">Picks in play</div>
@@ -184,7 +197,7 @@ export default async function LivePage({
 
       {liveMatches.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="flex items-center gap-2 font-display text-2xl">
+          <h2 className="flex items-center justify-center gap-2 font-display text-2xl">
             <span className="live-dot h-2.5 w-2.5 rounded-full bg-live" />
             Live now
           </h2>
@@ -195,7 +208,7 @@ export default async function LivePage({
       ) : null}
 
       <section className="space-y-2">
-        <h2 className="font-display text-2xl">Today</h2>
+        <h2 className="text-center font-display text-2xl">Today</h2>
         {todayMatches.length > 0 ? (
           todayMatches.map((m) => (
             <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={predNote(m)} />
