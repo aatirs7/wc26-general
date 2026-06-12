@@ -49,7 +49,17 @@ export default async function MePage() {
   // Achievements: a personal trophy case merged across the user's brackets
   // (a badge counts as earned if it's earned in any of their groups).
   const matchRows = await db
-    .select({ stage: matches.stage, status: matches.status, groupLetter: matches.groupLetter, winnerCode: matches.winnerCode })
+    .select({
+      stage: matches.stage,
+      status: matches.status,
+      groupLetter: matches.groupLetter,
+      winnerCode: matches.winnerCode,
+      // Scores let buildFacts build the live group tables (provisional points).
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+    })
     .from(matches);
   const standingRows = await db
     .select({ groupLetter: groupStandings.groupLetter, teamCode: groupStandings.teamCode, rank: groupStandings.rank, isBestThird: groupStandings.isBestThird })

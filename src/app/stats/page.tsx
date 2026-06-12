@@ -73,6 +73,12 @@ export default async function StatsPage({
       status: matches.status,
       groupLetter: matches.groupLetter,
       winnerCode: matches.winnerCode,
+      // Scores are required so buildFacts can compute the live group tables;
+      // without them attainable (and accuracy) would read 0.
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
     })
     .from(matches);
   const standingRows = await db
