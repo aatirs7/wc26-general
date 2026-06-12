@@ -85,8 +85,12 @@ export default async function StatsPage({
     .from(groupStandings);
   const facts = buildFacts(matchRows, standingRows);
   const attainable = attainablePoints(matchRows, facts);
+  // Clamp at 100: accuracy is banked / attainable. During a scoring-rule
+  // rollout, persisted points (banked by the latest sync) can briefly outrun
+  // the freshly computed denominator, but accuracy can never truly exceed
+  // 100%, so we never display more.
   const accuracyOf = (points: number) =>
-    attainable > 0 ? Math.round((points / attainable) * 100) : null;
+    attainable > 0 ? Math.min(100, Math.round((points / attainable) * 100)) : null;
 
   const scoreRows = poolBrackets.length
     ? await db
@@ -124,7 +128,9 @@ export default async function StatsPage({
   const totalPoints = rows.reduce((s, r) => s + r.points, 0);
   const avgPoints = players ? Math.round((totalPoints / players) * 10) / 10 : 0;
   const poolAccuracy =
-    attainable > 0 && players ? Math.round((totalPoints / (attainable * players)) * 100) : null;
+    attainable > 0 && players
+      ? Math.min(100, Math.round((totalPoints / (attainable * players)) * 100))
+      : null;
 
   const predOf = (ownerId: string) => byOwner.get(ownerId)?.predictions as Predictions | undefined;
 
