@@ -18,10 +18,12 @@ export const dynamic = 'force-dynamic';
 export default async function MatchesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; groups?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, groups } = await searchParams;
   const showGroups = view === 'groups';
+  // Groups sub-view: live "as it stands" table vs the player's own bracket picks.
+  const picksMode = showGroups && groups === 'picks';
 
   // Note fixtures with the signed-in player's picks (from their active pool).
   const userId = await currentUserId();
@@ -85,7 +87,36 @@ export default async function MatchesPage({
   // that have played are flagged provisional qualifiers (Q), matching the
   // live points; best-thirds only matter once groups end.
   let standings: StandingRowData[] = [];
-  if (showGroups) {
+  if (picksMode && myPredictions) {
+    // Predicted tables: your bracket's 1st and 2nd, then the rest of the group
+    // (unordered, since the bracket only ranks the top two). Same layout as the
+    // live table so the two are easy to compare side by side.
+    const teamsByGroup = new Map<string, string[]>();
+    for (const t of allTeams) {
+      if (!teamsByGroup.has(t.groupLetter)) teamsByGroup.set(t.groupLetter, []);
+      teamsByGroup.get(t.groupLetter)!.push(t.code);
+    }
+    standings = GROUP_LETTERS.flatMap((letter) => {
+      const g = myPredictions!.groups[letter as (typeof GROUP_LETTERS)[number]];
+      const first = g?.first;
+      const second = g?.second;
+      const rest = (teamsByGroup.get(letter) ?? [])
+        .filter((c) => c !== first && c !== second)
+        .sort();
+      const ordered = [first, second, ...rest].filter((c): c is string => !!c);
+      return ordered.map((code, i) => ({
+        groupLetter: letter,
+        teamCode: code,
+        played: 0,
+        points: 0,
+        gd: 0,
+        gf: 0,
+        rank: i + 1,
+        advanced: code === first || code === second,
+        isBestThird: false,
+      }));
+    });
+  } else if (showGroups) {
     standings = computeLiveGroupTables(
       allMatches.map((m) => ({
         stage: m.stage,
@@ -137,15 +168,40 @@ export default async function MatchesPage({
       </header>
 
       {showGroups ? (
-        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
-          {GROUP_LETTERS.map((letter) => (
-            <GroupStandingsTable
-              key={letter}
-              letter={letter}
-              rows={standings.filter((s) => s.groupLetter === letter)}
-              teamsByCode={teamsByCode}
-            />
-          ))}
+        <div className="space-y-3">
+          <div className="flex justify-center">
+            <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
+              <Link
+                href="/matches?view=groups"
+                className={`rounded-full px-3 py-1.5 transition-colors ${!picksMode ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+              >
+                Live table
+              </Link>
+              <Link
+                href="/matches?view=groups&groups=picks"
+                className={`rounded-full px-3 py-1.5 transition-colors ${picksMode ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+              >
+                My picks
+              </Link>
+            </div>
+          </div>
+          {picksMode && !myPredictions ? (
+            <p className="card p-5 text-center text-sm text-muted">
+              You have not made any group picks yet. Build your bracket to see them here.
+            </p>
+          ) : (
+            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
+              {GROUP_LETTERS.map((letter) => (
+                <GroupStandingsTable
+                  key={letter}
+                  letter={letter}
+                  rows={standings.filter((s) => s.groupLetter === letter)}
+                  teamsByCode={teamsByCode}
+                  predicted={picksMode}
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">

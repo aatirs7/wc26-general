@@ -16,9 +16,12 @@ interface Props {
   letter: string;
   rows: StandingRowData[];
   teamsByCode: Map<string, Team>;
+  // Predicted view: the rows are the player's bracket picks, not live results,
+  // so the played/GD/points columns have no value and show a dash instead.
+  predicted?: boolean;
 }
 
-export default function GroupStandingsTable({ letter, rows, teamsByCode }: Props) {
+export default function GroupStandingsTable({ letter, rows, teamsByCode, predicted }: Props) {
   // Sort by the provider rank, then a deterministic tiebreak so teams level
   // on rank (e.g. two sides yet to play, both rank 2) always appear in the
   // same order across databases instead of arbitrary insertion order.
@@ -75,11 +78,15 @@ export default function GroupStandingsTable({ letter, rows, teamsByCode }: Props
                     ) : null}
                   </span>
                 </td>
-                <td className="py-2 text-right tabular-nums text-muted">{row.played}</td>
                 <td className="py-2 text-right tabular-nums text-muted">
-                  {row.gd > 0 ? `+${row.gd}` : row.gd}
+                  {predicted ? '—' : row.played}
                 </td>
-                <td className="py-2 text-right font-display text-lg tabular-nums">{row.points}</td>
+                <td className="py-2 text-right tabular-nums text-muted">
+                  {predicted ? '—' : row.gd > 0 ? `+${row.gd}` : row.gd}
+                </td>
+                <td className="py-2 text-right font-display text-lg tabular-nums">
+                  {predicted ? '—' : row.points}
+                </td>
               </tr>
             );
           })}
