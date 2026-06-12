@@ -17,7 +17,7 @@ import {
   type KnockoutRoundKey,
   type RoundKey,
 } from './constants';
-import { computeLiveStandings } from './standings';
+import { computeLiveGroupTables } from './standings';
 
 export interface MatchFact {
   stage: string;
@@ -95,12 +95,14 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (m.stage === 'final') champion = m.winnerCode;
   }
 
-  // Live group points: as soon as a group kicks off, award ONLY the team
-  // currently in 1st place (the leader, from the same provider standings the
-  // Matches > Groups view shows). Second place is deliberately left out while
-  // the group is in progress -- before everyone has played it is a volatile
-  // tie -- so only the clear leader pays out live. Decided groups still pay
-  // the full top 2 (see scoreBracket).
+  // Live group points: as soon as a group kicks off, award the current top
+  // TWO of the live table -- both the leader and the runner-up -- matching
+  // the final scoring where the top two advance, since the bracket pays for
+  // guessing both 1st and 2nd. The table is built from match scores (the
+  // provider's own standings only refresh at full time), so points move on
+  // every goal. A side that has not yet played can sit in a top-two slot on
+  // zero stats, so computeLiveGroupTables excludes it from `advanced` until
+  // it kicks off. Decided groups pay the full, final top 2 (see scoreBracket).
   const COUNTED_STATUS = new Set(['live', 'ht', 'ft', 'et', 'pens']);
   const startedSet = new Set<string>();
   for (const m of matchRows) {
@@ -109,17 +111,11 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     }
   }
   const startedGroups = new Set([...startedSet].filter((g) => !decidedGroups.has(g)));
-  // The live leader comes from the current match scores (the provider's own
-  // standings table only refreshes at full time), so live group points move
-  // on every goal.
-  const leaderByGroup = new Map<string, string>();
-  for (const row of computeLiveStandings(matchRows)) {
-    if (row.rank === 1) leaderByGroup.set(row.groupLetter, row.teamCode);
-  }
   const liveTop2ByGroup = new Map<string, Set<string>>();
-  for (const g of startedGroups) {
-    const leader = leaderByGroup.get(g);
-    if (leader) liveTop2ByGroup.set(g, new Set([leader]));
+  for (const row of computeLiveGroupTables(matchRows)) {
+    if (!row.advanced || !startedGroups.has(row.groupLetter)) continue;
+    if (!liveTop2ByGroup.has(row.groupLetter)) liveTop2ByGroup.set(row.groupLetter, new Set());
+    liveTop2ByGroup.get(row.groupLetter)!.add(row.teamCode);
   }
 
   return {
@@ -208,9 +204,12 @@ export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
   let total = 0;
   // Each decided group: at best both top-2 picks correct.
   total += facts.decidedGroups.size * (SCORING.groupTop2 * 2);
-  // In-progress groups pay only the current leader (1 team), so count one
-  // group-top-2 unit each, or accuracy could read above 100% while live.
-  total += facts.startedGroups.size * SCORING.groupTop2;
+  // In-progress groups pay their current provisional top two (1 or 2 teams,
+  // whoever has actually played), so the denominator tracks how many
+  // provisional units are live, or accuracy could read above 100%.
+  for (const g of facts.startedGroups) {
+    total += (facts.liveTop2ByGroup.get(g)?.size ?? 0) * SCORING.groupTop2;
+  }
   // Best-thirds only resolve once every group is in.
   if (facts.allGroupsDecided) total += SCORING.thirdPlace * THIRD_PLACE_PICKS;
   // Each completed knockout match yields one advancer worth the round weight.

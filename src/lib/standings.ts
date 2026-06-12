@@ -14,6 +14,11 @@ export interface LiveStandingRow {
   gd: number;
   gf: number;
   rank: number;
+  // Provisional qualifier flag: a top-two team that has actually played. A
+  // side cannot hold a top-two spot before kickoff, so a not-yet-played team
+  // sorted into the top two on zero stats is listed but not flagged (and so
+  // earns no provisional points).
+  advanced: boolean;
 }
 
 export interface LiveMatchInput {
@@ -29,10 +34,12 @@ export interface LiveMatchInput {
 // Builds the current group tables straight from the match scores, counting
 // live/half-time games at their score so far. This is what powers the live
 // rankings: the provider's own standings table only updates once a match is
-// final, but the match scores update on every goal. Ranking is points, then
-// goal difference, then goals for, then team code for a stable order (the
-// official head-to-head tiebreakers only matter once a group is final).
-export function computeLiveStandings(matchRows: LiveMatchInput[]): LiveStandingRow[] {
+// final, but the match scores update on every goal. Every side in the group
+// fixtures is included (teams yet to kick off show with zeros). Ranking is
+// points, then goal difference, then goals for, then team code for a stable
+// order (the official head-to-head tiebreakers only matter once a group is
+// final). The top two that have played are flagged `advanced`.
+export function computeLiveGroupTables(matchRows: LiveMatchInput[]): LiveStandingRow[] {
   type Acc = { points: number; gf: number; ga: number; played: number };
   const groups = new Map<string, Map<string, Acc>>();
   const ensure = (g: string, t: string): Acc => {
@@ -41,6 +48,14 @@ export function computeLiveStandings(matchRows: LiveMatchInput[]): LiveStandingR
     if (!gm.has(t)) gm.set(t, { points: 0, gf: 0, ga: 0, played: 0 });
     return gm.get(t)!;
   };
+
+  // Seed every side that appears in a group fixture (any status) so teams
+  // that have not yet kicked off still show in the table with zeros.
+  for (const m of matchRows) {
+    if (m.stage !== 'group' || !m.groupLetter) continue;
+    if (m.homeCode) ensure(m.groupLetter, m.homeCode);
+    if (m.awayCode) ensure(m.groupLetter, m.awayCode);
+  }
 
   for (const m of matchRows) {
     if (m.stage !== 'group' || !m.groupLetter) continue;
@@ -78,7 +93,7 @@ export function computeLiveStandings(matchRows: LiveMatchInput[]): LiveStandingR
         (x, y) =>
           y.points - x.points || y.gd - x.gd || y.gf - x.gf || x.teamCode.localeCompare(y.teamCode),
       );
-    rows.forEach((r, i) => out.push({ ...r, rank: i + 1 }));
+    rows.forEach((r, i) => out.push({ ...r, rank: i + 1, advanced: i < 2 && r.played > 0 }));
   }
   return out;
 }
