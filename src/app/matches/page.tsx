@@ -2,15 +2,16 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, groupStandings, matches, poolMembers, teams } from '@/lib/schema';
+import { brackets, matches, poolMembers, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { pickNote } from '@/lib/pick-labels';
 import type { Predictions } from '@/types/bracket';
 import { GROUP_LETTERS } from '@/lib/constants';
 import { DISPLAY_TZ_LABEL, matchDayKey, matchDayLabel } from '@/lib/format-time';
 import MatchRow from '@/components/matches/MatchRow';
-import GroupStandingsTable from '@/components/matches/GroupStandingsTable';
+import GroupStandingsTable, { type StandingRowData } from '@/components/matches/GroupStandingsTable';
 import LivePoller from '@/components/matches/LivePoller';
+import { computeLiveStandings } from '@/lib/standings';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,49 @@ export default async function MatchesPage({
       m.kickoffUtc.getTime() < now + 3600 * 1000,
   );
 
-  const standings = showGroups ? await db.select().from(groupStandings) : [];
+  // Live "as it stands" group tables, computed straight from the match
+  // scores so an in-progress game's goals count the instant they land (the
+  // provider's own standings only refresh once a match is final). Top two are
+  // flagged provisional qualifiers; best-thirds only matter once groups end.
+  let standings: StandingRowData[] = [];
+  if (showGroups) {
+    const live = computeLiveStandings(
+      allMatches.map((m) => ({
+        stage: m.stage,
+        status: m.status,
+        groupLetter: m.groupLetter,
+        homeCode: m.homeCode,
+        awayCode: m.awayCode,
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+      })),
+    );
+    const liveByKey = new Map(live.map((r) => [`${r.groupLetter}:${r.teamCode}`, r]));
+    const teamsByGroup = new Map<string, string[]>();
+    for (const t of allTeams) {
+      if (!teamsByGroup.has(t.groupLetter)) teamsByGroup.set(t.groupLetter, []);
+      teamsByGroup.get(t.groupLetter)!.push(t.code);
+    }
+    standings = GROUP_LETTERS.flatMap((letter) =>
+      (teamsByGroup.get(letter) ?? [])
+        .map((code) => {
+          const r = liveByKey.get(`${letter}:${code}`);
+          return {
+            groupLetter: letter,
+            teamCode: code,
+            played: r?.played ?? 0,
+            points: r?.points ?? 0,
+            gd: r?.gd ?? 0,
+            gf: r?.gf ?? 0,
+          };
+        })
+        .sort(
+          (x, y) =>
+            y.points - x.points || y.gd - x.gd || y.gf - x.gf || x.teamCode.localeCompare(y.teamCode),
+        )
+        .map((r, i) => ({ ...r, rank: i + 1, advanced: i < 2, isBestThird: false })),
+    );
+  }
 
   // Group fixtures by calendar day in the display timezone so the heading
   // matches the kickoff time shown on each row.

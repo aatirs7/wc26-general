@@ -17,6 +17,7 @@ import {
   type KnockoutRoundKey,
   type RoundKey,
 } from './constants';
+import { computeLiveStandings } from './standings';
 
 export interface MatchFact {
   stage: string;
@@ -108,8 +109,11 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     }
   }
   const startedGroups = new Set([...startedSet].filter((g) => !decidedGroups.has(g)));
+  // The live leader comes from the current match scores (the provider's own
+  // standings table only refreshes at full time), so live group points move
+  // on every goal.
   const leaderByGroup = new Map<string, string>();
-  for (const row of standingRows) {
+  for (const row of computeLiveStandings(matchRows)) {
     if (row.rank === 1) leaderByGroup.set(row.groupLetter, row.teamCode);
   }
   const liveTop2ByGroup = new Map<string, Set<string>>();
