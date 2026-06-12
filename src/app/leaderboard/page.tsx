@@ -18,6 +18,7 @@ import {
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import { pointsBreakdown } from '@/lib/points-breakdown';
+import { computeLiveGroupTables } from '@/lib/standings';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
 import RememberPool from '@/components/RememberPool';
 import PullToRefresh from '@/components/PullToRefresh';
@@ -110,11 +111,12 @@ export default async function LeaderboardPage({
     name: teamByCode.get(code)?.name ?? code,
     flag: teamByCode.get(code)?.flag ?? '⚽',
   });
-  // Ranks come from the same provider standings table the Matches > Groups
-  // view shows, so the breakdown ("1st in Group A") always matches it.
+  // Ranks come from the same live group tables the Matches > Groups view
+  // shows (computed from match scores), so the breakdown ("1st in Group A")
+  // matches it -- the provider standings only refresh at full time.
   const rankByKey = new Map<string, number>();
-  for (const s of standingRows) {
-    if (s.rank != null) rankByKey.set(`${s.groupLetter}:${s.teamCode}`, s.rank);
+  for (const r of computeLiveGroupTables(matchRows)) {
+    rankByKey.set(`${r.groupLetter}:${r.teamCode}`, r.rank);
   }
   const rankOf = (group: string, code: string) => rankByKey.get(`${group}:${code}`) ?? null;
   const detailByOwner = new Map<string, ReturnType<typeof pointsBreakdown>>();
