@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import {
   Trophy,
   ListOrdered,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { brackets, bracketScores, groupStandings, matchPredictions, matches, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
+import { brackets, bracketScores, groupStandings, matchPredictions, matches, messages, poolMembers, pools, standingSnapshots, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { buildFacts, provisionalPoints } from '@/lib/scoring';
 import RememberPool from '@/components/RememberPool';
@@ -27,6 +27,7 @@ import Countdown from '@/components/home/Countdown';
 import AutofillNotice from '@/components/AutofillNotice';
 import DailyRecap, { type RecapData } from '@/components/home/DailyRecap';
 import UnlockBanner from '@/components/home/UnlockBanner';
+import ChatBadge from '@/components/chat/ChatBadge';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,13 @@ export default async function HomePage({
   // This app is multi-pool: bracket and standings are pool-scoped, so carry
   // the active pool through their links. Matches and stats are global.
   const poolQ = active ? `?pool=${active.poolId}` : '';
+
+  // Total smack-talk messages in the active pool, for the unread badge on the
+  // Trash Talk button (the client compares it to the last count it saw).
+  const chatCount = active
+    ? (await db.select({ c: count() }).from(messages).where(eq(messages.poolId, active.poolId)))[0]
+        ?.c ?? 0
+    : 0;
 
   // Pools of this player re-opened past kickoff (timed unlock), for the
   // notification banner + countdown.
@@ -393,8 +401,9 @@ export default async function HomePage({
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '160ms' }}>
         <Link
           href={`/chat${poolQ}`}
-          className="shine-sweep flex flex-col items-center gap-3 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 text-center active:scale-[0.98]"
+          className="shine-sweep relative flex flex-col items-center gap-3 rounded-[1.1rem] border border-gold/30 bg-gold/10 p-4 text-center active:scale-[0.98]"
         >
+          <ChatBadge poolId={active?.poolId ?? ''} count={chatCount} />
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
             <MessageCircle className="h-5 w-5 text-gold" strokeWidth={2.2} />
           </span>

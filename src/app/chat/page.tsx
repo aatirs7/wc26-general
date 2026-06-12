@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { messages, poolMembers, pools, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { matchTime } from '@/lib/format-time';
 import ChatBox from '@/components/chat/ChatBox';
+import ChatSeen from '@/components/chat/ChatSeen';
 import RememberPool from '@/components/RememberPool';
 
 export const dynamic = 'force-dynamic';
@@ -48,9 +49,17 @@ export default async function ChatPage({
     .limit(100);
   const feed = rows.reverse();
 
+  // Mark this pool's smack-talk read up to the current total so the home badge
+  // clears. Counted server-side (the feed itself is capped at 100).
+  const [{ c: chatCount } = { c: 0 }] = await db
+    .select({ c: count() })
+    .from(messages)
+    .where(eq(messages.poolId, active.poolId));
+
   return (
     <div className="flex min-h-[calc(100vh-9rem)] flex-col pb-36 pt-4 lg:mx-auto lg:max-w-2xl">
       <RememberPool poolId={active.poolId} />
+      <ChatSeen poolId={active.poolId} count={chatCount} />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Smack talk</h1>
         <p className="mt-1 text-xs text-muted">{active.poolName}</p>
