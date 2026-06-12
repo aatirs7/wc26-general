@@ -1,6 +1,8 @@
 // Score-prediction mini-game rules. Predictions open 24h before kickoff
 // and lock at kickoff. An exact scoreline is worth bonus points; anything
-// else scores nothing (kept deliberately simple).
+// else scores nothing (kept deliberately simple). The point scores live --
+// the moment the running score matches the prediction -- and locks at full
+// time, so it can come and go as the scoreline moves during the match.
 
 export const PREDICT_OPEN_MS = 24 * 60 * 60 * 1000;
 export const PREDICT_EXACT_POINTS = 1;
@@ -16,12 +18,18 @@ export function predictState(kickoffUtc: Date, nowMs: number): PredictState {
   return 'upcoming';
 }
 
-// Points for one prediction against a finished match.
+// Statuses that carry a usable score (a kicked-off match), so a prediction
+// scores live the instant the running score matches and locks at full time.
+const PREDICT_COUNTED = new Set(['live', 'ht', 'ft', 'et', 'pens']);
+
+// Points for one prediction against a match's current score (live or final).
 export function scorePrediction(
   pred: { homeScore: number; awayScore: number },
-  match: { homeScore: number | null; awayScore: number | null; isFinal: boolean },
+  match: { homeScore: number | null; awayScore: number | null; status: string },
 ): number {
-  if (!match.isFinal || match.homeScore == null || match.awayScore == null) return 0;
+  if (!PREDICT_COUNTED.has(match.status) || match.homeScore == null || match.awayScore == null) {
+    return 0;
+  }
   return pred.homeScore === match.homeScore && pred.awayScore === match.awayScore
     ? PREDICT_EXACT_POINTS
     : 0;

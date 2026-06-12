@@ -351,7 +351,7 @@ async function rescorePredictions() {
       ? scorePrediction(p, {
           homeScore: m.homeScore,
           awayScore: m.awayScore,
-          isFinal: isFinal(m.status),
+          status: m.status,
         })
       : 0;
     if (pts !== p.points) {

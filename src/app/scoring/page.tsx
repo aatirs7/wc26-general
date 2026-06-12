@@ -104,7 +104,9 @@ export default function ScoringPage() {
           Call the exact score of any match in the{' '}
           <span className="text-foreground">Predict</span> tab. Spot on earns{' '}
           <span className="text-foreground">{PREDICT_EXACT_POINTS} bonus points</span>; anything else
-          scores nothing. Predictions open 24h before kickoff and lock at kickoff. Bonus points are
+          scores nothing. Predictions open 24h before kickoff and lock at kickoff. The point scores{' '}
+          <span className="text-foreground">live</span> the moment the running score matches your call
+          and locks at full time, so it can come and go as the scoreline moves. Bonus points are
           separate from your bracket and add into your{' '}
           <span className="text-foreground">combined</span> standings total.
         </p>
