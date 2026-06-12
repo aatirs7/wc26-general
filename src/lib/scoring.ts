@@ -40,10 +40,19 @@ export interface StandingFact {
   isBestThird: boolean;
 }
 
+// The actual 1st- and 2nd-placed teams of a group, in order, used for the
+// exact-rank bonus (right team AND right position).
+export interface GroupOrder {
+  first: string | null;
+  second: string | null;
+}
+
 export interface Facts {
   decidedGroups: Set<string>;
   allGroupsDecided: boolean;
   top2ByGroup: Map<string, Set<string>>;
+  // Ordered top two per decided group (rank 1, rank 2) for the exact-rank bonus.
+  exactByGroup: Map<string, GroupOrder>;
   bestThirds: Set<string>;
   reached: Record<KnockoutRoundKey, Set<string>>;
   champion: string | null;
@@ -52,6 +61,8 @@ export interface Facts {
   // These pay out provisionally and harden once the group finishes.
   startedGroups: Set<string>;
   liveTop2ByGroup: Map<string, Set<string>>;
+  // Ordered live top two (rank 1, rank 2) for the provisional exact-rank bonus.
+  liveExactByGroup: Map<string, GroupOrder>;
 }
 
 const isFinal = (status: string) =>
@@ -70,11 +81,16 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
   }
 
   const top2ByGroup = new Map<string, Set<string>>();
+  const exactByGroup = new Map<string, GroupOrder>();
   const bestThirds = new Set<string>();
   for (const row of standingRows) {
     if (row.rank === 1 || row.rank === 2) {
       if (!top2ByGroup.has(row.groupLetter)) top2ByGroup.set(row.groupLetter, new Set());
       top2ByGroup.get(row.groupLetter)!.add(row.teamCode);
+      const order = exactByGroup.get(row.groupLetter) ?? { first: null, second: null };
+      if (row.rank === 1) order.first = row.teamCode;
+      else order.second = row.teamCode;
+      exactByGroup.set(row.groupLetter, order);
     }
     if (row.isBestThird) bestThirds.add(row.teamCode);
   }
@@ -112,22 +128,51 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
   }
   const startedGroups = new Set([...startedSet].filter((g) => !decidedGroups.has(g)));
   const liveTop2ByGroup = new Map<string, Set<string>>();
+  const liveExactByGroup = new Map<string, GroupOrder>();
   for (const row of computeLiveGroupTables(matchRows)) {
     if (!row.advanced || !startedGroups.has(row.groupLetter)) continue;
     if (!liveTop2ByGroup.has(row.groupLetter)) liveTop2ByGroup.set(row.groupLetter, new Set());
     liveTop2ByGroup.get(row.groupLetter)!.add(row.teamCode);
+    const order = liveExactByGroup.get(row.groupLetter) ?? { first: null, second: null };
+    if (row.rank === 1) order.first = row.teamCode;
+    else if (row.rank === 2) order.second = row.teamCode;
+    liveExactByGroup.set(row.groupLetter, order);
   }
 
   return {
     decidedGroups,
     allGroupsDecided: decidedGroups.size === GROUP_LETTERS.length,
     top2ByGroup,
+    exactByGroup,
     bestThirds,
     reached,
     champion,
     startedGroups,
     liveTop2ByGroup,
+    liveExactByGroup,
   };
+}
+
+// Group points for a pair of picks: the order-free top-2 advance points (per
+// team that actually lands in the top two) plus an exact-rank bonus when a
+// pick also matches the position it was slotted into (your 1st pick is the
+// actual 1st, your 2nd pick is the actual 2nd).
+function groupPoints(
+  first: string | undefined,
+  second: string | undefined,
+  actual: Set<string>,
+  order: GroupOrder | undefined,
+): number {
+  let pts = 0;
+  if (first && actual.has(first)) {
+    pts += SCORING.groupTop2;
+    if (order?.first === first) pts += SCORING.groupExactRank;
+  }
+  if (second && actual.has(second)) {
+    pts += SCORING.groupTop2;
+    if (order?.second === second) pts += SCORING.groupExactRank;
+  }
+  return pts;
 }
 
 export function scoreBracket(p: Predictions, facts: Facts): Record<RoundKey, number> {
@@ -137,21 +182,18 @@ export function scoreBracket(p: Predictions, facts: Facts): Record<RoundKey, num
     const actual = facts.top2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    for (const pick of [g?.first, g?.second]) {
-      if (pick && actual.has(pick)) scores.groups += SCORING.groupTop2;
-    }
+    scores.groups += groupPoints(g?.first, g?.second, actual, facts.exactByGroup.get(letter));
   }
 
   // Live (provisional) points: groups that have kicked off but are not yet
-  // decided pay out on their current top-2, so the leaderboard moves during
-  // matches. These shift as scores change and lock in when the group ends.
+  // decided pay out on their current top-2 (plus the exact-rank bonus), so the
+  // leaderboard moves during matches. These shift as scores change and lock in
+  // when the group ends.
   for (const letter of facts.startedGroups) {
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    for (const pick of [g?.first, g?.second]) {
-      if (pick && actual.has(pick)) scores.groups += SCORING.groupTop2;
-    }
+    scores.groups += groupPoints(g?.first, g?.second, actual, facts.liveExactByGroup.get(letter));
   }
 
   // Best-thirds is a cross-group ranking, so it only pays out once every
@@ -188,9 +230,7 @@ export function provisionalPoints(p: Predictions, facts: Facts): number {
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    for (const pick of [g?.first, g?.second]) {
-      if (pick && actual.has(pick)) pts += SCORING.groupTop2;
-    }
+    pts += groupPoints(g?.first, g?.second, actual, facts.liveExactByGroup.get(letter));
   }
   return pts;
 }
@@ -202,13 +242,16 @@ export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
     matchRows.filter((m) => m.stage === stage && isFinal(m.status)).length;
 
   let total = 0;
-  // Each decided group: at best both top-2 picks correct.
-  total += facts.decidedGroups.size * (SCORING.groupTop2 * 2);
+  // Each decided group: at best both top-2 picks correct AND both in the exact
+  // spot, so each of the two slots can bank top-2 plus the exact-rank bonus.
+  const perGroupSlot = SCORING.groupTop2 + SCORING.groupExactRank;
+  total += facts.decidedGroups.size * 2 * perGroupSlot;
   // In-progress groups pay their current provisional top two (1 or 2 teams,
-  // whoever has actually played), so the denominator tracks how many
-  // provisional units are live, or accuracy could read above 100%.
+  // whoever has actually played), each able to bank top-2 plus the bonus, so
+  // the denominator tracks how many provisional units are live, or accuracy
+  // could read above 100%.
   for (const g of facts.startedGroups) {
-    total += (facts.liveTop2ByGroup.get(g)?.size ?? 0) * SCORING.groupTop2;
+    total += (facts.liveTop2ByGroup.get(g)?.size ?? 0) * perGroupSlot;
   }
   // Best-thirds only resolve once every group is in.
   if (facts.allGroupsDecided) total += SCORING.thirdPlace * THIRD_PLACE_PICKS;

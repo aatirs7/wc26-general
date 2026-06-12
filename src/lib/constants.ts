@@ -3,6 +3,7 @@
 
 export const SCORING = {
   groupTop2: 3, // per team correctly placed in the top 2 of its group
+  groupExactRank: 1, // bonus per top-2 team you also put in its exact spot (1st/2nd)
   thirdPlace: 2, // per correct best-third qualifier
   reachR16: 5, // per predicted team that actually reached the Round of 16
   reachQF: 8,

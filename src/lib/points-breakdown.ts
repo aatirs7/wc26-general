@@ -34,23 +34,35 @@ export function pointsBreakdown(
   const t = (code: string) => teamName(code);
 
   // Group top-2: confirmed (decided groups) and live (in-progress groups).
-  const groupLine = (letter: string, code: string, live: boolean) => {
+  // `exact` flags a pick that also nailed its position, adding the bonus note
+  // and points to that line.
+  const groupLine = (letter: string, code: string, live: boolean, exact: boolean) => {
     const r = rankOf(letter, code);
-    const where = r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`;
+    const base = r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`;
     const { name, flag } = t(code);
-    lines.push({ flag, name, reason: where, pts: SCORING.groupTop2, live });
+    lines.push({
+      flag,
+      name,
+      reason: exact ? `${base} · exact spot +${SCORING.groupExactRank}` : base,
+      pts: SCORING.groupTop2 + (exact ? SCORING.groupExactRank : 0),
+      live,
+    });
   };
   for (const letter of facts.decidedGroups) {
     const actual = facts.top2ByGroup.get(letter);
     if (!actual) continue;
+    const order = facts.exactByGroup.get(letter);
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    for (const pick of [g?.first, g?.second]) if (pick && actual.has(pick)) groupLine(letter, pick, false);
+    if (g?.first && actual.has(g.first)) groupLine(letter, g.first, false, order?.first === g.first);
+    if (g?.second && actual.has(g.second)) groupLine(letter, g.second, false, order?.second === g.second);
   }
   for (const letter of facts.startedGroups) {
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
+    const order = facts.liveExactByGroup.get(letter);
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    for (const pick of [g?.first, g?.second]) if (pick && actual.has(pick)) groupLine(letter, pick, true);
+    if (g?.first && actual.has(g.first)) groupLine(letter, g.first, true, order?.first === g.first);
+    if (g?.second && actual.has(g.second)) groupLine(letter, g.second, true, order?.second === g.second);
   }
 
   // Best thirds (only once every group is decided).

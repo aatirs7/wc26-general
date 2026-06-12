@@ -4,7 +4,8 @@ import { PREDICT_EXACT_POINTS } from '@/lib/predict';
 export const dynamic = 'force-static';
 
 const ROWS: { label: string; pts: number; note: string }[] = [
-  { label: 'Group top-2 finish', pts: SCORING.groupTop2, note: 'per team you put 1st or 2nd in its group' },
+  { label: 'Group top-2 finish', pts: SCORING.groupTop2, note: 'per team you put in the top 2 that finishes top 2 (either spot)' },
+  { label: 'Exact group position', pts: SCORING.groupExactRank, note: 'bonus per top-2 team you also placed in its exact spot (1st or 2nd)' },
   { label: 'Best third-place qualifier', pts: SCORING.thirdPlace, note: 'per correct team among the 8 thirds that advance' },
   { label: 'Reaches Round of 16', pts: SCORING.reachR16, note: 'per team that wins its Round of 32 tie' },
   { label: 'Reaches Quarter-finals', pts: SCORING.reachQF, note: 'per team that makes the last 8' },
@@ -59,6 +60,13 @@ export default function ScoringPage() {
             </div>
           ))}
         </div>
+        <p className="mt-3 text-center text-xs leading-relaxed text-muted">
+          Group picks score on the two teams that go through,{' '}
+          <span className="text-foreground">in any order</span>: each of your two group picks banks{' '}
+          {SCORING.groupTop2} if it finishes top 2, plus {SCORING.groupExactRank} more if you also
+          nailed its exact spot. Get both right and that team is worth{' '}
+          {SCORING.groupTop2 + SCORING.groupExactRank}.
+        </p>
       </section>
 
       <section className="space-y-2">
@@ -66,17 +74,17 @@ export default function ScoringPage() {
         <div className="card border-gold/30 bg-gold/[0.06] p-3">
           <p className="text-sm leading-relaxed text-muted">
             <span className="font-bold text-gold">
-              Group points go live the moment a group kicks off, but only for the leader.
+              Group points go live the moment a group kicks off.
             </span>{' '}
-            While a group is in progress, the team you picked that is{' '}
-            <span className="text-foreground">currently sitting 1st</span> earns its{' '}
-            {SCORING.groupTop2} points right now, and that total moves as goals go in and the table
-            reshuffles. The <span className="text-foreground">runner-up&apos;s points are held back</span>{' '}
-            until the group is over, since 2nd place swings around too much mid-group to pay out
-            live. When the group finishes, <span className="text-foreground">both your top-2 picks
-            lock in</span> at {SCORING.groupTop2} each. Best-third points only count once{' '}
-            <span className="text-foreground">all 12 groups are done</span>. The leaderboard tags
-            this still-moving portion as <span className="text-gold">live</span>.
+            While a group is in progress, both teams you picked that are{' '}
+            <span className="text-foreground">currently in the top two</span> of the live table earn
+            their {SCORING.groupTop2} points right away (plus the{' '}
+            <span className="text-foreground">+{SCORING.groupExactRank} exact-spot bonus</span> if you
+            also called their position), and those totals move as goals go in and the table
+            reshuffles. A team that <span className="text-foreground">has not kicked off yet</span>{' '}
+            does not count until it plays. When the group finishes, your picks lock in. Best-third
+            points only count once <span className="text-foreground">all 12 groups are done</span>.
+            The leaderboard tags this still-moving portion as <span className="text-gold">live</span>.
           </p>
         </div>
       </section>
@@ -122,9 +130,9 @@ export default function ScoringPage() {
           round.&quot;
         </Step>
         <Step n={4} title="Points land as results come in">
-          The current group leader scores live as soon as a group kicks off; the full top-2 locks in
-          when that group finishes, third-place points once all 12 groups are done, and each knockout
-          round as it completes.
+          Both teams in a group&apos;s current top two score live as soon as the group kicks off; the
+          top-2 picks (and any exact-spot bonus) lock in when that group finishes, third-place points
+          once all 12 groups are done, and each knockout round as it completes.
         </Step>
       </section>
 
