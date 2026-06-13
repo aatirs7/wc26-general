@@ -88,9 +88,9 @@ export default async function MatchesPage({
   // live points; best-thirds only matter once groups end.
   let standings: StandingRowData[] = [];
   if (picksMode && myPredictions) {
-    // Predicted tables: your bracket's 1st and 2nd, then the rest of the group
-    // (unordered, since the bracket only ranks the top two). Same layout as the
-    // live table so the two are easy to compare side by side.
+    // Predicted tables: your bracket's full 1-2-3-4 ranking for each group,
+    // exactly as you set it. Same layout as the live table so the two are easy
+    // to compare side by side.
     const teamsByGroup = new Map<string, string[]>();
     for (const t of allTeams) {
       if (!teamsByGroup.has(t.groupLetter)) teamsByGroup.set(t.groupLetter, []);
@@ -98,12 +98,11 @@ export default async function MatchesPage({
     }
     standings = GROUP_LETTERS.flatMap((letter) => {
       const g = myPredictions!.groups[letter as (typeof GROUP_LETTERS)[number]];
-      const first = g?.first;
-      const second = g?.second;
-      const rest = (teamsByGroup.get(letter) ?? [])
-        .filter((c) => c !== first && c !== second)
-        .sort();
-      const ordered = [first, second, ...rest].filter((c): c is string => !!c);
+      // Honour the bracket's own order (1st, 2nd, 3rd, 4th); only fall back to
+      // the remaining group teams if a position was left blank.
+      const ranked = [g?.first, g?.second, g?.third, g?.fourth].filter((c): c is string => !!c);
+      const rest = (teamsByGroup.get(letter) ?? []).filter((c) => !ranked.includes(c)).sort();
+      const ordered = [...ranked, ...rest];
       return ordered.map((code, i) => ({
         groupLetter: letter,
         teamCode: code,
@@ -112,7 +111,7 @@ export default async function MatchesPage({
         gd: 0,
         gf: 0,
         rank: i + 1,
-        advanced: code === first || code === second,
+        advanced: i < 2,
         isBestThird: false,
       }));
     });
