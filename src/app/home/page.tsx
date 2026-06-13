@@ -394,9 +394,6 @@ export default async function HomePage({
         </div>
       </section>
 
-      {/* Daily recap (self-hides until there is movement) */}
-      <DailyRecap data={recap} />
-
       {/* Trash talk + Score predict */}
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '160ms' }}>
         <Link
@@ -425,6 +422,9 @@ export default async function HomePage({
           </div>
         </Link>
       </section>
+
+      {/* Daily recap (self-hides until there is movement) */}
+      <DailyRecap data={recap} />
 
       {/* Bracket status headline */}
       <section className="reveal" style={{ animationDelay: '180ms' }}>
