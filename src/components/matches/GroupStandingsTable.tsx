@@ -1,43 +1,72 @@
-import type { Team } from '@/types/team';
+'use client';
 
-export interface StandingRowData {
+import { useState } from 'react';
+
+export interface GroupRow {
   groupLetter: string;
   teamCode: string;
+  name: string;
+  flag: string;
   played: number;
   points: number;
   gd: number;
   gf: number;
-  rank: number | null;
+  rank: number;
   advanced: boolean;
   isBestThird: boolean;
 }
 
 interface Props {
   letter: string;
-  rows: StandingRowData[];
-  teamsByCode: Map<string, Team>;
-  // Predicted view: the rows are the player's bracket picks, not live results,
-  // so the played/GD/points columns have no value and show a dash instead.
-  predicted?: boolean;
+  liveRows: GroupRow[];
+  picksRows: GroupRow[];
+  // Whether the viewer has a bracket to compare against (controls the toggle).
+  hasPicks: boolean;
 }
 
-export default function GroupStandingsTable({ letter, rows, teamsByCode, predicted }: Props) {
-  // Sort by the provider rank, then a deterministic tiebreak so teams level
-  // on rank (e.g. two sides yet to play, both rank 2) always appear in the
-  // same order across databases instead of arbitrary insertion order.
+// One group's table with its own Live / My picks toggle, so each group can be
+// flipped independently between the live standings and the player's bracket.
+export default function GroupStandingsTable({ letter, liveRows, picksRows, hasPicks }: Props) {
+  const [mode, setMode] = useState<'live' | 'picks'>('live');
+  const predicted = hasPicks && mode === 'picks';
+  const rows = predicted ? picksRows : liveRows;
+
+  // Sort by rank, then a deterministic tiebreak so teams level on rank always
+  // appear in the same order instead of arbitrary insertion order.
   const sorted = [...rows].sort(
     (a, b) =>
-      (a.rank ?? 99) - (b.rank ?? 99) ||
+      a.rank - b.rank ||
       b.points - a.points ||
       b.gd - a.gd ||
       b.gf - a.gf ||
       a.teamCode.localeCompare(b.teamCode),
   );
+
   return (
     <section className="card p-3">
-      <h3 className="mb-2 font-display text-2xl leading-none">
-        Group <span className="text-accent">{letter}</span>
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="font-display text-2xl leading-none">
+          Group <span className="text-accent">{letter}</span>
+        </h3>
+        {hasPicks ? (
+          <div className="flex shrink-0 rounded-full border border-edge bg-white/[0.03] p-0.5 text-[0.55rem] font-bold">
+            <button
+              type="button"
+              onClick={() => setMode('live')}
+              className={`rounded-full px-2 py-1 transition-colors ${!predicted ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+            >
+              Live
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('picks')}
+              className={`rounded-full px-2 py-1 transition-colors ${predicted ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+            >
+              My picks
+            </button>
+          </div>
+        ) : null}
+      </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wider text-muted-2">
@@ -50,7 +79,6 @@ export default function GroupStandingsTable({ letter, rows, teamsByCode, predict
         </thead>
         <tbody>
           {sorted.map((row, i) => {
-            const team = teamsByCode.get(row.teamCode);
             const pos = row.rank ?? i + 1;
             return (
               <tr key={row.teamCode} className="border-t border-edge/60">
@@ -65,8 +93,8 @@ export default function GroupStandingsTable({ letter, rows, teamsByCode, predict
                 </td>
                 <td className="py-2">
                   <span className="flex items-center gap-2">
-                    <span className="text-base">{team?.flag}</span>
-                    <span className="truncate font-semibold">{team?.name ?? row.teamCode}</span>
+                    <span className="text-base">{row.flag}</span>
+                    <span className="truncate font-semibold">{row.name}</span>
                     {row.advanced ? (
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold ${

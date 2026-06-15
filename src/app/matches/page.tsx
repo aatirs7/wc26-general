@@ -9,7 +9,7 @@ import type { Predictions } from '@/types/bracket';
 import { GROUP_LETTERS } from '@/lib/constants';
 import { DISPLAY_TZ_LABEL, matchDayKey, matchDayLabel } from '@/lib/format-time';
 import MatchRow from '@/components/matches/MatchRow';
-import GroupStandingsTable, { type StandingRowData } from '@/components/matches/GroupStandingsTable';
+import GroupStandingsTable, { type GroupRow } from '@/components/matches/GroupStandingsTable';
 import LivePoller from '@/components/matches/LivePoller';
 import { computeLiveGroupTables } from '@/lib/standings';
 
@@ -18,12 +18,10 @@ export const dynamic = 'force-dynamic';
 export default async function MatchesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; groups?: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
-  const { view, groups } = await searchParams;
+  const { view } = await searchParams;
   const showGroups = view === 'groups';
-  // Groups sub-view: live "as it stands" table vs the player's own bracket picks.
-  const picksMode = showGroups && groups === 'picks';
 
   // Note fixtures with the signed-in player's picks (from their active pool).
   const userId = await currentUserId();
@@ -86,37 +84,16 @@ export default async function MatchesPage({
   // provider's own standings only refresh once a match is final). The top two
   // that have played are flagged provisional qualifiers (Q), matching the
   // live points; best-thirds only matter once groups end.
-  let standings: StandingRowData[] = [];
-  if (picksMode && myPredictions) {
-    // Predicted tables: your bracket's full 1-2-3-4 ranking for each group,
-    // exactly as you set it. Same layout as the live table so the two are easy
-    // to compare side by side.
-    const teamsByGroup = new Map<string, string[]>();
-    for (const t of allTeams) {
-      if (!teamsByGroup.has(t.groupLetter)) teamsByGroup.set(t.groupLetter, []);
-      teamsByGroup.get(t.groupLetter)!.push(t.code);
-    }
-    standings = GROUP_LETTERS.flatMap((letter) => {
-      const g = myPredictions!.groups[letter as (typeof GROUP_LETTERS)[number]];
-      // Honour the bracket's own order (1st, 2nd, 3rd, 4th); only fall back to
-      // the remaining group teams if a position was left blank.
-      const ranked = [g?.first, g?.second, g?.third, g?.fourth].filter((c): c is string => !!c);
-      const rest = (teamsByGroup.get(letter) ?? []).filter((c) => !ranked.includes(c)).sort();
-      const ordered = [...ranked, ...rest];
-      return ordered.map((code, i) => ({
-        groupLetter: letter,
-        teamCode: code,
-        played: 0,
-        points: 0,
-        gd: 0,
-        gf: 0,
-        rank: i + 1,
-        advanced: i < 2,
-        isBestThird: false,
-      }));
-    });
-  } else if (showGroups) {
-    standings = computeLiveGroupTables(
+  // Each group card holds both tables (live + your bracket picks) and toggles
+  // between them on the client, so groups can be flipped independently.
+  const teamMeta = (code: string) => {
+    const t = teamsByCode.get(code);
+    return { name: t?.name ?? code, flag: t?.flag ?? '⚽' };
+  };
+  let liveStandings: GroupRow[] = [];
+  let picksStandings: GroupRow[] = [];
+  if (showGroups) {
+    liveStandings = computeLiveGroupTables(
       allMatches.map((m) => ({
         stage: m.stage,
         status: m.status,
@@ -126,7 +103,47 @@ export default async function MatchesPage({
         homeScore: m.homeScore,
         awayScore: m.awayScore,
       })),
-    ).map((r) => ({ ...r, isBestThird: false }));
+    ).map((r) => ({
+      groupLetter: r.groupLetter,
+      teamCode: r.teamCode,
+      ...teamMeta(r.teamCode),
+      played: r.played,
+      points: r.points,
+      gd: r.gd,
+      gf: r.gf,
+      rank: r.rank,
+      advanced: r.advanced,
+      isBestThird: false,
+    }));
+
+    if (myPredictions) {
+      // Predicted tables: your bracket's full 1-2-3-4 ranking for each group,
+      // exactly as you set it. Falls back to the remaining group teams only if
+      // a position was left blank.
+      const teamsByGroup = new Map<string, string[]>();
+      for (const t of allTeams) {
+        if (!teamsByGroup.has(t.groupLetter)) teamsByGroup.set(t.groupLetter, []);
+        teamsByGroup.get(t.groupLetter)!.push(t.code);
+      }
+      picksStandings = GROUP_LETTERS.flatMap((letter) => {
+        const g = myPredictions!.groups[letter as (typeof GROUP_LETTERS)[number]];
+        const ranked = [g?.first, g?.second, g?.third, g?.fourth].filter((c): c is string => !!c);
+        const rest = (teamsByGroup.get(letter) ?? []).filter((c) => !ranked.includes(c)).sort();
+        const ordered = [...ranked, ...rest];
+        return ordered.map((code, i) => ({
+          groupLetter: letter,
+          teamCode: code,
+          ...teamMeta(code),
+          played: 0,
+          points: 0,
+          gd: 0,
+          gf: 0,
+          rank: i + 1,
+          advanced: i < 2,
+          isBestThird: false,
+        }));
+      });
+    }
   }
 
   // Group fixtures by calendar day in the display timezone so the heading
@@ -167,40 +184,16 @@ export default async function MatchesPage({
       </header>
 
       {showGroups ? (
-        <div className="space-y-3">
-          <div className="flex justify-center">
-            <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
-              <Link
-                href="/matches?view=groups"
-                className={`rounded-full px-3 py-1.5 transition-colors ${!picksMode ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
-              >
-                Live table
-              </Link>
-              <Link
-                href="/matches?view=groups&groups=picks"
-                className={`rounded-full px-3 py-1.5 transition-colors ${picksMode ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
-              >
-                My picks
-              </Link>
-            </div>
-          </div>
-          {picksMode && !myPredictions ? (
-            <p className="card p-5 text-center text-sm text-muted">
-              You have not made any group picks yet. Build your bracket to see them here.
-            </p>
-          ) : (
-            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
-              {GROUP_LETTERS.map((letter) => (
-                <GroupStandingsTable
-                  key={letter}
-                  letter={letter}
-                  rows={standings.filter((s) => s.groupLetter === letter)}
-                  teamsByCode={teamsByCode}
-                  predicted={picksMode}
-                />
-              ))}
-            </div>
-          )}
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
+          {GROUP_LETTERS.map((letter) => (
+            <GroupStandingsTable
+              key={letter}
+              letter={letter}
+              liveRows={liveStandings.filter((s) => s.groupLetter === letter)}
+              picksRows={picksStandings.filter((s) => s.groupLetter === letter)}
+              hasPicks={!!myPredictions}
+            />
+          ))}
         </div>
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
