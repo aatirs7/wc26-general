@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, lte } from 'drizzle-orm';
 import {
   Trophy,
   ListOrdered,
@@ -22,6 +22,7 @@ import RememberPool from '@/components/RememberPool';
 import PoolSwitcher from '@/components/PoolSwitcher';
 import { isLocked, kickoffUtc, poolUnlockUntil } from '@/lib/lock';
 import { isComplete } from '@/lib/predictions';
+import { PREDICT_OPEN_MS } from '@/lib/predict';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import Countdown from '@/components/home/Countdown';
 import AutofillNotice from '@/components/AutofillNotice';
@@ -90,6 +91,33 @@ export default async function HomePage({
     ? (await db.select({ c: count() }).from(messages).where(eq(messages.poolId, active.poolId)))[0]
         ?.c ?? 0
     : 0;
+
+  // Open score predictions the player has not made yet (match kicks off within
+  // the prediction window and has not started). Drives the reminder banner and
+  // the count badge on the Score Predict button, since people keep forgetting.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  let predictCount = 0;
+  if (userId) {
+    const openMatches = await db
+      .select({ id: matches.id })
+      .from(matches)
+      .where(
+        and(
+          eq(matches.status, 'scheduled'),
+          gt(matches.kickoffUtc, new Date(nowMs)),
+          lte(matches.kickoffUtc, new Date(nowMs + PREDICT_OPEN_MS)),
+        ),
+      );
+    if (openMatches.length > 0) {
+      const made = await db
+        .select({ matchId: matchPredictions.matchId })
+        .from(matchPredictions)
+        .where(eq(matchPredictions.userId, userId));
+      const done = new Set(made.map((p) => p.matchId));
+      predictCount = openMatches.filter((m) => !done.has(m.id)).length;
+    }
+  }
 
   // Pools of this player re-opened past kickoff (timed unlock), for the
   // notification banner + countdown.
@@ -324,6 +352,18 @@ export default async function HomePage({
         <UnlockBanner key={u.poolId} poolName={u.poolName} poolId={u.poolId} untilMs={u.until.getTime()} />
       ))}
 
+      {predictCount > 0 ? (
+        <Link
+          href="/predict"
+          className="reveal flex items-center justify-center gap-2 rounded-xl border border-accent/40 bg-accent/[0.1] px-3 py-2.5 text-center shadow-sm active:scale-[0.99]"
+        >
+          <Target className="h-4 w-4 shrink-0 text-accent" strokeWidth={2.4} />
+          <span className="text-sm font-semibold text-accent">
+            Don&apos;t forget: {predictCount} {predictCount === 1 ? 'match' : 'matches'} to predict before kickoff
+          </span>
+        </Link>
+      ) : null}
+
       <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       <div className="space-y-6">
       {/* Pre-kickoff countdown (hidden once the tournament is live) */}
@@ -411,8 +451,13 @@ export default async function HomePage({
         </Link>
         <Link
           href="/predict"
-          className="shine-sweep-2 flex flex-col items-center gap-3 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 text-center active:scale-[0.98]"
+          className="shine-sweep-2 relative flex flex-col items-center gap-3 rounded-[1.1rem] border border-accent/30 bg-accent/10 p-4 text-center active:scale-[0.98]"
         >
+          {predictCount > 0 ? (
+            <span className="absolute right-2 top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-live px-1 text-[0.6rem] font-bold leading-none text-white shadow-sm">
+              {predictCount > 99 ? '99+' : predictCount}
+            </span>
+          ) : null}
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/40">
             <Target className="h-5 w-5 text-accent" strokeWidth={2.2} />
           </span>
