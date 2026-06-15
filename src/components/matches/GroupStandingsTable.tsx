@@ -72,13 +72,11 @@ export default function GroupStandingsTable({ letter, liveRows, picksRows, hasPi
           <tr className="text-left text-[0.6rem] uppercase tracking-wider text-muted-2">
             <th className="w-5 pb-1.5 font-semibold">#</th>
             <th className="pb-1.5 font-semibold">Team</th>
-            {!predicted ? (
-              <>
-                <th className="w-7 pb-1.5 text-right font-semibold">P</th>
-                <th className="w-8 pb-1.5 text-right font-semibold">GD</th>
-                <th className="w-9 pb-1.5 text-right font-semibold">Pts</th>
-              </>
-            ) : null}
+            {/* Columns kept (with fixed widths) in both modes so the table does
+                not resize when toggling; just blanked out for My picks. */}
+            <th className="w-7 pb-1.5 text-right font-semibold">{predicted ? '' : 'P'}</th>
+            <th className="w-8 pb-1.5 text-right font-semibold">{predicted ? '' : 'GD'}</th>
+            <th className="w-9 pb-1.5 text-right font-semibold">{predicted ? '' : 'Pts'}</th>
           </tr>
         </thead>
         <tbody>
@@ -110,15 +108,15 @@ export default function GroupStandingsTable({ letter, liveRows, picksRows, hasPi
                     ) : null}
                   </span>
                 </td>
-                {!predicted ? (
-                  <>
-                    <td className="py-2 text-right tabular-nums text-muted">{row.played}</td>
-                    <td className="py-2 text-right tabular-nums text-muted">
-                      {row.gd > 0 ? `+${row.gd}` : row.gd}
-                    </td>
-                    <td className="py-2 text-right font-display text-lg tabular-nums">{row.points}</td>
-                  </>
-                ) : null}
+                <td className="py-2 text-right tabular-nums text-muted">
+                  {predicted ? '' : row.played}
+                </td>
+                <td className="py-2 text-right tabular-nums text-muted">
+                  {predicted ? '' : row.gd > 0 ? `+${row.gd}` : row.gd}
+                </td>
+                <td className="py-2 text-right font-display text-lg tabular-nums">
+                  {predicted ? '' : row.points}
+                </td>
               </tr>
             );
           })}
