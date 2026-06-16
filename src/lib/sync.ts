@@ -256,17 +256,31 @@ export async function runSync(opts: { dry?: boolean } = {}): Promise<SyncReport>
   };
 }
 
-// Snapshot each group's standings once per day as the baseline for the
-// leaderboard's movement indicators. Points are the combined total (bracket
-// + score-prediction bonus) and the ranking MUST match the leaderboard's
-// combined sort.
+// Snapshot the standings as the baseline for the leaderboard's movement
+// indicators. Points are the combined total (bracket + score-prediction
+// bonus) and the ranking MUST match the leaderboard's combined sort. The
+// baseline rolls over once per day, but NOT at midnight: the previous day's
+// movement stays visible until the new day's first match actually kicks off,
+// so it also persists across rest days.
 async function snapshotStandings() {
-  const day = matchDayKey(new Date());
+  const now = new Date();
+  const day = matchDayKey(now);
   const [existing] = await db
     .select({ capturedDay: standingSnapshots.capturedDay })
     .from(standingSnapshots)
     .limit(1);
+  // Already re-baselined for today.
   if (existing?.capturedDay === day) return;
+  // Hold the prior day's baseline (and its movement arrows) until today's
+  // first game has kicked off. The very first snapshot ever is captured
+  // immediately so there is always a baseline to compare against.
+  if (existing) {
+    const kickoffs = await db.select({ kickoffUtc: matches.kickoffUtc }).from(matches);
+    const firstGameStarted = kickoffs.some(
+      (m) => matchDayKey(m.kickoffUtc) === day && m.kickoffUtc.getTime() <= now.getTime(),
+    );
+    if (!firstGameStarted) return;
+  }
 
   const allBrackets = await db.select().from(brackets);
   const scores = await db.select().from(bracketScores);
