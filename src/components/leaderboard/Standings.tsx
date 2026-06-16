@@ -68,11 +68,14 @@ export default function Standings({ rows, meId }: { rows: PlayerRow[]; meId: str
                 </div>
                 {/* Always reserve this column so a movement badge never shifts the
                     centered name; rows with and without movement line up. */}
-                <div className="flex w-8 shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
-                  {row.rankDelta > 0 ? (
-                    <span className="text-accent">▲{row.rankDelta}</span>
-                  ) : row.rankDelta < 0 ? (
-                    <span className="text-live">▼{-row.rankDelta}</span>
+                <div className="flex w-10 shrink-0 flex-col items-end text-[0.6rem] font-bold leading-tight">
+                  {row.rankDelta !== 0 ? (
+                    <>
+                      <span className={row.rankDelta > 0 ? 'text-accent' : 'text-live'}>
+                        {row.rankDelta > 0 ? `▲${row.rankDelta}` : `▼${-row.rankDelta}`}
+                      </span>
+                      <span className="text-[0.5rem] font-semibold uppercase text-muted-2">spots</span>
+                    </>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-col items-center leading-none">

@@ -40,7 +40,7 @@ export function pointsBreakdown(
   // and points to that line.
   const groupLine = (letter: string, code: string, live: boolean, exact: boolean) => {
     const r = rankOf(letter, code);
-    const reason = r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`;
+    const reason = r ? ordinal(r) : 'top 2';
     const { name, flag } = t(code);
     lines.push({
       flag,
