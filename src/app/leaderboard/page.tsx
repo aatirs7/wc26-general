@@ -5,7 +5,6 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
   brackets,
-  bracketScores,
   groupStandings,
   matchPredictions,
   matches,
@@ -16,7 +15,7 @@ import {
   users,
 } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { buildFacts, provisionalPoints } from '@/lib/scoring';
+import { buildFacts, provisionalPoints, scoreBracket, totalOf } from '@/lib/scoring';
 import { pointsBreakdown } from '@/lib/points-breakdown';
 import { computeLiveGroupTables } from '@/lib/standings';
 import Standings, { type PlayerRow } from '@/components/leaderboard/Standings';
@@ -124,23 +123,6 @@ export default async function LeaderboardPage({
     detailByOwner.set(b.ownerId, pointsBreakdown(b.predictions, facts, rankOf, teamName));
   }
 
-  const scoreRows = poolBrackets.length
-    ? await db
-        .select()
-        .from(bracketScores)
-        .where(inArray(bracketScores.bracketId, poolBrackets.map((b) => b.id)))
-    : [];
-  const roundsByBracket = new Map<string, Map<string, number>>();
-  const tiebreakByBracket = new Map<string, number>();
-  for (const s of scoreRows) {
-    const m = roundsByBracket.get(s.bracketId) ?? new Map<string, number>();
-    m.set(s.roundKey, s.points);
-    roundsByBracket.set(s.bracketId, m);
-    if (s.roundKey === 'champion' || s.roundKey === 'final') {
-      tiebreakByBracket.set(s.bracketId, (tiebreakByBracket.get(s.bracketId) ?? 0) + s.points);
-    }
-  }
-
   const predRows = memberIds.length
     ? await db
         .select({ userId: matchPredictions.userId, points: matchPredictions.points })
@@ -158,15 +140,19 @@ export default async function LeaderboardPage({
 
   const bracketByOwner = new Map(poolBrackets.map((b) => [b.ownerId, b]));
 
-  // Combined standing = bracket points + score-prediction bonus.
+  // Combined standing = bracket points + score-prediction bonus. Recompute the
+  // bracket total from the SAME live facts the per-pick breakdown uses, so the
+  // headline number always equals the sum of the breakdown lines. (The persisted
+  // brackets.totalPoints is written by the cron rescore and can lag mid-game,
+  // which made the big number and the itemised lines disagree during live play.)
   const computed = members.map((m) => {
     const b = bracketByOwner.get(m.userId);
-    const bracketTotal = b?.totalPoints ?? 0;
+    const liveScores = b ? scoreBracket(b.predictions, facts) : null;
+    const bracketTotal = liveScores ? totalOf(liveScores) : 0;
     const bonus = bonusByUser.get(m.userId) ?? 0;
-    const roundMap = b ? roundsByBracket.get(b.id) : undefined;
-    const rounds = ROUND_ORDER.map((k) => ({ label: ROUND_LABELS[k], pts: roundMap?.get(k) ?? 0 })).filter(
-      (r) => r.pts > 0,
-    );
+    const rounds = liveScores
+      ? ROUND_ORDER.map((k) => ({ label: ROUND_LABELS[k], pts: liveScores[k] })).filter((r) => r.pts > 0)
+      : [];
     return {
       ownerId: m.userId,
       name: m.displayName,
@@ -178,7 +164,7 @@ export default async function LeaderboardPage({
       live: liveByOwner.get(m.userId) ?? 0,
       detail: detailByOwner.get(m.userId) ?? [],
       submitted: b?.submitted ?? false,
-      tiebreak: b ? tiebreakByBracket.get(b.id) ?? 0 : 0,
+      tiebreak: liveScores ? liveScores.champion + liveScores.final : 0,
       lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
       rounds,
     };
