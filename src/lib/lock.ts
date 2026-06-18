@@ -37,7 +37,7 @@ export function isPoolLockExempt(poolId: string | null | undefined): boolean {
 const TIMED_UNLOCKS: Record<string, string> = {
   '894978dd-9ccd-44de-94e5-57c4a6c040aa': '2026-06-12T16:30:00Z', // Cousins: 15-hour grant
   '28ee9f94-4749-4fd4-bfdc-eeb347d7eb43': '2026-06-14T07:45:00Z', // NED 84-84: extended 24h
-  '641f808c-b62f-439b-b871-d4fd63675cba': '2026-06-16T00:45:00Z', // LPA World Cup Bracket: reopened 24h
+  '641f808c-b62f-439b-b871-d4fd63675cba': '2026-06-19T18:39:00Z', // LPA World Cup Bracket: reopened 24h
   '5b020daf-2282-4182-ae9f-d2229caa6060': '2026-06-13T21:30:00Z', // PESSJ: 24-hour grant
 };
 
