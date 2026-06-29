@@ -206,23 +206,51 @@ export interface ActualMatchRow {
   winnerCode: string | null;
 }
 
-// The REAL knockout bracket as it actually stands, resolved straight from the
-// match rows. The match table ids line up with the matchup ids (openfootball
-// numbering), so each tie reads its real teams, real winner and the slot label
-// as a fallback before the teams are known. Used for the live bracket view.
-export function resolveActualById(matchRows: ActualMatchRow[]): Map<number, ResolvedMatchup> {
+// The REAL knockout bracket as it actually stands. The match table ids line up
+// with the matchup ids (openfootball numbering), so each tie reads its real
+// teams and winner. When a real slot is not populated yet, we fill it from what
+// is actually known: a group winner/runner from the final standings, and a
+// feeder slot from the actual winner of the match that feeds it, propagated
+// forward (so a decided R32 winner shows up in its R16 slot immediately instead
+// of a "W76" placeholder). Third-place feeder slots stay as a label until the
+// real fixture assigns the team. Used for the live bracket view.
+export function resolveActualById(
+  matchRows: ActualMatchRow[],
+  groupFirst?: Map<string, string | null>,
+  groupSecond?: Map<string, string | null>,
+): Map<number, ResolvedMatchup> {
   const byId = new Map(matchRows.map((m) => [m.id, m]));
   const out = new Map<number, ResolvedMatchup>();
+  const winnerById = new Map<number, string | null>();
+
+  const seed = (slot: Slot, realCode: string | null | undefined): string | null => {
+    if (realCode) return realCode;
+    switch (slot.kind) {
+      case 'winner':
+        return groupFirst?.get(slot.group) ?? null;
+      case 'runner':
+        return groupSecond?.get(slot.group) ?? null;
+      case 'third':
+        return null;
+      case 'feeder':
+        return winnerById.get(slot.from) ?? null;
+    }
+  };
+
+  // ALL_MATCHUPS runs R32 -> R16 -> QF -> SF -> FINAL, so every feeder is
+  // resolved before the tie that consumes it.
   for (const def of ALL_MATCHUPS) {
     const real = byId.get(def.id);
+    const winner = real?.winnerCode ?? null;
+    winnerById.set(def.id, winner);
     out.set(def.id, {
       id: def.id,
       fills: fillsForId(def.id),
-      aCode: real?.homeCode ?? null,
-      bCode: real?.awayCode ?? null,
+      aCode: seed(def.a, real?.homeCode),
+      bCode: seed(def.b, real?.awayCode),
       aLabel: real?.homePlaceholder ?? slotLabel(def.a),
       bLabel: real?.awayPlaceholder ?? slotLabel(def.b),
-      winner: real?.winnerCode ?? null,
+      winner,
     });
   }
   return out;

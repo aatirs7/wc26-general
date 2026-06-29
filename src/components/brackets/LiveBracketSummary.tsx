@@ -28,7 +28,16 @@ const emptyPreds: Predictions = { groups: {}, thirdPlace: [], knockout: { r16: [
 // called correctly get a tick so they can compare against their own picks.
 export default function LiveBracketSummary({ matchRows, standings, teams, myPredictions }: Props) {
   const byCode = new Map(teams.map((t) => [t.code, t]));
-  const resolved = resolveActualById(matchRows);
+
+  // Actual group winners and runners-up, so R32 winner/runner slots fill in
+  // from the final standings even before the provider assigns the fixtures.
+  const groupFirst = new Map<string, string | null>();
+  const groupSecond = new Map<string, string | null>();
+  for (const s of standings) {
+    if (s.rank === 1) groupFirst.set(s.groupLetter, s.teamCode);
+    else if (s.rank === 2) groupSecond.set(s.groupLetter, s.teamCode);
+  }
+  const resolved = resolveActualById(matchRows, groupFirst, groupSecond);
 
   const championCode = matchRows.find((m) => m.id === ROOT_ID)?.winnerCode ?? null;
   const championTeam = championCode ? byCode.get(championCode) : undefined;
