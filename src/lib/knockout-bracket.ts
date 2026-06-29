@@ -206,24 +206,73 @@ export interface ActualMatchRow {
   winnerCode: string | null;
 }
 
+// Completes the R32 third-place assignment for the live bracket. Some third
+// slots are already filled by the provider (their match has a real away team);
+// the rest are inferred by matching the remaining best thirds into the remaining
+// eligible slots. With most thirds already pinned, the leftover ones are forced,
+// so this resolves the real matchups (e.g. Switzerland v Algeria, Colombia v
+// Ghana) before the provider has populated those fixtures.
+function completeThirds(
+  byId: Map<number, ActualMatchRow>,
+  bestThirds: { code: string; group: string }[],
+): Map<number, string> {
+  const slots = R32.filter((m) => m.b.kind === 'third').map((m) => ({
+    id: m.id,
+    groups: (m.b as { kind: 'third'; groups: string[] }).groups,
+  }));
+  const bestByCode = new Map(bestThirds.map((t) => [t.code, t.group]));
+
+  const result = new Map<number, string>();
+  const placed = new Set<string>();
+  for (const slot of slots) {
+    const real = byId.get(slot.id);
+    const code = real?.awayCode ?? null;
+    if (code && bestByCode.has(code)) {
+      result.set(slot.id, code);
+      placed.add(code);
+    }
+  }
+
+  const remainingThirds = bestThirds.filter((t) => !placed.has(t.code));
+  const remainingSlots = slots.filter((s) => !result.has(s.id));
+  const used = new Set<number>();
+  const place = (i: number): boolean => {
+    if (i >= remainingThirds.length) return true;
+    for (const slot of remainingSlots) {
+      if (used.has(slot.id)) continue;
+      if (!slot.groups.includes(remainingThirds[i].group)) continue;
+      used.add(slot.id);
+      result.set(slot.id, remainingThirds[i].code);
+      if (place(i + 1)) return true;
+      used.delete(slot.id);
+      result.delete(slot.id);
+    }
+    return false;
+  };
+  place(0);
+  return result;
+}
+
 // The REAL knockout bracket as it actually stands. The match table ids line up
 // with the matchup ids (openfootball numbering), so each tie reads its real
 // teams and winner. When a real slot is not populated yet, we fill it from what
-// is actually known: a group winner/runner from the final standings, and a
-// feeder slot from the actual winner of the match that feeds it, propagated
-// forward (so a decided R32 winner shows up in its R16 slot immediately instead
-// of a "W76" placeholder). Third-place feeder slots stay as a label until the
-// real fixture assigns the team. Used for the live bracket view.
+// is actually known: a group winner/runner from the final standings, a
+// third-place team by completing the eligibility matching, and a feeder slot
+// from the actual winner of the match that feeds it, propagated forward (so a
+// decided R32 winner shows up in its R16 slot immediately instead of a "W76"
+// placeholder). Used for the live bracket view.
 export function resolveActualById(
   matchRows: ActualMatchRow[],
   groupFirst?: Map<string, string | null>,
   groupSecond?: Map<string, string | null>,
+  bestThirds?: { code: string; group: string }[],
 ): Map<number, ResolvedMatchup> {
   const byId = new Map(matchRows.map((m) => [m.id, m]));
   const out = new Map<number, ResolvedMatchup>();
   const winnerById = new Map<number, string | null>();
+  const thirdByMatch = bestThirds ? completeThirds(byId, bestThirds) : new Map<number, string>();
 
-  const seed = (slot: Slot, realCode: string | null | undefined): string | null => {
+  const seed = (slot: Slot, realCode: string | null | undefined, matchId: number): string | null => {
     if (realCode) return realCode;
     switch (slot.kind) {
       case 'winner':
@@ -231,7 +280,7 @@ export function resolveActualById(
       case 'runner':
         return groupSecond?.get(slot.group) ?? null;
       case 'third':
-        return null;
+        return thirdByMatch.get(matchId) ?? null;
       case 'feeder':
         return winnerById.get(slot.from) ?? null;
     }
@@ -246,8 +295,8 @@ export function resolveActualById(
     out.set(def.id, {
       id: def.id,
       fills: fillsForId(def.id),
-      aCode: seed(def.a, real?.homeCode),
-      bCode: seed(def.b, real?.awayCode),
+      aCode: seed(def.a, real?.homeCode, def.id),
+      bCode: seed(def.b, real?.awayCode, def.id),
       aLabel: real?.homePlaceholder ?? slotLabel(def.a),
       bLabel: real?.awayPlaceholder ?? slotLabel(def.b),
       winner,

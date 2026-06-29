@@ -33,11 +33,13 @@ export default function LiveBracketSummary({ matchRows, standings, teams, myPred
   // from the final standings even before the provider assigns the fixtures.
   const groupFirst = new Map<string, string | null>();
   const groupSecond = new Map<string, string | null>();
+  const actualBestThirds: { code: string; group: string }[] = [];
   for (const s of standings) {
     if (s.rank === 1) groupFirst.set(s.groupLetter, s.teamCode);
     else if (s.rank === 2) groupSecond.set(s.groupLetter, s.teamCode);
+    if (s.isBestThird) actualBestThirds.push({ code: s.teamCode, group: s.groupLetter });
   }
-  const resolved = resolveActualById(matchRows, groupFirst, groupSecond);
+  const resolved = resolveActualById(matchRows, groupFirst, groupSecond, actualBestThirds);
 
   const championCode = matchRows.find((m) => m.id === ROOT_ID)?.winnerCode ?? null;
   const championTeam = championCode ? byCode.get(championCode) : undefined;
