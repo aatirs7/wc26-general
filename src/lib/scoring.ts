@@ -40,11 +40,15 @@ export interface StandingFact {
   isBestThird: boolean;
 }
 
-// The actual 1st- and 2nd-placed teams of a group, in order, used for the
-// exact-rank bonus (right team AND right position).
+// The actual finishing teams of a group, by rank, used for the exact-rank
+// bonus (right team AND right position). For live (in-progress) groups only
+// first/second are known; third/fourth stay null so the exact 3rd/4th bonus
+// never fires provisionally.
 export interface GroupOrder {
   first: string | null;
   second: string | null;
+  third: string | null;
+  fourth: string | null;
 }
 
 export interface Facts {
@@ -87,9 +91,16 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (row.rank === 1 || row.rank === 2) {
       if (!top2ByGroup.has(row.groupLetter)) top2ByGroup.set(row.groupLetter, new Set());
       top2ByGroup.get(row.groupLetter)!.add(row.teamCode);
-      const order = exactByGroup.get(row.groupLetter) ?? { first: null, second: null };
+    }
+    // Capture the exact finishing team for every rank 1-4 (exact-position bonus).
+    if (row.rank != null && row.rank >= 1 && row.rank <= 4) {
+      const order =
+        exactByGroup.get(row.groupLetter) ??
+        ({ first: null, second: null, third: null, fourth: null } as GroupOrder);
       if (row.rank === 1) order.first = row.teamCode;
-      else order.second = row.teamCode;
+      else if (row.rank === 2) order.second = row.teamCode;
+      else if (row.rank === 3) order.third = row.teamCode;
+      else if (row.rank === 4) order.fourth = row.teamCode;
       exactByGroup.set(row.groupLetter, order);
     }
     if (row.isBestThird) bestThirds.add(row.teamCode);
@@ -133,7 +144,9 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
     if (!row.advanced || !startedGroups.has(row.groupLetter)) continue;
     if (!liveTop2ByGroup.has(row.groupLetter)) liveTop2ByGroup.set(row.groupLetter, new Set());
     liveTop2ByGroup.get(row.groupLetter)!.add(row.teamCode);
-    const order = liveExactByGroup.get(row.groupLetter) ?? { first: null, second: null };
+    const order =
+      liveExactByGroup.get(row.groupLetter) ??
+      ({ first: null, second: null, third: null, fourth: null } as GroupOrder);
     if (row.rank === 1) order.first = row.teamCode;
     else if (row.rank === 2) order.second = row.teamCode;
     liveExactByGroup.set(row.groupLetter, order);
@@ -153,36 +166,44 @@ export function buildFacts(matchRows: MatchFact[], standingRows: StandingFact[])
   };
 }
 
-// Group points for a pair of picks: the order-free top-2 advance points (per
-// team that actually lands in the top two) plus an exact-rank bonus when a
-// pick also matches the position it was slotted into (your 1st pick is the
-// actual 1st, your 2nd pick is the actual 2nd).
-function groupPoints(
-  first: string | undefined,
-  second: string | undefined,
-  actual: Set<string>,
-  order: GroupOrder | undefined,
-): number {
+type GroupPick = { first?: string; second?: string; third?: string; fourth?: string } | undefined;
+
+// Group points for one group's four picks:
+//   - Advancement: any team you slotted in your top 3 (1st/2nd/3rd) that
+//     actually finished in the top two earns the advance points, no matter
+//     which lane you put it in. (Best-third advancement is scored separately
+//     in scoreBracket since it can only resolve once every group is decided.)
+//   - Exact-position bonus: +1 for each of the four slots where your pick
+//     matches the team that finished in that exact rank. `order` carries the
+//     actual finishers by rank; live groups only know 1st/2nd, so the exact
+//     3rd/4th bonus never fires provisionally.
+function groupPoints(g: GroupPick, actualTop2: Set<string>, order: GroupOrder | undefined): number {
+  if (!g) return 0;
   let pts = 0;
-  if (first && actual.has(first)) {
-    pts += SCORING.groupTop2;
-    if (order?.first === first) pts += SCORING.groupExactRank;
+  for (const pick of [g.first, g.second, g.third]) {
+    if (pick && actualTop2.has(pick)) pts += SCORING.groupTop2;
   }
-  if (second && actual.has(second)) {
-    pts += SCORING.groupTop2;
-    if (order?.second === second) pts += SCORING.groupExactRank;
-  }
+  if (g.first && order?.first === g.first) pts += SCORING.groupExactRank;
+  if (g.second && order?.second === g.second) pts += SCORING.groupExactRank;
+  if (g.third && order?.third === g.third) pts += SCORING.groupExactRank;
+  if (g.fourth && order?.fourth === g.fourth) pts += SCORING.groupExactRank;
   return pts;
+}
+
+// Did this bracket predict `code` to advance from group `letter`? True when the
+// team sits in any of the bracket's top three slots for that group (1st/2nd as
+// a top-two pick, 3rd as a best-third hope) -- a 4th-place slot means you
+// predicted it out.
+function predictedToAdvance(g: GroupPick, code: string): boolean {
+  return !!g && (g.first === code || g.second === code || g.third === code);
 }
 
 export function scoreBracket(p: Predictions, facts: Facts): Record<RoundKey, number> {
   const scores = Object.fromEntries(ROUND_KEYS.map((k) => [k, 0])) as Record<RoundKey, number>;
 
   for (const letter of facts.decidedGroups) {
-    const actual = facts.top2ByGroup.get(letter);
-    if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    scores.groups += groupPoints(g?.first, g?.second, actual, facts.exactByGroup.get(letter));
+    scores.groups += groupPoints(g, facts.top2ByGroup.get(letter) ?? new Set(), facts.exactByGroup.get(letter));
   }
 
   // Live (provisional) points: groups that have kicked off but are not yet
@@ -193,14 +214,19 @@ export function scoreBracket(p: Predictions, facts: Facts): Record<RoundKey, num
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    scores.groups += groupPoints(g?.first, g?.second, actual, facts.liveExactByGroup.get(letter));
+    scores.groups += groupPoints(g, actual, facts.liveExactByGroup.get(letter));
   }
 
-  // Best-thirds is a cross-group ranking, so it only pays out once every
-  // group is decided. No provisional points.
+  // Best-third advancement is a cross-group ranking, so it only pays out once
+  // every group is decided. A team that qualifies as a best third earns the
+  // points for any bracket that predicted it to advance (slotted it in the top
+  // three of its group), regardless of the exact lane. No provisional points.
   if (facts.allGroupsDecided) {
-    for (const pick of p.thirdPlace) {
-      if (facts.bestThirds.has(pick)) scores.thirdPlace += SCORING.thirdPlace;
+    for (const letter of facts.decidedGroups) {
+      const third = facts.exactByGroup.get(letter)?.third;
+      if (!third || !facts.bestThirds.has(third)) continue;
+      const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
+      if (predictedToAdvance(g, third)) scores.thirdPlace += SCORING.thirdPlace;
     }
   }
 
@@ -230,7 +256,7 @@ export function provisionalPoints(p: Predictions, facts: Facts): number {
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    pts += groupPoints(g?.first, g?.second, actual, facts.liveExactByGroup.get(letter));
+    pts += groupPoints(g, actual, facts.liveExactByGroup.get(letter));
   }
   return pts;
 }
@@ -242,16 +268,15 @@ export function attainablePoints(matchRows: MatchFact[], facts: Facts): number {
     matchRows.filter((m) => m.stage === stage && isFinal(m.status)).length;
 
   let total = 0;
-  // Each decided group: at best both top-2 picks correct AND both in the exact
-  // spot, so each of the two slots can bank top-2 plus the exact-rank bonus.
-  const perGroupSlot = SCORING.groupTop2 + SCORING.groupExactRank;
-  total += facts.decidedGroups.size * 2 * perGroupSlot;
+  // Each decided group: at best both top-2 advancers banked (groupTop2 each)
+  // AND all four positions nailed exactly (the exact-rank bonus on every slot).
+  total += facts.decidedGroups.size * (2 * SCORING.groupTop2 + 4 * SCORING.groupExactRank);
   // In-progress groups pay their current provisional top two (1 or 2 teams,
-  // whoever has actually played), each able to bank top-2 plus the bonus, so
-  // the denominator tracks how many provisional units are live, or accuracy
+  // whoever has actually played), each able to bank top-2 plus an exact bonus,
+  // so the denominator tracks how many provisional units are live, or accuracy
   // could read above 100%.
   for (const g of facts.startedGroups) {
-    total += (facts.liveTop2ByGroup.get(g)?.size ?? 0) * perGroupSlot;
+    total += (facts.liveTop2ByGroup.get(g)?.size ?? 0) * (SCORING.groupTop2 + SCORING.groupExactRank);
   }
   // Best-thirds only resolve once every group is in.
   if (facts.allGroupsDecided) total += SCORING.thirdPlace * THIRD_PLACE_PICKS;

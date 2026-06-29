@@ -51,6 +51,16 @@ export default async function PredictPage() {
     .filter((m) => predByMatch.has(m.id) && m.kickoffUtc.getTime() <= now)
     .reverse();
 
+  // Knockout matches that have kicked off but you did NOT predict. Without this
+  // they vanish from the page entirely (not open, not in your results), so a
+  // missed knockout game looks like it never existed. Newest first.
+  const KO_STAGES = new Set(['r32', 'r16', 'qf', 'sf', 'third', 'final']);
+  const koMissed = allMatches
+    .filter(
+      (m) => KO_STAGES.has(m.stage) && m.kickoffUtc.getTime() <= now && !predByMatch.has(m.id),
+    )
+    .reverse();
+
   return (
     <div className="space-y-5 py-4 lg:mx-auto lg:max-w-2xl">
       <header className="pt-2 text-center">
@@ -134,6 +144,41 @@ export default async function PredictPage() {
                       +{p.points}
                     </div>
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {koMissed.length > 0 ? (
+        <section>
+          <h2 className="mb-2 text-center font-display text-2xl text-muted">Knockout results</h2>
+          <p className="mb-2 text-center text-xs text-muted-2">
+            Knockout games you did not call a score on. Predictions open 24h before each kickoff.
+          </p>
+          <ul className="space-y-2">
+            {koMissed.map((m) => {
+              const h = label(m.homeCode, m.homePlaceholder);
+              const a = label(m.awayCode, m.awayPlaceholder);
+              const settled = isFinal(m.status) && m.homeScore != null && m.awayScore != null;
+              return (
+                <li key={m.id} className="card flex items-center gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">
+                      {h.flag} {h.name} <span className="text-muted-2">v</span> {a.flag} {a.name}
+                    </div>
+                    <div className="text-xs text-muted">
+                      {settled
+                        ? `Final: ${m.homeScore}–${m.awayScore}`
+                        : m.status === 'live' || m.status === 'ht'
+                          ? `Live: ${m.homeScore ?? 0}–${m.awayScore ?? 0}`
+                          : 'Locked'}
+                      {' · '}
+                      <span className="text-muted-2">no prediction from you</span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 font-display text-lg leading-none text-muted-2">–</div>
                 </li>
               );
             })}

@@ -197,6 +197,37 @@ export function resolveById(p: Predictions): Map<number, ResolvedMatchup> {
   return out;
 }
 
+export interface ActualMatchRow {
+  id: number;
+  homeCode: string | null;
+  awayCode: string | null;
+  homePlaceholder: string | null;
+  awayPlaceholder: string | null;
+  winnerCode: string | null;
+}
+
+// The REAL knockout bracket as it actually stands, resolved straight from the
+// match rows. The match table ids line up with the matchup ids (openfootball
+// numbering), so each tie reads its real teams, real winner and the slot label
+// as a fallback before the teams are known. Used for the live bracket view.
+export function resolveActualById(matchRows: ActualMatchRow[]): Map<number, ResolvedMatchup> {
+  const byId = new Map(matchRows.map((m) => [m.id, m]));
+  const out = new Map<number, ResolvedMatchup>();
+  for (const def of ALL_MATCHUPS) {
+    const real = byId.get(def.id);
+    out.set(def.id, {
+      id: def.id,
+      fills: fillsForId(def.id),
+      aCode: real?.homeCode ?? null,
+      bCode: real?.awayCode ?? null,
+      aLabel: real?.homePlaceholder ?? slotLabel(def.a),
+      bLabel: real?.awayPlaceholder ?? slotLabel(def.b),
+      winner: real?.winnerCode ?? null,
+    });
+  }
+  return out;
+}
+
 // Reconcile the stored knockout sets with what the bracket structure
 // actually shows: each round becomes exactly the winners of its matchups,
 // walked in feeder order. This drops "orphans" (teams a round still holds

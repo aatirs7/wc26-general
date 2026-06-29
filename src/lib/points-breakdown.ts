@@ -1,5 +1,5 @@
 // Turns a bracket's points into plain-language lines so players can see
-// exactly where each point comes from (e.g. "Mexico — 1st in Group A").
+// exactly where each point comes from (e.g. "Mexico, 1st in Group A").
 import type { Predictions } from '@/types/bracket';
 import type { Facts } from './scoring';
 import {
@@ -16,6 +16,9 @@ export interface BreakdownLine {
   reason: string;
   pts: number;
   live: boolean;
+  // Which part of the bracket this point came from, for sectioning the
+  // "score explained" view.
+  category: 'group' | 'knockout';
   // Group pick that also matched its exact position (shown as a badge).
   exact?: boolean;
 }
@@ -35,47 +38,74 @@ export function pointsBreakdown(
   const lines: BreakdownLine[] = [];
   const t = (code: string) => teamName(code);
 
-  // Group top-2: confirmed (decided groups) and live (in-progress groups).
-  // `exact` flags a pick that also nailed its position, adding the bonus note
-  // and points to that line.
-  const groupLine = (letter: string, code: string, live: boolean, exact: boolean) => {
-    const r = rankOf(letter, code);
-    const reason = r ? ordinal(r) : 'top 2';
-    const { name, flag } = t(code);
-    lines.push({
-      flag,
-      name,
-      reason,
-      pts: SCORING.groupTop2 + (exact ? SCORING.groupExactRank : 0),
-      live,
-      exact,
-    });
-  };
-  for (const letter of facts.decidedGroups) {
-    const actual = facts.top2ByGroup.get(letter);
-    if (!actual) continue;
-    const order = facts.exactByGroup.get(letter);
+  // One group's lines. Advancement: any of your top-3 picks that actually
+  // finishes top two banks the advance points (with an exact-spot bonus if you
+  // also nailed the position). Plus pure exact-position bonuses for an exact
+  // 3rd or 4th that did not already score as an advancer. Live groups only
+  // know the current top two, so exact 3rd/4th and best-third lines are skipped.
+  const emitGroup = (
+    letter: string,
+    top2: Set<string>,
+    order: { first: string | null; second: string | null; third?: string | null; fourth?: string | null } | undefined,
+    live: boolean,
+  ) => {
     const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    if (g?.first && actual.has(g.first)) groupLine(letter, g.first, false, order?.first === g.first);
-    if (g?.second && actual.has(g.second)) groupLine(letter, g.second, false, order?.second === g.second);
+    if (!g) return;
+    const advance = (code: string, exact: boolean) => {
+      const r = rankOf(letter, code);
+      const { name, flag } = t(code);
+      lines.push({
+        flag,
+        name,
+        reason: r ? `${ordinal(r)} in Group ${letter}` : `top 2 of Group ${letter}`,
+        pts: SCORING.groupTop2 + (exact ? SCORING.groupExactRank : 0),
+        live,
+        category: 'group',
+        exact,
+      });
+    };
+    if (g.first && top2.has(g.first)) advance(g.first, order?.first === g.first);
+    if (g.second && top2.has(g.second)) advance(g.second, order?.second === g.second);
+    if (g.third && top2.has(g.third)) advance(g.third, order?.third === g.third);
+
+    if (live) return;
+    // Best-third advancement: the actual 3rd that qualifies, if you predicted it
+    // to advance (slotted it in your top three). Only resolves once every group
+    // is decided, matching the engine.
+    const third = order?.third ?? null;
+    const predictedThird =
+      third && (g.first === third || g.second === third || g.third === third);
+    if (third && facts.allGroupsDecided && facts.bestThirds.has(third) && predictedThird) {
+      const exact = g.third === third;
+      const { name, flag } = t(third);
+      lines.push({
+        flag,
+        name,
+        reason: 'qualified as a best third',
+        pts: SCORING.thirdPlace + (exact ? SCORING.groupExactRank : 0),
+        live: false,
+        category: 'group',
+        exact,
+      });
+    } else if (third && g.third === third) {
+      // Exact 3rd that did not qualify: the standalone exact-spot bonus.
+      const { name, flag } = t(third);
+      lines.push({ flag, name, reason: `finished exactly 3rd in Group ${letter}`, pts: SCORING.groupExactRank, live: false, category: 'group', exact: true });
+    }
+    // Exact 4th: standalone exact-spot bonus.
+    if (order?.fourth && g.fourth === order.fourth) {
+      const { name, flag } = t(order.fourth);
+      lines.push({ flag, name, reason: `finished exactly 4th in Group ${letter}`, pts: SCORING.groupExactRank, live: false, category: 'group', exact: true });
+    }
+  };
+
+  for (const letter of facts.decidedGroups) {
+    emitGroup(letter, facts.top2ByGroup.get(letter) ?? new Set(), facts.exactByGroup.get(letter), false);
   }
   for (const letter of facts.startedGroups) {
     const actual = facts.liveTop2ByGroup.get(letter);
     if (!actual) continue;
-    const order = facts.liveExactByGroup.get(letter);
-    const g = p.groups[letter as (typeof GROUP_LETTERS)[number]];
-    if (g?.first && actual.has(g.first)) groupLine(letter, g.first, true, order?.first === g.first);
-    if (g?.second && actual.has(g.second)) groupLine(letter, g.second, true, order?.second === g.second);
-  }
-
-  // Best thirds (only once every group is decided).
-  if (facts.allGroupsDecided) {
-    for (const pick of p.thirdPlace) {
-      if (facts.bestThirds.has(pick)) {
-        const { name, flag } = t(pick);
-        lines.push({ flag, name, reason: 'qualified as a best third', pts: SCORING.thirdPlace, live: false });
-      }
-    }
+    emitGroup(letter, actual, facts.liveExactByGroup.get(letter), true);
   }
 
   // Knockout advancement.
@@ -89,13 +119,14 @@ export function pointsBreakdown(
           reason: `reached the ${KNOCKOUT_ROUND_LABELS[round]}`,
           pts: SCORING_BY_ROUND[round],
           live: false,
+          category: 'knockout',
         });
       }
     }
   }
   if (facts.champion && p.knockout.champion === facts.champion) {
     const { name, flag } = t(facts.champion);
-    lines.push({ flag, name, reason: 'won the tournament', pts: SCORING.champion, live: false });
+    lines.push({ flag, name, reason: 'won the tournament', pts: SCORING.champion, live: false, category: 'knockout' });
   }
 
   return lines;

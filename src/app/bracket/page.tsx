@@ -4,12 +4,14 @@ import { redirect } from 'next/navigation';
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { Lock } from 'lucide-react';
-import { brackets, poolMembers, pools, teams } from '@/lib/schema';
+import { brackets, groupStandings, matches, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isLockedForPool } from '@/lib/lock';
 import BracketBuilder from '@/components/bracket/BracketBuilder';
 import AutofillRestart from '@/components/bracket/AutofillRestart';
 import BracketSummary from '@/components/brackets/BracketSummary';
+import LiveBracketSummary from '@/components/brackets/LiveBracketSummary';
+import BracketTabs from '@/components/brackets/BracketTabs';
 import StartBracket from '@/components/bracket/StartBracket';
 import PoolActions from '@/components/pools/PoolActions';
 import RememberPool from '@/components/RememberPool';
@@ -73,6 +75,32 @@ export default async function BracketPage({
 
   const locked = isLockedForPool(activePoolId);
 
+  // Live "actual results" bracket data, only needed for the locked view's
+  // My picks / Live toggle.
+  const liveData =
+    bracket && locked
+      ? {
+          matchRows: await db
+            .select({
+              id: matches.id,
+              homeCode: matches.homeCode,
+              awayCode: matches.awayCode,
+              homePlaceholder: matches.homePlaceholder,
+              awayPlaceholder: matches.awayPlaceholder,
+              winnerCode: matches.winnerCode,
+            })
+            .from(matches),
+          standings: await db
+            .select({
+              groupLetter: groupStandings.groupLetter,
+              teamCode: groupStandings.teamCode,
+              rank: groupStandings.rank,
+              isBestThird: groupStandings.isBestThird,
+            })
+            .from(groupStandings),
+        }
+      : null;
+
   return (
     <div className="py-4 lg:mx-auto lg:max-w-3xl">
       <RememberPool poolId={activePoolId} />
@@ -115,7 +143,21 @@ export default async function BracketPage({
               {bracket.submitted ? 'Locked in. May the best bracket win.' : 'Not submitted before kickoff.'}
             </p>
           </header>
-          <BracketSummary predictions={bracket.predictions} teams={allTeams} />
+          {liveData ? (
+            <BracketTabs
+              picks={<BracketSummary predictions={bracket.predictions} teams={allTeams} />}
+              live={
+                <LiveBracketSummary
+                  matchRows={liveData.matchRows}
+                  standings={liveData.standings}
+                  teams={allTeams}
+                  myPredictions={bracket.predictions}
+                />
+              }
+            />
+          ) : (
+            <BracketSummary predictions={bracket.predictions} teams={allTeams} />
+          )}
         </div>
       ) : (
         <>

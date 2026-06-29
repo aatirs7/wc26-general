@@ -4,9 +4,9 @@ import { PREDICT_EXACT_POINTS } from '@/lib/predict';
 export const dynamic = 'force-static';
 
 const ROWS: { label: string; pts: number; note: string }[] = [
-  { label: 'Group top-2 finish', pts: SCORING.groupTop2, note: 'per team you put in the top 2 that finishes top 2 (either spot)' },
-  { label: 'Exact group position', pts: SCORING.groupExactRank, note: 'bonus per top-2 team you also placed in its exact spot (1st or 2nd)' },
-  { label: 'Best third-place qualifier', pts: SCORING.thirdPlace, note: 'per correct team among the 8 thirds that advance' },
+  { label: 'Team advances from its group', pts: SCORING.groupTop2, note: 'per team you picked to go through (anywhere in your top 3 of a group) that finishes in the top 2, whatever lane you put it in' },
+  { label: 'Best third-place qualifier', pts: SCORING.thirdPlace, note: 'per team you picked to go through that sneaks in as one of the 8 best third-placed teams' },
+  { label: 'Exact finishing position', pts: SCORING.groupExactRank, note: 'bonus for every spot you nail exactly: 1st, 2nd, 3rd or 4th in a group' },
   { label: 'Reaches Round of 16', pts: SCORING.reachR16, note: 'per team that wins its Round of 32 tie' },
   { label: 'Reaches Quarter-finals', pts: SCORING.reachQF, note: 'per team that makes the last 8' },
   { label: 'Reaches Semi-finals', pts: SCORING.reachSF, note: 'per team that makes the last 4' },
@@ -40,8 +40,16 @@ export default function ScoringPage() {
         <p className="text-sm leading-relaxed text-muted">
           You score points for every team you correctly send to a stage,{' '}
           <span className="text-foreground">no matter who they beat to get there</span>. Picking a
-          winner in the bracket just means &quot;this team gets to the next round&quot; — you get
+          winner in the bracket just means &quot;this team gets to the next round&quot;, and you get
           the points if they really do, even if their real opponent is different from yours.
+        </p>
+        <p className="text-sm leading-relaxed text-muted">
+          For the group stage, what matters is{' '}
+          <span className="text-foreground">whether you called a team to go through</span>. If a team
+          you ranked in your top 3 of a group actually qualifies, you bank the advance points even if
+          you had it 2nd and it finished 3rd, or the other way around. Then you earn an{' '}
+          <span className="text-foreground">extra point for every exact spot</span> you nail (1st,
+          2nd, 3rd or 4th).
         </p>
       </section>
 
@@ -61,11 +69,11 @@ export default function ScoringPage() {
           ))}
         </div>
         <p className="mt-3 text-center text-xs leading-relaxed text-muted">
-          Group picks score on the two teams that go through,{' '}
-          <span className="text-foreground">in any order</span>: each of your two group picks banks{' '}
-          {SCORING.groupTop2} if it finishes top 2, plus {SCORING.groupExactRank} more if you also
-          nailed its exact spot. Get both right and that team is worth{' '}
-          {SCORING.groupTop2 + SCORING.groupExactRank}.
+          Example: you rank a team 2nd and it actually finishes 3rd but grabs a best-third spot. You
+          still called it to go through, so you bank {SCORING.thirdPlace}. Nail a team in its exact
+          spot and that is {SCORING.groupExactRank} more, so a team you put 1st that wins its group is
+          worth {SCORING.groupTop2 + SCORING.groupExactRank} (advance {SCORING.groupTop2} + exact{' '}
+          {SCORING.groupExactRank}).
         </p>
       </section>
 
@@ -76,11 +84,11 @@ export default function ScoringPage() {
             <span className="font-bold text-gold">
               Group points go live the moment a group kicks off.
             </span>{' '}
-            While a group is in progress, both teams you picked that are{' '}
-            <span className="text-foreground">currently in the top two</span> of the live table earn
-            their {SCORING.groupTop2} points right away (plus the{' '}
-            <span className="text-foreground">+{SCORING.groupExactRank} exact-spot bonus</span> if you
-            also called their position), and those totals move as goals go in and the table
+            While a group is in progress, any team you picked to go through that is{' '}
+            <span className="text-foreground">currently in the top two</span> of the live table earns
+            its {SCORING.groupTop2} advance points right away (plus the{' '}
+            <span className="text-foreground">+{SCORING.groupExactRank} bonus</span> if it is sitting
+            in the exact spot you called), and those totals move as goals go in and the table
             reshuffles. A team that <span className="text-foreground">has not kicked off yet</span>{' '}
             does not count until it plays. When the group finishes, your picks lock in. Best-third
             points only count once <span className="text-foreground">all 12 groups are done</span>.
@@ -124,7 +132,7 @@ export default function ScoringPage() {
         </Step>
         <Step n={2} title="The deep rounds decide it">
           Everyone gets a lot of group picks right, so brackets mostly separate on the knockout
-          calls — especially the finalists ({SCORING.reachFinal} each) and the champion (
+          calls, especially the finalists ({SCORING.reachFinal} each) and the champion (
           {SCORING.champion}). Read the late rounds well and you pull away.
         </Step>
         <Step n={3} title="No penalties, no partial credit">
@@ -142,7 +150,7 @@ export default function ScoringPage() {
         <h2 className="text-center font-display text-2xl">Accuracy &amp; ties</h2>
         <p className="text-sm leading-relaxed text-muted">
           <span className="text-foreground">Accuracy</span> is your points divided by the most a
-          perfect bracket could have banked so far, as a percentage — a fair way to compare before
+          perfect bracket could have banked so far, as a percentage, a fair way to compare before
           the tournament is over.
         </p>
         <p className="text-sm leading-relaxed text-muted">

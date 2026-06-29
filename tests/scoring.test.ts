@@ -39,7 +39,12 @@ function fullStandings(bestThirdLetters: string[]): StandingFact[] {
 function fullBracket(): Predictions {
   const p = emptyPredictions();
   for (const letter of GROUP_LETTERS) {
-    p.groups[letter] = { first: T(letter, 0), second: T(letter, 1) };
+    p.groups[letter] = {
+      first: T(letter, 0),
+      second: T(letter, 1),
+      third: T(letter, 2),
+      fourth: T(letter, 3),
+    };
   }
   p.thirdPlace = GROUP_LETTERS.slice(0, 8).map((l) => T(l, 2));
   const qualifiers = [
@@ -91,14 +96,43 @@ describe('scoreBracket', () => {
     expect(totalOf(scores)).toBe(0);
   });
 
-  it('scores decided groups only, 3 points per correct top-2 team', () => {
-    // Groups A and B decided; bracket has both right in A, top-2 set
-    // right in B. Order within the top 2 does not matter.
+  it('scores decided groups: advance points plus exact-position bonuses', () => {
+    // Group A ranked perfectly (1-2-3-4): 2 advancers * 3 + 4 exact spots = 10.
+    // Group B has the right top two but with 1st/2nd swapped and no 3rd/4th:
+    // 2 advancers * 3, no exact bonus = 6.
     const facts = buildFacts(decidedGroupMatches(['A', 'B']), fullStandings([]));
     const p = fullBracket();
     p.groups.B = { first: T('B', 1), second: T('B', 0) };
     const scores = scoreBracket(p, facts);
-    expect(scores.groups).toBe(4 * 3);
+    expect(scores.groups).toBe(10 + 6);
+    expect(scores.thirdPlace).toBe(0);
+  });
+
+  it('awards advancement no matter which lane you slotted the team in', () => {
+    // Group B actual: 1st BAX, 2nd BBX, 3rd BCX (best third), 4th BDX.
+    // Bracket swaps lanes like Alyaan did: 2nd and 3rd flipped.
+    const facts = buildFacts(decidedGroupMatches(GROUP_LETTERS), fullStandings(['B']));
+    const p = emptyPredictions(); // only group B picked, so only B scores
+    p.groups.B = { first: T('B', 0), second: T('B', 2), third: T('B', 1), fourth: T('B', 3) };
+    const scores = scoreBracket(p, facts);
+    // BAX (1st) advances, slotted 1st: +3 advance +1 exact.
+    // BBX (2nd) advances, slotted 3rd: +3 advance (no exact).
+    // BCX (3rd, best third) qualifies, slotted 2nd: +2 best-third (no exact).
+    // BDX (4th) slotted 4th: +1 exact.
+    // groups = 3+1 + 3 + 1(BDX exact) = 8 ; thirdPlace = 2.
+    expect(scores.groups).toBe(8);
+    expect(scores.thirdPlace).toBe(2);
+  });
+
+  it('pays an exact 3rd/4th bonus even when the team does not advance', () => {
+    // No best thirds, so the 3rd-placed team does not qualify; the only points
+    // are the exact-position bonuses for nailing 3rd and 4th.
+    const facts = buildFacts(decidedGroupMatches(['A']), fullStandings([]));
+    const p = emptyPredictions();
+    // Only 3rd and 4th picked, both exactly right; no top-two picks at all.
+    p.groups.A = { third: T('A', 2), fourth: T('A', 3) };
+    const scores = scoreBracket(p, facts);
+    expect(scores.groups).toBe(2); // exact 3rd + exact 4th
     expect(scores.thirdPlace).toBe(0);
   });
 
@@ -166,42 +200,52 @@ describe('scoreBracket', () => {
 });
 
 describe('live provisional scoring', () => {
-  const liveGroupMatch = (letter: string, status = 'live'): MatchFact => ({
+  // One live group match between the 1st- and 2nd-placed teams, leader winning,
+  // so both have played and sit in the live top two.
+  const liveMatch = (letter: string, status = 'live'): MatchFact => ({
     stage: 'group',
     status,
     groupLetter: letter,
     winnerCode: null,
+    homeCode: T(letter, 0),
+    awayCode: T(letter, 1),
+    homeScore: 1,
+    awayScore: 0,
   });
 
   it('starts a group as soon as it kicks off', () => {
-    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
+    const facts = buildFacts([liveMatch('A')], fullStandings([]));
     expect(facts.startedGroups.has('A')).toBe(true);
     expect(facts.startedGroups.has('B')).toBe(false);
   });
 
-  it('awards only the current group leader (1st place), not 2nd', () => {
-    const facts = buildFacts([liveGroupMatch('A')], fullStandings([])); // A leader = AAX
-    const p = fullBracket(); // A.first = AAX (leader), A.second = ABX
-    expect(scoreBracket(p, facts).groups).toBe(3); // only the leader counts live
-    expect(provisionalPoints(p, facts)).toBe(3);
+  it('awards the current live top two that have played', () => {
+    const facts = buildFacts([liveMatch('A')], fullStandings([]));
+    const p = fullBracket(); // A: 1st AAX, 2nd ABX, 3rd ACX, 4th ADX
+    // Both AAX and ABX have played and lead the live table: 3 advance each,
+    // plus exact-spot bonuses on 1st and 2nd. ACX/ADX have not played.
+    expect(scoreBracket(p, facts).groups).toBe(3 + 1 + 3 + 1);
+    expect(provisionalPoints(p, facts)).toBe(8);
   });
 
-  it('credits the leader whether picked 1st or 2nd', () => {
-    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
+  it('credits a live qualifier even when slotted in the wrong lane', () => {
+    const facts = buildFacts([liveMatch('A')], fullStandings([]));
     const p = fullBracket();
-    p.groups.A = { first: T('A', 1), second: T('A', 0) }; // leader AAX picked 2nd
-    expect(scoreBracket(p, facts).groups).toBe(3);
+    // Leader AAX slotted 3rd: still earns advance points (top-3 pick), no exact.
+    p.groups.A = { first: T('A', 1), second: T('A', 3), third: T('A', 0), fourth: T('A', 2) };
+    // ABX (2nd) slotted 1st: advance, no exact. AAX (1st) slotted 3rd: advance.
+    expect(scoreBracket(p, facts).groups).toBe(3 + 3);
   });
 
-  it('does not credit non-leaders while the group is live', () => {
-    const facts = buildFacts([liveGroupMatch('A')], fullStandings([]));
+  it('does not credit a team that has not played yet', () => {
+    const facts = buildFacts([liveMatch('A')], fullStandings([]));
     const p = fullBracket();
-    p.groups.A = { first: T('A', 1), second: T('A', 2) }; // 2nd and 3rd, no leader
+    p.groups.A = { first: T('A', 2), second: T('A', 3) }; // 3rd and 4th, neither played
     expect(scoreBracket(p, facts).groups).toBe(0);
   });
 
   it('gives no live points before kickoff', () => {
-    const facts = buildFacts([liveGroupMatch('A', 'scheduled')], fullStandings([]));
+    const facts = buildFacts([liveMatch('A', 'scheduled')], fullStandings([]));
     expect(facts.startedGroups.size).toBe(0);
   });
 });

@@ -1,41 +1,52 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   HelpCircle,
   X,
   ChevronLeft,
   ChevronRight,
-  Target,
-  UserPlus,
-  Copy,
+  Trophy,
+  Calculator,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 
 // Bump VERSION whenever CHANGELOG changes; the modal then auto-opens once
 // for each user (tracked in localStorage), and the ? button reopens it.
-const VERSION = '2026-06-09';
+const VERSION = '2026-06-29-knockouts';
 const KEY = 'wc26_whatsnew_seen';
 
-const CHANGELOG: { icon: LucideIcon; title: string; desc: string }[] = [
+type Entry = {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  showGain?: boolean; // render the personalised points-gained badge
+  cta?: { label: string; href: string };
+};
+
+const CHANGELOG: Entry[] = [
   {
-    icon: Target,
-    title: 'Predict scores',
-    desc: 'Call the exact scoreline of upcoming matches for bonus points. Opens 24h before kickoff, locks at kickoff.',
+    icon: Trophy,
+    title: 'Welcome to the knockouts',
+    desc: 'The group stage is done and the Round of 32 is underway. From here your bracket scores for every team you rode deeper: 5 for the Round of 16, 8 the quarters, 12 the semis, 18 the final, and 30 if your champion lifts the trophy.',
   },
   {
-    icon: UserPlus,
-    title: 'Easy invites',
-    desc: 'Share a join code or a link that drops friends straight into your group.',
+    icon: Calculator,
+    title: 'Group scoring got fairer',
+    desc: 'You now bank the advance points for any team you picked to go through, even if you had it 2nd and it finished 3rd (or the other way around). On top of that, every exact finish you nailed (1st, 2nd, 3rd or 4th in a group) is worth a bonus point.',
+    showGain: true,
   },
   {
-    icon: Copy,
-    title: 'Reuse a bracket',
-    desc: 'Joined another group? Copy your picks from an existing group and tweak them.',
+    icon: Sparkles,
+    title: 'See your score, explained',
+    desc: 'There is a new "My score explained" page on the home screen: a plain-English, always-updating breakdown of every single point you have, split into group stage, knockouts and predictions.',
+    cta: { label: 'Open my score', href: '/score' },
   },
 ];
 
-export default function WhatsNew() {
+export default function WhatsNew({ gain }: { gain?: number | null }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -108,6 +119,24 @@ export default function WhatsNew() {
             </p>
             <h2 className="mt-1 font-display text-2xl leading-tight text-foreground">{entry.title}</h2>
             <p className="mt-2 min-h-[3.5rem] text-sm leading-relaxed text-muted">{entry.desc}</p>
+
+            {entry.showGain && gain != null && gain > 0 ? (
+              <div className="mt-3 rounded-xl border border-gold/40 bg-gold/[0.1] px-3 py-2 text-sm">
+                <span className="font-display text-2xl text-gold">+{gain}</span>{' '}
+                <span className="font-semibold text-foreground">points</span>{' '}
+                <span className="text-muted">added to your total from this update</span>
+              </div>
+            ) : null}
+
+            {entry.cta ? (
+              <Link
+                href={entry.cta.href}
+                onClick={close}
+                className="mt-3 flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-gold/40 bg-gold/[0.1] text-sm font-bold text-gold active:scale-95"
+              >
+                <Sparkles className="h-4 w-4" /> {entry.cta.label}
+              </Link>
+            ) : null}
 
             <div className="mt-3 flex justify-center gap-1.5">
               {CHANGELOG.map((_, i) => (

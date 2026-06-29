@@ -22,6 +22,7 @@ export default async function MatchesPage({
 }) {
   const { view } = await searchParams;
   const showGroups = view === 'groups';
+  const showKnockouts = view === 'knockouts';
 
   // Note fixtures with the signed-in player's picks (from their active pool).
   const userId = await currentUserId();
@@ -161,6 +162,24 @@ export default async function MatchesPage({
   const upcoming = days.filter((d) => d >= today);
   const past = days.filter((d) => d < today).reverse();
 
+  // Knockout fixtures grouped by round, in bracket order.
+  const KO_STAGES: { stage: string; label: string }[] = [
+    { stage: 'r32', label: 'Round of 32' },
+    { stage: 'r16', label: 'Round of 16' },
+    { stage: 'qf', label: 'Quarter-finals' },
+    { stage: 'sf', label: 'Semi-finals' },
+    { stage: 'third', label: 'Third-place playoff' },
+    { stage: 'final', label: 'Final' },
+  ];
+  const koRounds = showKnockouts
+    ? KO_STAGES.map((s) => ({
+        ...s,
+        games: allMatches
+          .filter((m) => m.stage === s.stage)
+          .sort((a, b) => a.kickoffUtc.getTime() - b.kickoffUtc.getTime() || a.id - b.id),
+      })).filter((r) => r.games.length > 0)
+    : [];
+
   return (
     <div className="space-y-4 py-4">
       <LivePoller active={anyLive || anySoon} />
@@ -170,7 +189,7 @@ export default async function MatchesPage({
         <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
           <Link
             href="/matches"
-            className={`rounded-full px-3 py-1.5 transition-colors ${!showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+            className={`rounded-full px-3 py-1.5 transition-colors ${!showGroups && !showKnockouts ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Fixtures
           </Link>
@@ -179,6 +198,12 @@ export default async function MatchesPage({
             className={`rounded-full px-3 py-1.5 transition-colors ${showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Groups
+          </Link>
+          <Link
+            href="/matches?view=knockouts"
+            className={`rounded-full px-3 py-1.5 transition-colors ${showKnockouts ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+          >
+            Knockouts
           </Link>
         </div>
       </header>
@@ -194,6 +219,27 @@ export default async function MatchesPage({
               hasPicks={!!myPredictions}
             />
           ))}
+        </div>
+      ) : showKnockouts ? (
+        <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
+          <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
+          {koRounds.map((round) => (
+            <section key={round.stage}>
+              <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur lg:top-16">
+                {round.label}
+              </h2>
+              <div className="space-y-2">
+                {round.games.map((m) => (
+                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={notesByMatch.get(m.id)} />
+                ))}
+              </div>
+            </section>
+          ))}
+          {koRounds.length === 0 ? (
+            <p className="card p-5 text-sm text-muted">
+              The knockout bracket is set once the group stage finishes.
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">

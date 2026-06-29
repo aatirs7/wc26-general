@@ -17,6 +17,9 @@ interface Props {
   predictions: Predictions;
   teamsByCode: Map<string, Team>;
   onPick?: (fills: FillKey, winner: string, loser: string | null) => void;
+  // Pre-resolved ties to render instead of deriving from `predictions` (used by
+  // the live "actual results" bracket). Read-only: onPick is ignored when set.
+  resolved?: Map<number, ResolvedMatchup>;
 }
 
 function Slot({
@@ -119,8 +122,9 @@ interface View {
   y: number;
 }
 
-export default function FullBracket({ predictions, teamsByCode, onPick }: Props) {
-  const resolved = resolveById(predictions);
+export default function FullBracket({ predictions, teamsByCode, onPick, resolved: resolvedProp }: Props) {
+  const resolved = resolvedProp ?? resolveById(predictions);
+  const interactive = !resolvedProp ? onPick : undefined;
 
   const [fs, setFs] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -299,7 +303,7 @@ export default function FullBracket({ predictions, teamsByCode, onPick }: Props)
           <Node id={feeders[1]} />
         </div>
         <Connector />
-        <Tie m={m} teamsByCode={teamsByCode} onPick={onPick} />
+        <Tie m={m} teamsByCode={teamsByCode} onPick={interactive} />
       </div>
     );
   }

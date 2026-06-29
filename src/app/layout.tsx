@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Bebas_Neue, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { syncMeta } from '@/lib/schema';
+import { currentUserId } from '@/lib/auth';
 import BottomTabBar from '@/components/nav/BottomTabBar';
 import DesktopNav from '@/components/nav/DesktopNav';
 import ThemeButton from '@/components/theme/ThemeButton';
@@ -49,6 +53,29 @@ export default async function RootLayout({
   const jar = await cookies();
   const theme = jar.get('wc26_theme')?.value === 'dark' ? 'dark' : 'gray';
   const signedIn = !!jar.get('wc26_uid')?.value;
+
+  // Personalised points-gained figure for the scoring-update announcement.
+  // Stored as a userId -> gain map under a single sync_meta row, written once
+  // when the new scoring went live; absent (or 0) just hides the badge.
+  let updateGain: number | null = null;
+  if (signedIn) {
+    try {
+      const uid = await currentUserId();
+      if (uid) {
+        const [row] = await db
+          .select({ value: syncMeta.value })
+          .from(syncMeta)
+          .where(eq(syncMeta.key, 'scoreUpdateV1'))
+          .limit(1);
+        if (row) {
+          const map = JSON.parse(row.value) as Record<string, number>;
+          updateGain = map[uid] ?? null;
+        }
+      }
+    } catch {
+      // best-effort: the announcement still shows without the badge
+    }
+  }
   return (
     <html
       lang="en"
@@ -62,7 +89,7 @@ export default async function RootLayout({
         <AutoRefresh />
         <ThemeButton initial={theme} />
         <DesktopNav />
-        {signedIn ? <WhatsNew /> : null}
+        {signedIn ? <WhatsNew gain={updateGain} /> : null}
         {signedIn ? <InstallPrompt /> : null}
         <main className="mx-auto w-full max-w-md flex-1 px-4 pt-14 lg:max-w-6xl lg:px-8 lg:pt-24">
           {children}

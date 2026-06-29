@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Target,
   Radio,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { cookies } from 'next/headers';
@@ -433,6 +434,22 @@ export default async function HomePage({
           )}
         </div>
       </section>
+
+      {/* Personalised, always-updating breakdown of every point */}
+      <Link
+        href="/score"
+        className="reveal flex items-center gap-3 rounded-[1.1rem] border border-gold/40 bg-gold/[0.08] p-4 active:scale-[0.99]"
+        style={{ animationDelay: '140ms' }}
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
+          <Sparkles className="h-5 w-5 text-gold" strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-xl leading-none text-gold">My score explained</div>
+          <div className="mt-0.5 text-xs text-muted">Every point, broken down in plain English</div>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-gold" />
+      </Link>
 
       {/* Trash talk + Score predict */}
       <section className="reveal grid grid-cols-2 gap-3" style={{ animationDelay: '160ms' }}>
