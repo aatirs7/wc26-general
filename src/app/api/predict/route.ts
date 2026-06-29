@@ -4,12 +4,15 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { matchPredictions, matches } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { PREDICT_MAX_GOALS, predictState } from '@/lib/predict';
+import { KNOCKOUT_STAGES, PREDICT_MAX_GOALS, predictState } from '@/lib/predict';
 
 const bodySchema = z.object({
   matchId: z.number().int(),
   home: z.number().int().min(0).max(PREDICT_MAX_GOALS),
   away: z.number().int().min(0).max(PREDICT_MAX_GOALS),
+  // Optional knockout shootout pick: the team code predicted to win on pens,
+  // or null/absent for none.
+  pensWinner: z.string().regex(/^[A-Z]{3}$/).nullable().optional(),
 });
 
 // Save (or update) a score prediction for a match. Only allowed while the
@@ -23,7 +26,12 @@ export async function POST(req: Request) {
   const { matchId, home, away } = parsed.data;
 
   const [match] = await db
-    .select({ kickoffUtc: matches.kickoffUtc })
+    .select({
+      kickoffUtc: matches.kickoffUtc,
+      stage: matches.stage,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+    })
     .from(matches)
     .where(eq(matches.id, matchId))
     .limit(1);
@@ -33,12 +41,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'predictions are not open for this match' }, { status: 403 });
   }
 
+  // A shootout pick only makes sense on a knockout tie you called level, and it
+  // must be one of the two sides. Anything else is stored as no pick.
+  let pensWinner: string | null = null;
+  if (
+    parsed.data.pensWinner &&
+    KNOCKOUT_STAGES.has(match.stage) &&
+    home === away &&
+    (parsed.data.pensWinner === match.homeCode || parsed.data.pensWinner === match.awayCode)
+  ) {
+    pensWinner = parsed.data.pensWinner;
+  }
+
   await db
     .insert(matchPredictions)
-    .values({ userId, matchId, homeScore: home, awayScore: away })
+    .values({ userId, matchId, homeScore: home, awayScore: away, pensWinner })
     .onConflictDoUpdate({
       target: [matchPredictions.userId, matchPredictions.matchId],
-      set: { homeScore: home, awayScore: away, updatedAt: new Date() },
+      set: { homeScore: home, awayScore: away, pensWinner, updatedAt: new Date() },
     });
 
   return NextResponse.json({ ok: true });

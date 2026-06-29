@@ -41,6 +41,9 @@ export default function MatchPredict({
   away,
   homeFlag,
   awayFlag,
+  homeCode,
+  awayCode,
+  knockout = false,
   initial,
 }: {
   matchId: number;
@@ -48,16 +51,24 @@ export default function MatchPredict({
   away: string;
   homeFlag: string;
   awayFlag: string;
-  initial: { home: number; away: number } | null;
+  homeCode?: string | null;
+  awayCode?: string | null;
+  knockout?: boolean;
+  initial: { home: number; away: number; pensWinner?: string | null } | null;
 }) {
   const [h, setH] = useState(initial?.home ?? 0);
   const [a, setA] = useState(initial?.away ?? 0);
+  const [pensWinner, setPensWinner] = useState<string | null>(initial?.pensWinner ?? null);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     initial ? 'saved' : 'idle',
   );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function schedule(nh: number, na: number) {
+  // The shootout picker only applies to knockout ties you call level.
+  const isDraw = h === a;
+  const showPens = knockout && isDraw && !!homeCode && !!awayCode;
+
+  function schedule(nh: number, na: number, pw: string | null) {
     setStatus('saving');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -65,7 +76,7 @@ export default function MatchPredict({
         const res = await fetch('/api/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matchId, home: nh, away: na }),
+          body: JSON.stringify({ matchId, home: nh, away: na, pensWinner: pw }),
         });
         if (!res.ok) throw new Error('save failed');
         setStatus('saved');
@@ -75,26 +86,57 @@ export default function MatchPredict({
     }, 600);
   }
 
+  function setScore(nh: number, na: number) {
+    setH(nh);
+    setA(na);
+    // A non-level score cannot go to penalties, so drop any shootout pick.
+    const nextPens = nh === na ? pensWinner : null;
+    if (nextPens !== pensWinner) setPensWinner(nextPens);
+    schedule(nh, na, nextPens);
+  }
+
+  function pickPens(code: string) {
+    const next = pensWinner === code ? null : code;
+    setPensWinner(next);
+    schedule(h, a, next);
+  }
+
+  const pensBtn = (code: string, flag: string, label: string) => {
+    const on = pensWinner === code;
+    return (
+      <button
+        type="button"
+        onClick={() => pickPens(code)}
+        className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-bold active:scale-95 ${
+          on ? 'border-gold/60 bg-gold/15 text-gold' : 'border-edge bg-white/[0.03] text-muted'
+        }`}
+      >
+        <span className="text-sm leading-none">{flag}</span>
+        <span className="min-w-0 truncate">{label}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="card space-y-2 p-3">
-      <Side
-        label={home}
-        flag={homeFlag}
-        value={h}
-        onChange={(v) => {
-          setH(v);
-          schedule(v, a);
-        }}
-      />
-      <Side
-        label={away}
-        flag={awayFlag}
-        value={a}
-        onChange={(v) => {
-          setA(v);
-          schedule(h, v);
-        }}
-      />
+      <Side label={home} flag={homeFlag} value={h} onChange={(v) => setScore(v, a)} />
+      <Side label={away} flag={awayFlag} value={a} onChange={(v) => setScore(h, v)} />
+
+      {showPens ? (
+        <div className="rounded-lg border border-gold/25 bg-gold/[0.05] p-2">
+          <div className="mb-1.5 text-center text-[0.7rem] font-bold uppercase tracking-wider text-gold">
+            Level after extra time, who wins on penalties?
+          </div>
+          <div className="flex gap-2">
+            {pensBtn(homeCode!, homeFlag, home)}
+            {pensBtn(awayCode!, awayFlag, away)}
+          </div>
+          <div className="mt-1 text-center text-[0.6rem] text-muted-2">
+            Optional. Tap again to clear. Worth a bonus point if it goes to pens and you call it.
+          </div>
+        </div>
+      ) : null}
+
       <div className="text-right text-[0.7rem] font-semibold">
         {status === 'saving' ? (
           <span className="text-muted">Saving…</span>

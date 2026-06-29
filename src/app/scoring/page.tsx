@@ -1,5 +1,5 @@
 import { SCORING } from '@/lib/constants';
-import { PREDICT_EXACT_POINTS } from '@/lib/predict';
+import { PREDICT_EXACT_POINTS, PREDICT_PENS_POINTS } from '@/lib/predict';
 
 export const dynamic = 'force-static';
 
@@ -117,6 +117,13 @@ export default function ScoringPage() {
           and locks at full time, so it can come and go as the scoreline moves. Bonus points are
           separate from your bracket and add into your{' '}
           <span className="text-foreground">combined</span> standings total.
+        </p>
+        <p className="text-sm leading-relaxed text-muted">
+          <span className="text-foreground">Knockout shootouts:</span> when you call a knockout match
+          level, you also pick who wins on penalties. If the tie really is decided on penalties and
+          you called the right team, that is{' '}
+          <span className="text-foreground">{PREDICT_PENS_POINTS} more bonus point</span> on top of
+          the exact score.
         </p>
       </section>
 

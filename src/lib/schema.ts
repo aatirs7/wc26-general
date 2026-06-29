@@ -119,6 +119,9 @@ export const matchPredictions = pgTable(
     matchId: integer('match_id').notNull(),
     homeScore: integer('home_score').notNull(),
     awayScore: integer('away_score').notNull(),
+    // Knockout only: the team the user predicts wins a penalty shootout (set
+    // when they call a level score). Null for non-knockout or decisive picks.
+    pensWinner: text('pens_winner'),
     points: integer('points').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

@@ -15,6 +15,13 @@
       "when": 1781035687735,
       "tag": "0001_magical_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782757925317,
+      "tag": "0002_awesome_the_call",
+      "breakpoints": true
     }
   ]
 }

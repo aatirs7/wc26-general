@@ -354,6 +354,7 @@ async function rescorePredictions() {
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
       status: matches.status,
+      winnerCode: matches.winnerCode,
     })
     .from(matches);
   const byId = new Map(matchRows.map((m) => [m.id, m]));
@@ -366,6 +367,7 @@ async function rescorePredictions() {
           homeScore: m.homeScore,
           awayScore: m.awayScore,
           status: m.status,
+          winnerCode: m.winnerCode,
         })
       : 0;
     if (pts !== p.points) {

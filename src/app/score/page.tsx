@@ -266,6 +266,13 @@ export default async function ScorePage({
             {predHits.map(({ p, m }) => {
               const h = teamName(m!.homeCode ?? '');
               const a = teamName(m!.awayCode ?? '');
+              const exactHit = p.homeScore === m!.homeScore && p.awayScore === m!.awayScore;
+              const pensHit = m!.status === 'pens' && !!p.pensWinner && p.pensWinner === m!.winnerCode;
+              const reason = exactHit && pensHit
+                ? `Exact score ${p.homeScore}–${p.awayScore} and the shootout`
+                : pensHit
+                  ? `Called the penalty shootout`
+                  : `Called it exactly: ${p.homeScore}–${p.awayScore}`;
               return (
                 <li key={p.matchId} className="flex items-center gap-3 px-3 py-2">
                   <span className="text-lg leading-none">🎯</span>
@@ -273,9 +280,7 @@ export default async function ScorePage({
                     <div className="truncate text-sm font-semibold">
                       {h.flag} {h.name} <span className="text-muted-2">v</span> {a.flag} {a.name}
                     </div>
-                    <div className="text-xs text-muted">
-                      Called it exactly: {p.homeScore}–{p.awayScore}
-                    </div>
+                    <div className="text-xs text-muted">{reason}</div>
                   </div>
                   <span className="shrink-0 font-display text-lg text-accent">+{p.points}</span>
                 </li>

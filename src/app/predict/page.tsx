@@ -8,6 +8,7 @@ import { FINAL_STATUSES } from '@/lib/constants';
 import { PREDICT_EXACT_POINTS, predictState } from '@/lib/predict';
 import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import MatchPredict from '@/components/predict/MatchPredict';
+import PredictPensIntro from '@/components/predict/PredictPensIntro';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,7 @@ export default async function PredictPage() {
 
   return (
     <div className="space-y-5 py-4 lg:mx-auto lg:max-w-2xl">
+      <PredictPensIntro />
       <header className="pt-2 text-center">
         <h1 className="font-display text-4xl leading-none">Predict</h1>
         <p className="mt-1 text-sm text-muted">
@@ -109,7 +111,10 @@ export default async function PredictPage() {
                     away={a.name}
                     homeFlag={h.flag}
                     awayFlag={a.flag}
-                    initial={p ? { home: p.homeScore, away: p.awayScore } : null}
+                    homeCode={m.homeCode}
+                    awayCode={m.awayCode}
+                    knockout={KO_STAGES.has(m.stage)}
+                    initial={p ? { home: p.homeScore, away: p.awayScore, pensWinner: p.pensWinner } : null}
                   />
                 </div>
               );
@@ -138,6 +143,18 @@ export default async function PredictPage() {
                       You: {p.homeScore}–{p.awayScore}
                       {settled ? ` · Actual: ${m.homeScore}–${m.awayScore}` : ' · awaiting result'}
                     </div>
+                    {p.pensWinner ? (
+                      <div className="text-[0.7rem] text-muted-2">
+                        Shootout call: {label(p.pensWinner, null).flag} {label(p.pensWinner, null).name}
+                        {m.status === 'pens'
+                          ? p.pensWinner === m.winnerCode
+                            ? ' · won on pens ✓'
+                            : ' · lost on pens'
+                          : settled
+                            ? ' · no shootout'
+                            : ''}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className={`font-display text-xl leading-none ${hit ? 'text-accent' : 'text-muted'}`}>
