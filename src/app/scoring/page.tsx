@@ -161,8 +161,9 @@ export default function ScoringPage() {
           the tournament is over.
         </p>
         <p className="text-sm leading-relaxed text-muted">
-          <span className="text-foreground">Ties</span> break by most champion + final points, then
-          whoever locked in first.
+          <span className="text-foreground">Ties</span> on the combined total break by most
+          score-prediction points first, then most champion + final points, then whoever locked in
+          first.
         </p>
       </section>
     </div>

@@ -315,6 +315,7 @@ async function snapshotStandings() {
       return {
         userId,
         points: combined,
+        bonus: bonusByUser.get(userId) ?? 0,
         submitted: b?.submitted ?? false,
         tiebreak: b ? tb.get(b.id) ?? 0 : 0,
         lockedAtMs: b?.lockedAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
@@ -323,6 +324,7 @@ async function snapshotStandings() {
     // MUST match the leaderboard's combined sort.
     rr.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
+      if (b.bonus !== a.bonus) return b.bonus - a.bonus;
       if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
       if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
       return a.lockedAtMs - b.lockedAtMs;

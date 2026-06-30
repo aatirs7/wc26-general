@@ -172,6 +172,8 @@ export default async function LeaderboardPage({
 
   computed.sort((a, b) => {
     if (b.combined !== a.combined) return b.combined - a.combined;
+    // Tied on the combined total: more score-prediction points ranks higher.
+    if (b.bonus !== a.bonus) return b.bonus - a.bonus;
     if (a.submitted !== b.submitted) return a.submitted ? -1 : 1;
     if (b.tiebreak !== a.tiebreak) return b.tiebreak - a.tiebreak;
     return a.lockedAtMs - b.lockedAtMs;
