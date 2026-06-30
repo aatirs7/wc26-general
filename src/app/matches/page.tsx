@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { brackets, groupStandings, matches, poolMembers, teams } from '@/lib/schema';
@@ -19,13 +18,15 @@ export const dynamic = 'force-dynamic';
 export default async function MatchesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; fix?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, fix } = await searchParams;
   const showGroups = view === 'groups';
   const showKnockouts = view === 'knockouts';
+  // Fixtures tab sub-picker: group-stage fixtures vs knockout fixtures.
+  const fixStage: 'group' | 'ko' = fix === 'group' ? 'group' : 'ko';
 
-  // Note fixtures with the signed-in player's picks (from their active pool).
+  // Note fixtures with the signed-in player's picks.
   const userId = await currentUserId();
   let myPredictions: Predictions | null = null;
   if (userId) {
@@ -34,11 +35,8 @@ export default async function MatchesPage({
       .from(poolMembers)
       .where(eq(poolMembers.userId, userId));
     if (memberships.length > 0) {
-      const activePoolCookie = (await cookies()).get('wc26_active_pool')?.value;
       const active =
-        memberships.find((m) => m.poolId === activePoolCookie) ??
-        memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
-        memberships[0];
+        memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ?? memberships[0];
       const [mine] = await db
         .select()
         .from(brackets)
@@ -148,37 +146,13 @@ export default async function MatchesPage({
     }
   }
 
-  // Group fixtures by calendar day in the display timezone so the heading
-  // matches the kickoff time shown on each row.
-  const byDay = new Map<string, typeof allMatches>();
-  for (const m of allMatches) {
-    const day = matchDayKey(m.kickoffUtc);
-    if (!byDay.has(day)) byDay.set(day, []);
-    byDay.get(day)!.push(m);
-  }
-
-  // Jump to today (or the next day with matches) by listing past days last.
-  const today = matchDayKey(new Date());
-  const days = [...byDay.keys()].sort();
-  const upcoming = days.filter((d) => d >= today);
-  const past = days.filter((d) => d < today).reverse();
-
-  // Knockout fixtures grouped by round, in bracket order.
-  const KO_STAGES: { stage: string; label: string }[] = [
-    { stage: 'r32', label: 'Round of 32' },
-    { stage: 'r16', label: 'Round of 16' },
-    { stage: 'qf', label: 'Quarter-finals' },
-    { stage: 'sf', label: 'Semi-finals' },
-    { stage: 'third', label: 'Third-place playoff' },
-    { stage: 'final', label: 'Final' },
-  ];
-  // Resolve the real knockout bracket so each tie shows the teams that have
-  // actually advanced (group winners/runners and best thirds from the final
-  // standings, and feeder winners propagated forward) before the provider
-  // populates that fixture. The Round of 16 onward then auto-fills as results
-  // come in instead of showing "W76" placeholders.
+  // Resolve the real knockout bracket so knockout fixtures show the teams that
+  // have actually advanced (group winners/runners and best thirds from the
+  // final standings, plus feeder winners propagated forward) before the
+  // provider populates each fixture. Shared by the Fixtures (Knockouts filter)
+  // and the Knockouts tab.
   let resolvedKo: ReturnType<typeof resolveActualById> | null = null;
-  if (showKnockouts) {
+  if (!showGroups) {
     const standings = await db
       .select({
         groupLetter: groupStandings.groupLetter,
@@ -199,13 +173,42 @@ export default async function MatchesPage({
   }
 
   // Fill a knockout fixture's teams from the resolved bracket when the provider
-  // has not assigned them yet, leaving everything else (scores, status) intact.
+  // has not assigned them yet, leaving scores and status intact.
   const fillKo = (m: (typeof allMatches)[number]): (typeof allMatches)[number] => {
     const r = resolvedKo?.get(m.id);
     if (!r) return m;
     return { ...m, homeCode: m.homeCode ?? r.aCode, awayCode: m.awayCode ?? r.bCode };
   };
 
+  // Fixtures tab is split by the sub-picker: group-stage fixtures, or knockout
+  // fixtures with their teams filled in (and future spots). Grouped by calendar
+  // day in the display timezone so the heading matches each row's kickoff time.
+  const fixSource =
+    fixStage === 'group'
+      ? allMatches.filter((m) => m.stage === 'group')
+      : allMatches.filter((m) => m.stage !== 'group').map(fillKo);
+  const byDay = new Map<string, typeof allMatches>();
+  for (const m of fixSource) {
+    const day = matchDayKey(m.kickoffUtc);
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day)!.push(m);
+  }
+
+  // Jump to today (or the next day with matches) by listing past days last.
+  const today = matchDayKey(new Date());
+  const days = [...byDay.keys()].sort();
+  const upcoming = days.filter((d) => d >= today);
+  const past = days.filter((d) => d < today).reverse();
+
+  // Knockout fixtures grouped by round, in bracket order.
+  const KO_STAGES: { stage: string; label: string }[] = [
+    { stage: 'r32', label: 'Round of 32' },
+    { stage: 'r16', label: 'Round of 16' },
+    { stage: 'qf', label: 'Quarter-finals' },
+    { stage: 'sf', label: 'Semi-finals' },
+    { stage: 'third', label: 'Third-place playoff' },
+    { stage: 'final', label: 'Final' },
+  ];
   const koRounds = showKnockouts
     ? KO_STAGES.map((s) => ({
         ...s,
@@ -291,6 +294,22 @@ export default async function MatchesPage({
         </div>
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
+          <div className="flex justify-center">
+            <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
+              <Link
+                href="/matches?fix=group"
+                className={`rounded-full px-3 py-1.5 transition-colors ${fixStage === 'group' ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+              >
+                Group stage
+              </Link>
+              <Link
+                href="/matches?fix=ko"
+                className={`rounded-full px-3 py-1.5 transition-colors ${fixStage === 'ko' ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+              >
+                Knockouts
+              </Link>
+            </div>
+          </div>
           <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
           {[...upcoming, ...past].map((day) => (
             <section key={day}>
@@ -304,9 +323,11 @@ export default async function MatchesPage({
               </div>
             </section>
           ))}
-          {allMatches.length === 0 ? (
+          {fixSource.length === 0 ? (
             <p className="card p-5 text-sm text-muted">
-              No fixtures yet. Run the seed script to load the schedule.
+              {fixStage === 'group'
+                ? 'No group-stage fixtures loaded yet.'
+                : 'The knockout bracket is set once the group stage finishes.'}
             </p>
           ) : null}
         </div>
