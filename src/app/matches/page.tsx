@@ -265,9 +265,21 @@ export default async function MatchesPage({
                 {round.label}
               </h2>
               <div className="space-y-2">
-                {round.games.map((m) => (
-                  <MatchRow key={m.id} match={m} teamsByCode={teamsByCode} notes={notesByMatch.get(m.id)} />
-                ))}
+                {round.games.map((m, i) => {
+                  // Date sub-heading whenever the day changes within a round.
+                  const prev = round.games[i - 1];
+                  const showDate = !prev || matchDayKey(prev.kickoffUtc) !== matchDayKey(m.kickoffUtc);
+                  return (
+                    <div key={m.id} className="space-y-2">
+                      {showDate ? (
+                        <p className="px-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-2">
+                          {matchDayLabel(m.kickoffUtc)}
+                        </p>
+                      ) : null}
+                      <MatchRow match={m} teamsByCode={teamsByCode} notes={notesByMatch.get(m.id)} />
+                    </div>
+                  );
+                })}
               </div>
             </section>
           ))}
