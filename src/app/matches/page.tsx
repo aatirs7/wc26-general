@@ -22,7 +22,6 @@ export default async function MatchesPage({
 }) {
   const { view, fix } = await searchParams;
   const showGroups = view === 'groups';
-  const showKnockouts = view === 'knockouts';
   // Fixtures tab sub-picker: group-stage fixtures vs knockout fixtures.
   const fixStage: 'group' | 'ko' = fix === 'group' ? 'group' : 'ko';
 
@@ -149,8 +148,7 @@ export default async function MatchesPage({
   // Resolve the real knockout bracket so knockout fixtures show the teams that
   // have actually advanced (group winners/runners and best thirds from the
   // final standings, plus feeder winners propagated forward) before the
-  // provider populates each fixture. Shared by the Fixtures (Knockouts filter)
-  // and the Knockouts tab.
+  // provider populates each fixture, for the Fixtures tab Knockouts filter.
   let resolvedKo: ReturnType<typeof resolveActualById> | null = null;
   if (!showGroups) {
     const standings = await db
@@ -200,25 +198,6 @@ export default async function MatchesPage({
   const upcoming = days.filter((d) => d >= today);
   const past = days.filter((d) => d < today).reverse();
 
-  // Knockout fixtures grouped by round, in bracket order.
-  const KO_STAGES: { stage: string; label: string }[] = [
-    { stage: 'r32', label: 'Round of 32' },
-    { stage: 'r16', label: 'Round of 16' },
-    { stage: 'qf', label: 'Quarter-finals' },
-    { stage: 'sf', label: 'Semi-finals' },
-    { stage: 'third', label: 'Third-place playoff' },
-    { stage: 'final', label: 'Final' },
-  ];
-  const koRounds = showKnockouts
-    ? KO_STAGES.map((s) => ({
-        ...s,
-        games: allMatches
-          .filter((m) => m.stage === s.stage)
-          .sort((a, b) => a.kickoffUtc.getTime() - b.kickoffUtc.getTime() || a.id - b.id)
-          .map(fillKo),
-      })).filter((r) => r.games.length > 0)
-    : [];
-
   return (
     <div className="space-y-4 py-4">
       <LivePoller active={anyLive || anySoon} />
@@ -228,7 +207,7 @@ export default async function MatchesPage({
         <div className="flex rounded-full border border-edge bg-white/[0.03] p-1 text-xs font-bold">
           <Link
             href="/matches"
-            className={`rounded-full px-3 py-1.5 transition-colors ${!showGroups && !showKnockouts ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
+            className={`rounded-full px-3 py-1.5 transition-colors ${!showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Fixtures
           </Link>
@@ -237,12 +216,6 @@ export default async function MatchesPage({
             className={`rounded-full px-3 py-1.5 transition-colors ${showGroups ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
           >
             Groups
-          </Link>
-          <Link
-            href="/matches?view=knockouts"
-            className={`rounded-full px-3 py-1.5 transition-colors ${showKnockouts ? 'bg-accent text-[var(--accent-ink)]' : 'text-muted'}`}
-          >
-            Knockouts
           </Link>
         </div>
       </header>
@@ -258,39 +231,6 @@ export default async function MatchesPage({
               hasPicks={!!myPredictions}
             />
           ))}
-        </div>
-      ) : showKnockouts ? (
-        <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
-          <p className="text-center text-xs text-muted-2">All times Eastern ({DISPLAY_TZ_LABEL})</p>
-          {koRounds.map((round) => (
-            <section key={round.stage}>
-              <h2 className="sticky top-0 z-10 mb-2 -mx-1 bg-bg/80 px-1 py-1 font-display text-lg tracking-wide text-muted backdrop-blur lg:top-16">
-                {round.label}
-              </h2>
-              <div className="space-y-2">
-                {round.games.map((m, i) => {
-                  // Date sub-heading whenever the day changes within a round.
-                  const prev = round.games[i - 1];
-                  const showDate = !prev || matchDayKey(prev.kickoffUtc) !== matchDayKey(m.kickoffUtc);
-                  return (
-                    <div key={m.id} className="space-y-2">
-                      {showDate ? (
-                        <p className="px-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-2">
-                          {matchDayLabel(m.kickoffUtc)}
-                        </p>
-                      ) : null}
-                      <MatchRow match={m} teamsByCode={teamsByCode} notes={notesByMatch.get(m.id)} />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-          {koRounds.length === 0 ? (
-            <p className="card p-5 text-sm text-muted">
-              The knockout bracket is set once the group stage finishes.
-            </p>
-          ) : null}
         </div>
       ) : (
         <div className="space-y-5 lg:mx-auto lg:max-w-2xl">
