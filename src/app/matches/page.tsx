@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { brackets, matches, poolMembers, teams } from '@/lib/schema';
+import { brackets, groupStandings, matches, poolMembers, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { pickNote } from '@/lib/pick-labels';
 import type { Predictions } from '@/types/bracket';
@@ -12,6 +12,7 @@ import MatchRow from '@/components/matches/MatchRow';
 import GroupStandingsTable, { type GroupRow } from '@/components/matches/GroupStandingsTable';
 import LivePoller from '@/components/matches/LivePoller';
 import { computeLiveGroupTables } from '@/lib/standings';
+import { resolveActualById } from '@/lib/knockout-bracket';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,12 +172,47 @@ export default async function MatchesPage({
     { stage: 'third', label: 'Third-place playoff' },
     { stage: 'final', label: 'Final' },
   ];
+  // Resolve the real knockout bracket so each tie shows the teams that have
+  // actually advanced (group winners/runners and best thirds from the final
+  // standings, and feeder winners propagated forward) before the provider
+  // populates that fixture. The Round of 16 onward then auto-fills as results
+  // come in instead of showing "W76" placeholders.
+  let resolvedKo: ReturnType<typeof resolveActualById> | null = null;
+  if (showKnockouts) {
+    const standings = await db
+      .select({
+        groupLetter: groupStandings.groupLetter,
+        teamCode: groupStandings.teamCode,
+        rank: groupStandings.rank,
+        isBestThird: groupStandings.isBestThird,
+      })
+      .from(groupStandings);
+    const groupFirst = new Map<string, string | null>();
+    const groupSecond = new Map<string, string | null>();
+    const bestThirds: { code: string; group: string }[] = [];
+    for (const s of standings) {
+      if (s.rank === 1) groupFirst.set(s.groupLetter, s.teamCode);
+      else if (s.rank === 2) groupSecond.set(s.groupLetter, s.teamCode);
+      if (s.isBestThird) bestThirds.push({ code: s.teamCode, group: s.groupLetter });
+    }
+    resolvedKo = resolveActualById(allMatches, groupFirst, groupSecond, bestThirds);
+  }
+
+  // Fill a knockout fixture's teams from the resolved bracket when the provider
+  // has not assigned them yet, leaving everything else (scores, status) intact.
+  const fillKo = (m: (typeof allMatches)[number]): (typeof allMatches)[number] => {
+    const r = resolvedKo?.get(m.id);
+    if (!r) return m;
+    return { ...m, homeCode: m.homeCode ?? r.aCode, awayCode: m.awayCode ?? r.bCode };
+  };
+
   const koRounds = showKnockouts
     ? KO_STAGES.map((s) => ({
         ...s,
         games: allMatches
           .filter((m) => m.stage === s.stage)
-          .sort((a, b) => a.kickoffUtc.getTime() - b.kickoffUtc.getTime() || a.id - b.id),
+          .sort((a, b) => a.kickoffUtc.getTime() - b.kickoffUtc.getTime() || a.id - b.id)
+          .map(fillKo),
       })).filter((r) => r.games.length > 0)
     : [];
 
