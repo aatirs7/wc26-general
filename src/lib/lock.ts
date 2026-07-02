@@ -37,8 +37,10 @@ export function isPoolLockExempt(poolId: string | null | undefined): boolean {
 const TIMED_UNLOCKS: Record<string, string> = {
   '894978dd-9ccd-44de-94e5-57c4a6c040aa': '2026-06-12T16:30:00Z', // Cousins: 15-hour grant
   '28ee9f94-4749-4fd4-bfdc-eeb347d7eb43': '2026-06-14T07:45:00Z', // NED 84-84: extended 24h
-  '641f808c-b62f-439b-b871-d4fd63675cba': '2026-06-19T18:39:00Z', // LPA World Cup Bracket: reopened 24h
   '5b020daf-2282-4182-ae9f-d2229caa6060': '2026-06-13T21:30:00Z', // PESSJ: 24-hour grant
+  '641f808c-b62f-439b-b871-d4fd63675cba': '2026-07-03T05:45:00Z', // LPA World Cup Bracket: reopened ~14h (2026-07-02)
+  '4596ceb1-c056-47d8-99e7-9509ed9bde5c': '2026-07-03T05:45:00Z', // Qahwah community: reopened ~14h (2026-07-02)
+  '93371b2b-5ea6-48ad-af44-d2ea0c552c3d': '2026-07-03T05:45:00Z', // Habasha Squad: reopened ~14h (2026-07-02)
 };
 
 // The moment a pool's timed unlock ends, or null if it has none / it passed.

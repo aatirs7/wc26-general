@@ -6,7 +6,8 @@ import { db } from '@/lib/db';
 import { Lock } from 'lucide-react';
 import { brackets, groupStandings, matches, poolMembers, pools, teams } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
-import { isLockedForPool } from '@/lib/lock';
+import { isLockedForPool, poolUnlockUntil } from '@/lib/lock';
+import { DISPLAY_TZ_LABEL, matchDayLabel, matchTime } from '@/lib/format-time';
 import BracketBuilder from '@/components/bracket/BracketBuilder';
 import AutofillRestart from '@/components/bracket/AutofillRestart';
 import BracketSummary from '@/components/brackets/BracketSummary';
@@ -74,6 +75,10 @@ export default async function BracketPage({
     .orderBy(asc(teams.groupLetter), asc(teams.name));
 
   const locked = isLockedForPool(activePoolId);
+  // If this pool is inside an active timed-unlock window past kickoff, show a
+  // heads-up with the deadline.
+  const unlockUntil = poolUnlockUntil(activePoolId);
+  const activePoolName = memberships.find((m) => m.poolId === activePoolId)?.poolName ?? 'This group';
 
   // Live "actual results" bracket data, only needed for the locked view's
   // My picks / Live toggle.
@@ -119,6 +124,20 @@ export default async function BracketPage({
               {m.poolName}
             </Link>
           ))}
+        </div>
+      ) : null}
+
+      {unlockUntil ? (
+        <div className="mb-4 rounded-xl border border-gold/40 bg-gold/[0.08] p-3.5 text-center">
+          <p className="font-display text-xl leading-none text-gold">⏱️ Stoppage time</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            The final whistle blew, but the ref waved play on. <span className="font-semibold text-foreground">{activePoolName}</span> is
+            open again to finish and lock in your bracket until{' '}
+            <span className="font-semibold text-foreground">
+              {matchDayLabel(unlockUntil)} at {matchTime(unlockUntil)} {DISPLAY_TZ_LABEL}
+            </span>
+            . Don&apos;t get caught offside, it shuts for good after that.
+          </p>
         </div>
       ) : null}
 
