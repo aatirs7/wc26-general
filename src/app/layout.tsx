@@ -3,14 +3,17 @@ import { Bebas_Neue, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { syncMeta } from '@/lib/schema';
+import { matches, syncMeta, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import { isTournamentOver, isFinalePreview } from '@/lib/finale';
+import { ROOT_ID } from '@/lib/knockout-bracket';
 import BottomTabBar from '@/components/nav/BottomTabBar';
 import DesktopNav from '@/components/nav/DesktopNav';
 import ThemeButton from '@/components/theme/ThemeButton';
 import WhatsNew from '@/components/WhatsNew';
 import InstallPrompt from '@/components/InstallPrompt';
 import AutoRefresh from '@/components/AutoRefresh';
+import FinaleTakeover from '@/components/results/FinaleTakeover';
 import './globals.css';
 
 const display = Bebas_Neue({
@@ -58,10 +61,24 @@ export default async function RootLayout({
   // Stored as a userId -> gain map under a single sync_meta row, written once
   // when the new scoring went live; absent (or 0) just hides the badge.
   let updateGain: number | null = null;
+  // The end-of-tournament finale splash, live once the final ends or for
+  // preview players testing it early.
+  let finaleActive = false;
   if (signedIn) {
     try {
       const uid = await currentUserId();
       if (uid) {
+        const [me] = await db
+          .select({ displayName: users.displayName })
+          .from(users)
+          .where(eq(users.id, uid))
+          .limit(1);
+        const [finalMatch] = await db
+          .select({ status: matches.status })
+          .from(matches)
+          .where(eq(matches.id, ROOT_ID))
+          .limit(1);
+        finaleActive = isTournamentOver(finalMatch?.status) || isFinalePreview(me?.displayName);
         const [row] = await db
           .select({ value: syncMeta.value })
           .from(syncMeta)
@@ -95,6 +112,7 @@ export default async function RootLayout({
           {children}
         </main>
         <BottomTabBar />
+        {signedIn && finaleActive ? <FinaleTakeover /> : null}
       </body>
     </html>
   );
