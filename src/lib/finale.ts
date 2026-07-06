@@ -10,7 +10,7 @@ export function isTournamentOver(finalMatchStatus: string | null | undefined): b
 
 // Preview override: listed players see the finale immediately, computed from
 // whatever the standings are right now. Empty this list to turn preview off.
-export const FINALE_PREVIEW_NAMES: string[] = ['aatir'];
+export const FINALE_PREVIEW_NAMES: string[] = [];
 
 export function isFinalePreview(displayName: string | null | undefined): boolean {
   if (!displayName) return false;
