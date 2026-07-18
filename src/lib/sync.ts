@@ -401,3 +401,23 @@ export async function inLiveWindow(): Promise<boolean> {
 export async function lastFullSyncMs(): Promise<number> {
   return getMetaMs('lastFullSync');
 }
+
+// Remaining fixtures as UTC kickoff times. The cron only touches Postgres
+// within a window around these; once they are all in the past it never opens
+// a DB connection again, so Neon scales to zero. Update if fixtures change.
+const REMAINING_KICKOFFS_UTC = [
+  '2026-07-18T21:00:00Z', // third-place playoff
+  '2026-07-19T19:00:00Z', // final
+];
+const PRE_MATCH_MS = 15 * 60 * 1000; // begin syncing 15 min before kickoff
+const POST_MATCH_MS = 3 * 60 * 60 * 1000; // keep syncing up to 3h past kickoff
+
+// Pure and DB-free: is `now` inside any remaining match's live window? The cron
+// calls this FIRST so an out-of-window tick returns before opening a Neon
+// connection, letting the database scale to zero between matches.
+export function inScheduledMatchWindow(now: number = Date.now()): boolean {
+  return REMAINING_KICKOFFS_UTC.some((iso) => {
+    const ko = Date.parse(iso);
+    return now >= ko - PRE_MATCH_MS && now <= ko + POST_MATCH_MS;
+  });
+}

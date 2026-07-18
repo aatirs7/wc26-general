@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { inLiveWindow, lastFullSyncMs, runSync } from '@/lib/sync';
+import { inLiveWindow, lastFullSyncMs, runSync, inScheduledMatchWindow } from '@/lib/sync';
 
 export const maxDuration = 60;
 
@@ -13,6 +13,13 @@ export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
+  // DB-free gate: outside every remaining fixture's live window, do nothing and
+  // never open a Postgres connection, so Neon scales to zero between matches.
+  // Update REMAINING_KICKOFFS_UTC in sync.ts when fixtures change.
+  if (!inScheduledMatchWindow()) {
+    return NextResponse.json({ skipped: true, reason: 'no scheduled match window' });
   }
 
   try {
