@@ -12,7 +12,7 @@ number, a rank or a point.
 
 ---
 
-## 1. Your Wrapped (`src/components/finale/WrappedDeck.tsx`)
+## 1. Your Recap (`src/components/finale/RecapDeck.tsx`)
 
 ### Cold open
 > Twenty six days.
@@ -122,11 +122,11 @@ number, a rank or a point.
 >
 > Thanks for playing. See you in 2030, when you will absolutely do this again and absolutely not learn from any of it.
 
-Buttons: `Share your Wrapped`, `Watch the pool Wrapped`, `See the podium`.
+Buttons: `Share your Recap`, `Watch the pool Recap`, `See the podium`.
 
 ---
 
-## 2. Pool Wrapped (`src/components/finale/PoolWrappedDeck.tsx`)
+## 2. Pool Recap (`src/components/finale/PoolRecapDeck.tsx`)
 
 ### Cold open
 > One tournament.
@@ -150,8 +150,8 @@ Buttons: `Share your Wrapped`, `Watch the pool Wrapped`, `See the podium`.
 - `{n} of {n} brackets had them going deep. They {won the whole thing / went out at the quarter-finals}.`
 
 ### Nobody saw it coming
-- Zero backers: `Reached {the semi-finals} with zero brackets backing them. Not one person in {pool} believed.`
-- Few backers: `Reached {the final} with only {n} brackets backing them.`
+- Zero backers: `Reached {the semi-finals} with 0 of {n} brackets backing them. Not one person in {pool} believed.`
+- Few backers: `Reached {the final} with only {n} of {n} brackets backing them.`
 
 ### Agreed on, and wrong
 - `{n} of you sent them to the final. They got as far as {the Round of 16}. When this group agrees on something, be worried.`
@@ -195,7 +195,7 @@ Buttons: `Share your Wrapped`, `Watch the pool Wrapped`, `See the podium`.
 
 ---
 
-## 3. Personas (`pickArchetype` in `src/lib/wrapped.ts`)
+## 3. Personas (`pickArchetype` in `src/lib/recap.ts`)
 
 Ordered rules, first match wins.
 
@@ -238,8 +238,13 @@ Ordered rules, first match wins.
 
 ### Voting screen
 - `The people's awards` / `Cast your votes`
-- `Every tally is live and every vote shows your name next to it. Choose accordingly. You can change your mind, and tapping your own pick again withdraws it.`
-- `{n} of {n} categories voted`
+- `Every tally is live and every vote has your name on it. Choose accordingly.`
+- `{n} of {n} voted`
+- Your pick: `You picked {name}` with `Change or withdraw`, or `Cast your vote`
+- Picker header: `Pick someone else` (or `Pick anyone` where self-votes are allowed)
+- Receipts toggle: `Show who voted` / `Hide who voted`
+- Overflow line: `and {n} others with a vote`
+- Tie: `Too close to call`
 - Empty category: `No votes yet. Somebody has to go first.`
 - Receipts header: `Who voted for whom`
 
@@ -248,15 +253,14 @@ Ordered rules, first match wins.
 ## 5. The finale hub (`src/components/finale/FinaleHub.tsx`)
 
 - `Full time` / `The finale`
-- `It is over. Everything that happened in {pool} over the last month, three ways.`
-- **Your Wrapped**: `Your tournament, slide by slide. Not all of it is flattering.`
-- **{pool} Wrapped**: `What the {n} of you did to each other, in numbers.`
-- **The podium**: `Gold, silver and bronze. {winner} took it.` (winner's name is rendered blurred until you open it)
-- **The people's awards**: `{n} categories still need your vote. Everyone sees who you picked.`
-  or `You have voted in every category. Go and check the damage.`
+- `It is over. Everything that happened in {pool}, three ways.`
+- **Your recap**: `Your tournament, slide by slide. Not all of it is flattering.` with your points and finish beneath
+- **Pool recap**: `What the {n} of you did to each other`
+- **The podium**: `{winner} took it` (the name is rendered blurred until you open it)
+- **The people's awards**: `{n} categories still need your vote.` or `You have voted in every category. Go and check the damage.`, plus `{n} of {n} voted`
 
 Locked state (before the final ends):
-> The podium, your Wrapped, the pool Wrapped and the people's awards all unlock the moment the World Cup final ends. Come back once the trophy is lifted.
+> The podium, your Recap, the pool Recap and the people's awards all unlock the moment the World Cup final ends. Come back once the trophy is lifted.
 
 ---
 
@@ -266,9 +270,9 @@ Locked state (before the final ends):
 > **Full time**
 > **It is over**
 >
-> Every match has been played. Your Wrapped, the pool Wrapped, the podium and the people's awards are all waiting.
+> Every match has been played. Your Recap, the pool Recap, the podium and the people's awards are all waiting.
 
-Buttons: `Watch your Wrapped`, `See the podium`, `Everything else`, `Maybe later`.
+Buttons: `Watch your Recap`, `See the podium`, `Everything else`, `Maybe later`.
 
 ---
 
@@ -291,7 +295,7 @@ Match Day, once every match is played (`src/app/live/page.tsx`):
 - Today list: `The tournament is finished. There will not be another one of these for four years.`
 
 Standings banner (`src/app/leaderboard/page.tsx`):
-- `🏆 This table is final` / `Your Wrapped, the pool Wrapped and the podium are ready`
+- `🏆 This table is final` / `Your Recap, the pool Recap and the podium are ready`
 
 Home, once the finale is live: `Back to the app` toggle hides and shows the normal dashboard.
 
@@ -314,7 +318,7 @@ they are editorial rather than a stat.
 - Argentina: `Yes, Argentina scored you points. We are all very happy for you.`
 
 **The betrayal**
-- Portugal: `Not their fault. Never their fault.`
+- Portugal: `Not Ronaldos fault. We looking at you Bruno Fernandes..`
 - Argentina: `Honestly, this one felt inevitable from here.`
 
 **Pool champion-pick distribution**
@@ -343,3 +347,16 @@ the ones that will actually fire this tournament.
 
 - `House champions` / `The best player in each household, put up against each other.`
 - Inside each family card: `👑 {name}, {n} pts`
+
+---
+
+## 10. Share messages (`src/lib/share-text.ts`)
+
+Sharing now hands the phone a real PNG file through the native share sheet, so
+the image can be sent straight into Messages. Each share carries a message:
+
+**Podium and final table**
+> That is full time on {pool}. Congratulations to {name} (first, {n} pts), {name} (second, {n} pts) and {name} (third, {n} pts). {flag} {team} won the World Cup.
+
+**Your own recap card**
+> My World Cup 2026 recap: {3rd} of {n} in {pool} on {n} points. {The Realist}.

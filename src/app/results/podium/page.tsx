@@ -16,6 +16,9 @@ export default async function PodiumPage({
   if (gate.state === 'anon') redirect('/');
   if (gate.state === 'no-pool') redirect('/bracket');
   if (gate.state === 'locked') redirect('/results');
+  // A recap is meaningless without knowing which pool it is for, so anyone in
+  // several pools gets sent to the chooser rather than a guessed one.
+  if (gate.needsChoice) redirect('/results');
 
   const data = await loadResults(gate.active.poolId, gate.userId);
 

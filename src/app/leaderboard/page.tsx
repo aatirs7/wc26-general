@@ -241,7 +241,7 @@ export default async function LeaderboardPage({
         >
           <span className="font-display text-lg text-gold">🏆 This table is final</span>
           <span className="mt-0.5 block text-xs text-muted">
-            Your Wrapped, the pool Wrapped and the podium are ready &rarr;
+            Your Recap, the pool Recap and the podium are ready &rarr;
           </span>
         </Link>
       ) : null}

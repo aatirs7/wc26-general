@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTimeline, pickArchetype, ordinal, type FinaleContext } from '@/lib/wrapped';
+import { buildTimeline, pickArchetype, ordinal, type FinaleContext } from '@/lib/recap';
 import { emptyPredictions, type Predictions } from '@/types/bracket';
 import { GROUP_LETTERS } from '@/lib/constants';
 

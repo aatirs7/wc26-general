@@ -22,7 +22,7 @@ export function useReducedMotion(): boolean {
 
 // Small shared building blocks for the story slides. Every one of them is
 // purely presentational and takes its numbers already computed, so the slides
-// stay dumb and the maths stays in src/lib/wrapped.ts.
+// stay dumb and the maths stays in src/lib/recap.ts.
 
 // Client-safe copy of the ordinal helper. The server module that also exports
 // one pulls in the database client, so it can never be imported from here.
@@ -34,7 +34,7 @@ export const ordinal = (n: number) => {
 
 export function Kicker({ children, tone = 'accent' }: { children: React.ReactNode; tone?: 'accent' | 'gold' | 'muted' | 'live' }) {
   const color =
-    tone === 'gold' ? 'text-gold' : tone === 'live' ? 'text-live' : tone === 'muted' ? 'text-white/40' : 'text-accent';
+    tone === 'gold' ? 'text-gold' : tone === 'live' ? 'text-live' : tone === 'muted' ? 'text-muted-2' : 'text-accent';
   return <p className={`finale-kicker ${color}`}>{children}</p>;
 }
 
@@ -126,13 +126,13 @@ export function BigStat({
   count?: boolean;
 }) {
   const color =
-    tone === 'gold' ? 'text-gold' : tone === 'live' ? 'text-live' : tone === 'white' ? 'text-white' : 'text-accent';
+    tone === 'gold' ? 'text-gold' : tone === 'live' ? 'text-live' : tone === 'white' ? 'text-foreground' : 'text-accent';
   return (
     <div className="text-center">
       <div className={`anim-count finale-hero ${color}`} style={{ animationDelay: '180ms' }}>
         {count ? <CountUp to={value} suffix={suffix} /> : `${value}${suffix ?? ''}`}
       </div>
-      <div className="mt-3 text-sm leading-relaxed text-white/70">{label}</div>
+      <div className="mt-3 text-sm leading-relaxed text-muted">{label}</div>
     </div>
   );
 }
@@ -157,12 +157,12 @@ export function Bar({
   const bg =
     tone === 'gold' ? 'bg-gold' : tone === 'live' ? 'bg-live' : tone === 'white' ? 'bg-white' : 'bg-accent';
   return (
-    <div className={`rounded-lg px-1.5 py-1 ${highlight ? 'bg-white/[0.07]' : ''}`}>
+    <div className={`rounded-lg px-1.5 py-1 ${highlight ? 'f-fill' : ''}`}>
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="min-w-0 truncate font-semibold text-white/90">{label}</span>
-        {right ? <span className="shrink-0 text-xs font-bold text-white/55">{right}</span> : null}
+        {right ? <span className="shrink-0 text-xs font-bold text-muted">{right}</span> : null}
       </div>
-      <span className="mt-1 block h-2 overflow-hidden rounded-full bg-white/[0.09]">
+      <span className="mt-1 block h-2 overflow-hidden rounded-full f-track">
         <span
           className={`anim-bar block h-full rounded-full ${bg}`}
           style={{ width: `${Math.max(2, Math.min(100, pct))}%`, animationDelay: `${delay}ms` }}
@@ -192,7 +192,7 @@ export function FlagDisc({ flag, size = 'lg' }: { flag: string; size?: 'lg' | 'm
 // Initials disc used wherever a person is named.
 export function Avatar({ name, size = 'md', medal }: { name: string; size?: 'sm' | 'md' | 'lg'; medal?: 1 | 2 | 3 }) {
   const dim = size === 'lg' ? 'h-16 w-16 text-2xl' : size === 'sm' ? 'h-7 w-7 text-[0.7rem]' : 'h-10 w-10 text-base';
-  const medalClass = medal ? `medal-${medal}` : 'bg-white/10 text-white';
+  const medalClass = medal ? `medal-${medal}` : 'f-fill-2 text-foreground';
   return (
     <span
       className={`flex ${dim} shrink-0 items-center justify-center rounded-full font-display ${medalClass}`}
@@ -219,13 +219,13 @@ export function StampCard({
 }) {
   return (
     <div
-      className="anim-stamp rounded-2xl border border-white/15 bg-white/[0.05] p-5 text-center backdrop-blur-sm"
+      className="anim-stamp rounded-2xl border f-line f-fill p-5 text-center backdrop-blur-sm"
       style={{ animationDelay: `${delay}ms` }}
     >
       {emoji ? <div className="text-4xl">{emoji}</div> : null}
       <div className="mt-1 font-display text-3xl leading-none">{title}</div>
-      {body ? <div className="mt-2 text-sm leading-relaxed text-white/70">{body}</div> : null}
-      {footnote ? <div className="mt-2 text-xs italic text-white/40">{footnote}</div> : null}
+      {body ? <div className="mt-2 text-sm leading-relaxed text-muted">{body}</div> : null}
+      {footnote ? <div className="mt-2 text-xs italic text-muted-2">{footnote}</div> : null}
     </div>
   );
 }
@@ -257,7 +257,7 @@ export function Ghost({ children, opacity = 0.07 }: { children: React.ReactNode;
       aria-hidden
     >
       <span
-        className="font-display whitespace-nowrap leading-none text-white"
+        className="font-display whitespace-nowrap leading-none text-foreground"
         style={{ fontSize: 'clamp(11rem, 62vw, 26rem)', opacity }}
       >
         {children}
@@ -323,7 +323,7 @@ export function Layered({ children, layers }: { children: React.ReactNode; layer
 export function Tilt({ children, deg = -2.2 }: { children: React.ReactNode; deg?: number }) {
   return (
     <div
-      className="anim-stamp rounded-2xl border border-white/15 bg-white/[0.05] p-4 backdrop-blur-sm"
+      className="anim-stamp rounded-2xl border f-line f-fill p-4 backdrop-blur-sm"
       style={{ transform: `rotate(${deg}deg)`, animationDelay: '300ms' }}
     >
       <div style={{ transform: `rotate(${-deg}deg)` }}>{children}</div>

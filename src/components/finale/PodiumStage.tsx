@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { X, RotateCcw, FastForward } from 'lucide-react';
 import type { ResultsData, ResultPlayer } from '@/lib/results';
 import Confetti from '@/components/results/Confetti';
+import ShareCardButton from './ShareCardButton';
+import { congratsText } from '@/lib/share-text';
 import { Avatar, CountUp, ordinal, useReducedMotion } from './kit';
 
 // Reveal beats. Third place first, then second, then a deliberate pause, then
@@ -26,10 +28,13 @@ const BEATS: [number, number][] = [
   [PHASE.SETTLED, 6400],
 ];
 
+// Deliberately short. Tall plinths pushed the champion card and the rest of
+// the field below the fold on a phone, which is the one thing this screen
+// cannot afford to hide.
 const PLINTH = [
-  { h: 'h-44', medal: '🥇', klass: 'podium-1', label: 'Champion', color: '#e8b53e' },
-  { h: 'h-32', medal: '🥈', klass: 'podium-2', label: 'Runner-up', color: '#c4cdda' },
-  { h: 'h-24', medal: '🥉', klass: 'podium-3', label: 'Third', color: '#d08a4d' },
+  { h: 'h-24', medal: '🥇', klass: 'podium-1', label: 'Champion', color: '#e8b53e' },
+  { h: 'h-16', medal: '🥈', klass: 'podium-2', label: 'Runner-up', color: '#c4cdda' },
+  { h: 'h-11', medal: '🥉', klass: 'podium-3', label: 'Third', color: '#d08a4d' },
 ];
 
 function Plinth({
@@ -48,41 +53,36 @@ function Plinth({
 
   return (
     <div className="flex w-full flex-col items-center justify-end">
-      {/* Name block floats above the plinth and arrives with it. */}
+      {/* Name block sits on the plinth and arrives with it. Kept short on
+          purpose: accuracy and the champion pick live in the card below, so
+          the three columns cannot push the rest of the page off screen. */}
       <div
         className="flex flex-col items-center transition-all duration-700"
         style={{ opacity: show ? 1 : 0, transform: show ? 'none' : 'translateY(20px)' }}
       >
-        <div className={show ? 'anim-stamp' : ''} style={{ animationDelay: '220ms' }}>
+        <div className={`relative ${show ? 'anim-stamp' : ''}`} style={{ animationDelay: '220ms' }}>
           <Avatar name={player.name} size={place === 0 ? 'lg' : 'md'} medal={(place + 1) as 1 | 2 | 3} />
+          <span className="absolute -bottom-1 -right-1 text-base leading-none">{meta.medal}</span>
         </div>
-        <div className="mt-1.5 text-2xl leading-none">{meta.medal}</div>
         <div
-          className={`mt-1 max-w-[7rem] truncate px-1 text-center font-display leading-none ${
+          className={`mt-2 max-w-[6.5rem] truncate px-1 text-center font-display leading-none ${
             place === 0 ? 'text-2xl' : 'text-lg'
           } ${isMe ? 'text-accent' : ''}`}
         >
           {player.name}
         </div>
-        <div className="max-w-[7rem] truncate px-1 text-center text-[0.6rem] text-white/40">
-          {player.bracketName}
-        </div>
-        <div className={`mt-1 font-display leading-none ${place === 0 ? 'text-3xl' : 'text-2xl'}`} style={{ color: meta.color }}>
+        <div
+          className={`font-display leading-none ${place === 0 ? 'text-3xl' : 'text-2xl'}`}
+          style={{ color: meta.color }}
+        >
           {show ? <CountUp to={player.combined} delay={300} ms={1100} /> : 0}
         </div>
-        {player.accuracy != null ? (
-          <div className="text-[0.55rem] font-bold uppercase tracking-wider text-white/35">
-            {player.accuracy}% accurate
-          </div>
-        ) : null}
-        {player.championPick ? (
-          <div className="mt-1 rounded-full bg-white/[0.07] px-2 py-0.5 text-[0.6rem] font-semibold text-white/60">
-            {player.championPick.flag} {player.championPick.name}
-          </div>
-        ) : null}
       </div>
 
-      {/* The block itself, with a lit top face so it reads as solid. */}
+      {/* The block itself, with a lit top face so it reads as solid.
+          The numeral is a div, not a span: globals.css gives the first span
+          child of a .podium-* element an inset ring for the leaderboard rows,
+          which drew a stray outlined box around the number here. */}
       <div
         className={`mt-2 w-full ${show ? 'anim-plinth' : ''}`}
         style={{ opacity: show ? 1 : 0, transformStyle: 'preserve-3d' }}
@@ -97,12 +97,12 @@ function Plinth({
           }}
         />
         <div
-          className={`${meta.klass} relative flex ${meta.h} w-full items-start justify-center pt-3`}
+          className={`${meta.klass} relative flex ${meta.h} w-full items-center justify-center`}
           style={{ borderRadius: '2px 2px 0 0' }}
         >
-          <span className="font-display text-4xl" style={{ color: 'var(--medal-ink)' }}>
+          <div className="font-display text-3xl leading-none" style={{ color: 'var(--medal-ink)' }}>
             {place + 1}
-          </span>
+          </div>
         </div>
       </div>
     </div>
@@ -153,7 +153,7 @@ export default function PodiumStage({
         <div
           className="spotlight absolute -top-40 left-[8%] h-[130vh] w-[42vw] opacity-60"
           style={{
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent 62%)',
+            background: 'linear-gradient(180deg, var(--f-beam), transparent 62%)',
             clipPath: 'polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%)',
             filter: 'blur(22px)',
           }}
@@ -161,7 +161,7 @@ export default function PodiumStage({
         <div
           className="spotlight absolute -top-40 right-[8%] h-[130vh] w-[42vw] opacity-50"
           style={{
-            background: 'linear-gradient(180deg, rgba(255,200,80,0.16), transparent 62%)',
+            background: 'linear-gradient(180deg, var(--f-beam-2), transparent 62%)',
             clipPath: 'polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%)',
             filter: 'blur(22px)',
             animationDelay: '2.5s',
@@ -170,7 +170,7 @@ export default function PodiumStage({
         {Array.from({ length: 14 }).map((_, i) => (
           <span
             key={i}
-            className="dust absolute bottom-0 h-1 w-1 rounded-full bg-white/50"
+            className="dust absolute bottom-0 h-1 w-1 rounded-full"
             style={{
               left: `${6 + i * 6.5}%`,
               animationDuration: `${9 + (i % 5) * 3}s`,
@@ -193,12 +193,12 @@ export default function PodiumStage({
       <Link
         href={`/results?pool=${poolId}`}
         aria-label="Close"
-        className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 active:scale-90"
+        className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 flex h-9 w-9 items-center justify-center rounded-full f-fill-2 text-foreground active:scale-90"
       >
         <X className="h-4 w-4" />
       </Link>
 
-      <div className="relative z-20 mx-auto w-full max-w-lg px-5 pb-16 pt-[calc(env(safe-area-inset-top)+3.5rem)]">
+      <div className="relative z-20 mx-auto w-full max-w-lg px-5 pb-[calc(env(safe-area-inset-bottom)+4rem)] pt-[calc(env(safe-area-inset-top)+3.5rem)]">
         {preview ? (
           <p className="mb-4 rounded-xl border border-gold/40 bg-gold/[0.08] px-3 py-2 text-center text-[0.7rem] font-semibold text-gold">
             Preview. Computed from the standings exactly as they are right now.
@@ -210,7 +210,7 @@ export default function PodiumStage({
           <h1 className="mt-1 finale-hero metal-gold" style={{ fontSize: 'clamp(2.6rem, 13vw, 4.6rem)' }}>
             {data.poolName}
           </h1>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/35">
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-2">
             Final standings
           </p>
         </header>
@@ -224,11 +224,11 @@ export default function PodiumStage({
         {/* Stage floor */}
         <div
           className="h-px w-full"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, var(--f-floor), transparent)' }}
         />
         <div
           className="h-16 w-full"
-          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.05), transparent)' }}
+          style={{ background: 'linear-gradient(180deg, var(--f-panel), transparent)' }}
         />
 
         {/* Controls */}
@@ -237,7 +237,7 @@ export default function PodiumStage({
             <button
               type="button"
               onClick={play}
-              className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.07] px-4 py-2 text-xs font-bold text-white/80 active:scale-95"
+              className="flex items-center gap-1.5 rounded-full border f-line f-fill px-4 py-2 text-xs font-bold text-foreground active:scale-95"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Run it back
             </button>
@@ -245,7 +245,7 @@ export default function PodiumStage({
             <button
               type="button"
               onClick={skip}
-              className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.07] px-4 py-2 text-xs font-bold text-white/80 active:scale-95"
+              className="flex items-center gap-1.5 rounded-full border f-line f-fill px-4 py-2 text-xs font-bold text-foreground active:scale-95"
             >
               <FastForward className="h-3.5 w-3.5" /> Skip
             </button>
@@ -260,11 +260,11 @@ export default function PodiumStage({
           >
             <p className="finale-kicker text-gold">Pool champion</p>
             <div className="mt-1 font-display text-4xl leading-none">{first.name}</div>
-            <div className="text-sm text-white/45">{first.bracketName}</div>
+            <div className="text-sm text-muted-2">{first.bracketName}</div>
             {first.championPick ? (
-              <p className="mt-3 text-sm leading-relaxed text-white/70">
+              <p className="mt-3 text-sm leading-relaxed text-muted">
                 Backed{' '}
-                <span className="font-bold text-white">
+                <span className="font-bold text-foreground">
                   {first.championPick.flag} {first.championPick.name}
                 </span>{' '}
                 to lift it
@@ -281,7 +281,7 @@ export default function PodiumStage({
         {/* The rest of the field */}
         {rest.length ? (
           <section className="mt-8" style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms' }}>
-            <h2 className="mb-3 text-center finale-kicker text-white/35">The rest of the field</h2>
+            <h2 className="mb-3 text-center finale-kicker text-muted-2">The rest of the field</h2>
             <ol className="space-y-1.5">
               {rest.map((r, i) => (
                 <li
@@ -289,15 +289,15 @@ export default function PodiumStage({
                   className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
                     r.ownerId === viewerId
                       ? 'me-pulse border-accent/50 bg-accent/[0.07]'
-                      : 'border-white/10 bg-white/[0.03]'
+                      : 'f-line f-fill'
                   } ${settled ? 'anim-in' : ''}`}
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  <span className="w-6 shrink-0 text-center font-display text-lg text-white/35">{r.rank}</span>
+                  <span className="w-6 shrink-0 text-center font-display text-lg text-muted-2">{r.rank}</span>
                   <Avatar name={r.name} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold">{r.name}</span>
-                    <span className="block truncate text-[0.7rem] text-white/35">{r.bracketName}</span>
+                    <span className="block truncate text-[0.7rem] text-muted-2">{r.bracketName}</span>
                   </span>
                   <span className="shrink-0 font-display text-lg text-accent">{r.combined}</span>
                 </li>
@@ -309,7 +309,7 @@ export default function PodiumStage({
         {/* Where the viewer landed */}
         {data.viewer ? (
           <p
-            className="mt-6 text-center text-sm text-white/55"
+            className="mt-6 text-center text-sm text-muted"
             style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms 300ms' }}
           >
             You finished {ordinal(data.viewer.player.rank)} of {data.standings.length} on{' '}
@@ -319,19 +319,23 @@ export default function PodiumStage({
 
         <div className="mt-8 space-y-2" style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms 400ms' }}>
           <Link
-            href={`/results/wrapped?pool=${poolId}`}
-            className="block w-full rounded-2xl bg-white py-3 text-center text-sm font-bold text-black active:scale-95"
+            href={`/results/recap?pool=${poolId}`}
+            className="block w-full rounded-2xl f-solid py-3 text-center text-sm font-bold active:scale-95"
           >
-            Watch your Wrapped
+            Watch your Recap
           </Link>
-          <a
-            href={`/results/card?pool=${poolId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-2xl border border-white/20 bg-white/[0.06] py-3 text-center text-sm font-bold text-white active:scale-95"
-          >
-            Share this podium
-          </a>
+          <ShareCardButton
+            url={`/results/card?pool=${poolId}`}
+            filename="podium.png"
+            title={`${data.poolName} final standings`}
+            text={congratsText(
+              data.poolName,
+              data.podium,
+              data.championTeam ? `${data.championTeam.flag} ${data.championTeam.name}` : null,
+            )}
+            label="Share this podium"
+            className="w-full rounded-2xl border py-3 text-sm font-bold active:scale-95 f-panel"
+          />
         </div>
       </div>
     </div>

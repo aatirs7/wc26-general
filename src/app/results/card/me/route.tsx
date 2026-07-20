@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { currentUserId } from '@/lib/auth';
-import { loadPersonalWrapped } from '@/lib/wrapped';
+import { loadPersonalRecap } from '@/lib/recap';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const poolId = searchParams.get('pool');
   if (!userId || !poolId) return new Response('not found', { status: 404 });
 
-  const d = await loadPersonalWrapped(poolId, userId);
+  const d = await loadPersonalRecap(poolId, userId);
   if (!d) return new Response('not found', { status: 404 });
 
   const Stat = ({ value, label }: { value: string; label: string }) => (

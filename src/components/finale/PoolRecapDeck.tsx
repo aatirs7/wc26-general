@@ -1,35 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import type { PoolWrapped } from '@/lib/wrapped';
+import type { PoolRecap } from '@/lib/recap';
 import type { VotesData } from '@/lib/votes';
 import type { Award } from '@/lib/results';
 import { actualChampionBias, exitBias, poolChampionBias } from '@/lib/bias';
 import StoryDeck, { type Slide } from './StoryDeck';
+import ShareCardButton from './ShareCardButton';
+import { congratsText } from '@/lib/share-text';
 import { Avatar, Bar, BiasNote, BigStat, CountUp, FlagDisc, Kicker, Layered, Marquee, MaskLines } from './kit';
 
 // Matches the personal deck: one wash per slide so the pool story has the same
 // visual variety.
 const BG = {
-  emerald: 'radial-gradient(120% 80% at 50% 8%, rgba(30,230,164,0.30), transparent 60%), linear-gradient(180deg,#04120e,#04070e 70%)',
-  gold: 'radial-gradient(120% 80% at 50% 10%, rgba(255,200,80,0.30), transparent 60%), linear-gradient(180deg,#170f02,#04070e 70%)',
-  indigo: 'radial-gradient(120% 80% at 50% 5%, rgba(99,132,255,0.28), transparent 62%), linear-gradient(180deg,#080d20,#04070e 70%)',
-  crimson: 'radial-gradient(120% 80% at 50% 10%, rgba(255,93,115,0.32), transparent 60%), linear-gradient(180deg,#1a060c,#04070e 70%)',
-  violet: 'radial-gradient(120% 80% at 50% 8%, rgba(168,110,255,0.28), transparent 62%), linear-gradient(180deg,#120a20,#04070e 70%)',
-  magenta: 'radial-gradient(120% 80% at 50% 8%, rgba(255,110,190,0.26), transparent 62%), linear-gradient(180deg,#180a16,#04070e 70%)',
-  teal: 'radial-gradient(120% 80% at 50% 8%, rgba(60,200,220,0.26), transparent 62%), linear-gradient(180deg,#04161c,#04070e 70%)',
-  night: 'radial-gradient(130% 90% at 50% 0%, rgba(255,200,80,0.16), transparent 55%), radial-gradient(90% 60% at 50% 108%, rgba(30,230,164,0.16), transparent 60%), linear-gradient(180deg,#0a0f1c,#03060c 70%)',
+  night: 'var(--f-bg-night)',
+  emerald: 'var(--f-bg-emerald)',
+  gold: 'var(--f-bg-gold)',
+  indigo: 'var(--f-bg-indigo)',
+  crimson: 'var(--f-bg-crimson)',
+  violet: 'var(--f-bg-violet)',
+  slate: 'var(--f-bg-slate)',
+  magenta: 'var(--f-bg-magenta)',
+  teal: 'var(--f-bg-teal)',
 };
 
 const dayLabel = (iso: string) =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-export default function PoolWrappedDeck({
+export default function PoolRecapDeck({
   data,
   awards,
   votes,
 }: {
-  data: PoolWrapped;
+  data: PoolRecap;
   awards: Award[];
   votes: VotesData;
 }) {
@@ -44,17 +47,17 @@ export default function PoolWrappedDeck({
     <Layered
       layers={
         <>
-          <Marquee text="FULL TIME" className="top-4 -rotate-3" tone="rgba(255,255,255,0.05)" />
-          <Marquee text={d.poolName.toUpperCase()} className="bottom-2 rotate-2" tone="rgba(255,200,80,0.07)" />
+          <Marquee text="FULL TIME" className="top-4 -rotate-3" tone="var(--f-ghost)" />
+          <Marquee text={d.poolName.toUpperCase()} className="bottom-2 rotate-2" tone="var(--f-ghost)" />
         </>
       }
     >
       <MaskLines
-        className="font-display text-[2.4rem] leading-[0.95] text-white/70"
+        className="font-display text-[2.4rem] leading-[0.95] text-muted"
         lines={['One tournament.', `${d.fieldSize} of you.`, 'One table.']}
       />
       <MaskLines className="mt-6 finale-hero metal-gold" lines={[d.poolName]} delay={620} />
-      <p className="anim-in mt-6 text-sm text-white/55" style={{ animationDelay: '1200ms' }}>
+      <p className="anim-in mt-6 text-sm text-muted" style={{ animationDelay: '1200ms' }}>
         This is what the group did to itself over a month.
       </p>
     </Layered>,
@@ -72,20 +75,20 @@ export default function PoolWrappedDeck({
           <div className="anim-count finale-hero text-accent" style={{ animationDelay: '150ms' }}>
             <CountUp to={d.totals.points} />
           </div>
-          <div className="text-xs font-bold uppercase tracking-wider text-white/45">points scored between you</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-2">points scored between you</div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="anim-in rounded-xl border border-white/12 bg-white/[0.04] p-3" style={{ animationDelay: '600ms' }}>
+          <div className="anim-in rounded-xl border f-line f-fill p-3" style={{ animationDelay: '600ms' }}>
             <div className="font-display text-3xl leading-none text-gold">
               <CountUp to={d.totals.messages} delay={700} />
             </div>
-            <div className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white/45">messages sent</div>
+            <div className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-muted-2">messages sent</div>
           </div>
-          <div className="anim-in rounded-xl border border-white/12 bg-white/[0.04] p-3" style={{ animationDelay: '750ms' }}>
+          <div className="anim-in rounded-xl border f-line f-fill p-3" style={{ animationDelay: '750ms' }}>
             <div className="font-display text-3xl leading-none text-accent">
               <CountUp to={d.totals.predictions} delay={850} />
             </div>
-            <div className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white/45">scorelines called</div>
+            <div className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-muted-2">scorelines called</div>
           </div>
         </div>
       </div>
@@ -116,7 +119,7 @@ export default function PoolWrappedDeck({
             />
           ))}
         </div>
-        <p className="anim-in mt-4 text-center text-sm leading-relaxed text-white/70" style={{ animationDelay: '1100ms' }}>
+        <p className="anim-in mt-4 text-center text-sm leading-relaxed text-muted" style={{ animationDelay: '1100ms' }}>
           {d.championTeam ? (
             d.championPicks.some((c) => c.correct) ? (
               <>
@@ -149,8 +152,8 @@ export default function PoolWrappedDeck({
           <FlagDisc flag={d.believedIn.team.flag} />
         </div>
         <h2 className="mt-4 font-display text-4xl leading-none">{d.believedIn.team.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '500ms' }}>
-          <span className="font-bold text-white">{d.believedIn.count} of {d.fieldSize}</span> brackets had them
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '500ms' }}>
+          <span className="font-bold text-foreground">{d.believedIn.count} of {d.fieldSize}</span> brackets had them
           going deep. They {d.believedIn.champion ? 'won the whole thing' : `went out at ${d.believedIn.exitLabel}`}.
         </p>
         <BiasNote>{exitBias(d.believedIn.team.code, d.believedIn.exitLabel, d.believedIn.champion)}</BiasNote>
@@ -170,16 +173,19 @@ export default function PoolWrappedDeck({
           <FlagDisc flag={d.nobodySaw.team.flag} />
         </div>
         <h2 className="mt-4 font-display text-4xl leading-none">{d.nobodySaw.team.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '500ms' }}>
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '500ms' }}>
           {d.nobodySaw.count === 0 ? (
             <>
-              Reached {d.nobodySaw.exitLabel} with <span className="font-bold text-live">zero</span> brackets
-              backing them. Not one person in {d.poolName} believed.
+              Reached {d.nobodySaw.exitLabel} with{' '}
+              <span className="font-bold text-live">0 of {d.fieldSize}</span> brackets backing them.
+              Not one person in {d.poolName} believed.
             </>
           ) : (
             <>
               Reached {d.nobodySaw.exitLabel} with only{' '}
-              <span className="font-bold text-live">{d.nobodySaw.count}</span>{' '}
+              <span className="font-bold text-live">
+                {d.nobodySaw.count} of {d.fieldSize}
+              </span>{' '}
               {d.nobodySaw.count === 1 ? 'bracket' : 'brackets'} backing them.
             </>
           )}
@@ -198,8 +204,8 @@ export default function PoolWrappedDeck({
         <Kicker tone="live">Agreed on, and wrong</Kicker>
         <div className="mt-5 text-7xl">{d.consensusWrong.team.flag}</div>
         <h2 className="mt-3 font-display text-4xl leading-none">{d.consensusWrong.team.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '500ms' }}>
-          <span className="font-bold text-white">{d.consensusWrong.count}</span> of you sent them to{' '}
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '500ms' }}>
+          <span className="font-bold text-foreground">{d.consensusWrong.count}</span> of you sent them to{' '}
           {d.consensusWrong.promised}. They got as far as {d.consensusWrong.exitLabel}. When this group
           agrees on something, be worried.
         </p>
@@ -228,7 +234,7 @@ export default function PoolWrappedDeck({
             {d.biggestSwing.risers.map((r, i) => (
               <div
                 key={r.name}
-                className="anim-in flex items-center gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2"
+                className="anim-in flex items-center gap-3 rounded-xl border f-line f-fill px-3 py-2"
                 style={{ animationDelay: `${800 + i * 140}ms` }}
               >
                 <Avatar name={r.name} size="sm" />
@@ -273,8 +279,8 @@ export default function PoolWrappedDeck({
           ))}
         </div>
         {d.reign.longest ? (
-          <p className="anim-in mt-5 text-center text-sm text-white/65" style={{ animationDelay: '1400ms' }}>
-            <span className="font-bold text-white">{d.reign.longest.name}</span> led at{' '}
+          <p className="anim-in mt-5 text-center text-sm text-muted" style={{ animationDelay: '1400ms' }}>
+            <span className="font-bold text-foreground">{d.reign.longest.name}</span> led at{' '}
             {d.reign.longest.spells} of the {d.reign.holders.length} checkpoints, more than anyone.
           </p>
         ) : null}
@@ -306,18 +312,18 @@ export default function PoolWrappedDeck({
           ))}
         </div>
         {d.chat.busiestDay ? (
-          <p className="anim-in mt-4 text-center text-xs text-white/45" style={{ animationDelay: '1000ms' }}>
+          <p className="anim-in mt-4 text-center text-xs text-muted-2" style={{ animationDelay: '1000ms' }}>
             Peak noise: {dayLabel(d.chat.busiestDay.day)}, {d.chat.busiestDay.count} messages in one day.
           </p>
         ) : null}
         {d.chat.longest ? (
           <p
-            className="anim-in mt-4 rounded-xl border border-white/12 bg-white/[0.04] p-3 text-sm italic text-white/70"
+            className="anim-in mt-4 rounded-xl border f-line f-fill p-3 text-sm italic text-muted"
             style={{ animationDelay: '1200ms' }}
           >
             &ldquo;{d.chat.longest.body.slice(0, 160)}
             {d.chat.longest.body.length > 160 ? '...' : ''}&rdquo;
-            <span className="mt-1 block text-right text-[0.7rem] not-italic text-white/40">
+            <span className="mt-1 block text-right text-[0.7rem] not-italic text-muted-2">
               {d.chat.longest.name}, longest message of the tournament
             </span>
           </p>
@@ -350,7 +356,7 @@ export default function PoolWrappedDeck({
             <div className="anim-in rounded-xl border border-accent/30 bg-accent/[0.08] p-3 text-center" style={{ animationDelay: '700ms' }}>
               <div className="text-[0.6rem] font-bold uppercase tracking-wider text-accent">Everyone saw this one</div>
               <div className="mt-1 text-sm font-semibold">{p.easiest.label}</div>
-              <div className="text-xs text-white/50">
+              <div className="text-xs text-muted-2">
                 {p.easiest.hits} of {p.easiest.of} predictions nailed it
               </div>
             </div>
@@ -359,7 +365,7 @@ export default function PoolWrappedDeck({
             <div className="anim-in rounded-xl border border-live/30 bg-live/[0.08] p-3 text-center" style={{ animationDelay: '900ms' }}>
               <div className="text-[0.6rem] font-bold uppercase tracking-wider text-live">Nobody saw this one</div>
               <div className="mt-1 text-sm font-semibold">{p.hardest.label}</div>
-              <div className="text-xs text-white/50">{p.hardest.attempts} tried, none correct</div>
+              <div className="text-xs text-muted-2">{p.hardest.attempts} tried, none correct</div>
             </div>
           ) : null}
         </div>
@@ -380,14 +386,14 @@ export default function PoolWrappedDeck({
           {awards.slice(0, 5).map((a, i) => (
             <div
               key={a.key}
-              className="anim-stamp flex items-start gap-3 rounded-xl border border-white/12 bg-white/[0.04] p-3"
+              className="anim-stamp flex items-start gap-3 rounded-xl border f-line f-fill p-3"
               style={{ animationDelay: `${240 + i * 160}ms` }}
             >
               <span className="text-2xl leading-none">{a.emoji}</span>
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-lg leading-tight text-gold">{a.title}</span>
                 <span className="block truncate text-sm font-bold">{a.winnerName ?? 'Not decided'}</span>
-                <span className="block text-xs text-white/50">{a.detail}</span>
+                <span className="block text-xs text-muted-2">{a.detail}</span>
               </span>
             </div>
           ))}
@@ -410,7 +416,7 @@ export default function PoolWrappedDeck({
           {decided.slice(0, 5).map((c, i) => (
             <div
               key={c.category.key}
-              className="anim-stamp flex items-center gap-3 rounded-xl border border-white/12 bg-white/[0.04] p-3"
+              className="anim-stamp flex items-center gap-3 rounded-xl border f-line f-fill p-3"
               style={{ animationDelay: `${240 + i * 150}ms` }}
             >
               <span className="text-2xl leading-none">{c.category.emoji}</span>
@@ -420,21 +426,21 @@ export default function PoolWrappedDeck({
                   {c.tied ? 'Too close to call' : c.leader?.name}
                 </span>
               </span>
-              <span className="shrink-0 text-xs font-bold text-white/45">
+              <span className="shrink-0 text-xs font-bold text-muted-2">
                 {c.total} {c.total === 1 ? 'vote' : 'votes'}
               </span>
             </div>
           ))}
         </div>
       ) : (
-        <p className="anim-in mt-5 text-sm leading-relaxed text-white/60" style={{ animationDelay: '400ms' }}>
+        <p className="anim-in mt-5 text-sm leading-relaxed text-muted" style={{ animationDelay: '400ms' }}>
           Nobody has voted yet. There are {votes.categories.length} categories sitting there, completely
           empty, waiting for someone to start an argument.
         </p>
       )}
       <Link
         href={`/results/vote?pool=${d.poolId}`}
-        className="anim-in mt-6 block w-full rounded-2xl bg-white py-3 text-center text-sm font-bold text-black active:scale-95"
+        className="anim-in mt-6 block w-full rounded-2xl f-solid py-3 text-center text-sm font-bold active:scale-95"
         style={{ animationDelay: '1000ms' }}
       >
         {votes.myVoteCount > 0
@@ -471,25 +477,29 @@ export default function PoolWrappedDeck({
     <div className="text-center">
       <div className="anim-trophy text-6xl">🏆</div>
       <h2 className="mt-4 font-display text-4xl leading-none">{d.poolName}, that is a wrap</h2>
-      <p className="anim-in mt-3 text-sm leading-relaxed text-white/60" style={{ animationDelay: '400ms' }}>
+      <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '400ms' }}>
         {d.standings[0]?.name ?? 'Someone'} won it. The rest of you have four years to think about what
         happened here.
       </p>
       <div className="mt-7 space-y-2">
         <Link
           href={`/results/podium?pool=${d.poolId}`}
-          className="block w-full rounded-2xl bg-white py-3 text-sm font-bold text-black active:scale-95"
+          className="block w-full rounded-2xl f-solid py-3 text-sm font-bold active:scale-95"
         >
           See the podium
         </Link>
-        <a
-          href={`/results/card?pool=${d.poolId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full rounded-2xl border border-white/20 bg-white/[0.06] py-3 text-sm font-bold text-white active:scale-95"
-        >
-          Share the final table
-        </a>
+        <ShareCardButton
+          url={`/results/card?pool=${d.poolId}`}
+          filename="final-standings.png"
+          title={`${d.poolName} final standings`}
+          text={congratsText(
+            d.poolName,
+            d.standings,
+            d.championTeam ? `${d.championTeam.flag} ${d.championTeam.name}` : null,
+          )}
+          label="Share the final table"
+          className="w-full rounded-2xl border f-line f-track py-3 text-sm font-bold text-foreground active:scale-95"
+        />
       </div>
     </div>,
     20000,

@@ -1,4 +1,4 @@
-// The finale data layer: everything the personal and pool "Wrapped" story
+// The finale data layer: everything the personal and pool "Recap" story
 // decks need. Two ideas do the heavy lifting here.
 //
 // 1. A stage-by-stage REPLAY of the whole tournament. The scoring engine is
@@ -451,10 +451,10 @@ function heaviestPicks(p: Predictions): { code: string; weight: number; round: s
 }
 
 // ---------------------------------------------------------------------------
-// Personal wrapped
+// Personal recap
 // ---------------------------------------------------------------------------
 
-export interface PersonalWrapped {
+export interface PersonalRecap {
   poolId: string;
   poolName: string;
   name: string;
@@ -500,10 +500,10 @@ export interface PersonalWrapped {
   archetype: { title: string; emoji: string; line: string };
 }
 
-export async function loadPersonalWrapped(
+export async function loadPersonalRecap(
   poolId: string,
   userId: string,
-): Promise<PersonalWrapped | null> {
+): Promise<PersonalRecap | null> {
   const ctx = await loadFinaleContext(poolId);
   const me = ctx.standings.find((s) => s.userId === userId);
   if (!me) return null;
@@ -528,8 +528,8 @@ export async function loadPersonalWrapped(
     if (!trough || j.rank > trough.rank) trough = j;
   }
 
-  let biggestClimb: PersonalWrapped['biggestClimb'] = null;
-  let biggestFall: PersonalWrapped['biggestFall'] = null;
+  let biggestClimb: PersonalRecap['biggestClimb'] = null;
+  let biggestFall: PersonalRecap['biggestFall'] = null;
   for (let i = 1; i < journey.length; i += 1) {
     const delta = journey[i - 1].rank - journey[i].rank;
     if (delta > 0 && (!biggestClimb || delta > biggestClimb.spots)) {
@@ -541,7 +541,7 @@ export async function loadPersonalWrapped(
   }
 
   // --- Champion ---
-  let champion: PersonalWrapped['champion'] = null;
+  let champion: PersonalRecap['champion'] = null;
   if (me.champion) {
     const exit = exits.get(me.champion.code);
     champion = {
@@ -553,9 +553,9 @@ export async function loadPersonalWrapped(
   }
 
   // --- Ride or die, best call, betrayal ---
-  let rideOrDie: PersonalWrapped['rideOrDie'] = null;
-  let bestCall: PersonalWrapped['bestCall'] = null;
-  let betrayal: PersonalWrapped['betrayal'] = null;
+  let rideOrDie: PersonalRecap['rideOrDie'] = null;
+  let bestCall: PersonalRecap['bestCall'] = null;
+  let betrayal: PersonalRecap['betrayal'] = null;
 
   if (bracket) {
     const lines = pointsBreakdown(bracket.predictions, ctx.facts, ctx.rankOf, (code) => ({
@@ -617,7 +617,7 @@ export async function loadPersonalWrapped(
 
   // --- Score predictions ---
   const myPreds = ctx.predsByUser.get(userId) ?? [];
-  let predictions: PersonalWrapped['predictions'] = null;
+  let predictions: PersonalRecap['predictions'] = null;
   if (myPreds.length > 0) {
     let exact = 0;
     let pensCalled = 0;
@@ -650,7 +650,7 @@ export async function loadPersonalWrapped(
   }
 
   // --- Chat ---
-  let chat: PersonalWrapped['chat'] = null;
+  let chat: PersonalRecap['chat'] = null;
   if (ctx.messageRows.length > 0) {
     const mine = ctx.messageRows.filter((m) => m.userId === userId);
     const countByUser = new Map<string, number>();
@@ -674,7 +674,7 @@ export async function loadPersonalWrapped(
   }
 
   // --- Nemesis: most rank crossings across the replay ---
-  let nemesis: PersonalWrapped['nemesis'] = null;
+  let nemesis: PersonalRecap['nemesis'] = null;
   if (timeline.length > 1) {
     let bestCrossings = 0;
     let bestGap = Number.MAX_SAFE_INTEGER;
@@ -701,7 +701,7 @@ export async function loadPersonalWrapped(
   }
 
   // --- Bracket twin ---
-  let twin: PersonalWrapped['twin'] = null;
+  let twin: PersonalRecap['twin'] = null;
   if (bracket) {
     const mine = pickSet(bracket.predictions);
     let best: { name: string; pct: number; shared: number } | null = null;
@@ -809,11 +809,11 @@ interface ArchetypeInput {
   me: Standing;
   fieldSize: number;
   journey: JourneyPoint[];
-  predictions: PersonalWrapped['predictions'];
-  chat: PersonalWrapped['chat'];
-  rideOrDie: PersonalWrapped['rideOrDie'];
-  champion: PersonalWrapped['champion'];
-  twin: PersonalWrapped['twin'];
+  predictions: PersonalRecap['predictions'];
+  chat: PersonalRecap['chat'];
+  rideOrDie: PersonalRecap['rideOrDie'];
+  champion: PersonalRecap['champion'];
+  twin: PersonalRecap['twin'];
 }
 
 // Ordered rules: the first one that fits wins, so the more specific and more
@@ -902,10 +902,10 @@ export function pickArchetype(i: ArchetypeInput): { title: string; emoji: string
 }
 
 // ---------------------------------------------------------------------------
-// Pool wrapped
+// Pool recap
 // ---------------------------------------------------------------------------
 
-export interface PoolWrapped {
+export interface PoolRecap {
   poolId: string;
   poolName: string;
   fieldSize: number;
@@ -934,7 +934,7 @@ export interface PoolWrapped {
   checkpointLabels: { label: string; short: string }[];
 }
 
-export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
+export async function loadPoolRecap(poolId: string): Promise<PoolRecap> {
   const ctx = await loadFinaleContext(poolId);
   const timeline = buildTimeline(ctx);
   const exits = buildExits(ctx);
@@ -980,7 +980,7 @@ export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
 
   // Least-backed team that still made the semi-finals.
   const semiFinalists = [...ctx.facts.reached.final, ...ctx.facts.reached.sf];
-  let nobodySaw: PoolWrapped['nobodySaw'] = null;
+  let nobodySaw: PoolRecap['nobodySaw'] = null;
   for (const code of new Set(semiFinalists)) {
     const count = backing.get(code) ?? 0;
     if (!nobodySaw || count < nobodySaw.count) {
@@ -994,7 +994,7 @@ export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
   }
 
   // The pick the pool was most united behind that did not deliver.
-  let consensusWrong: PoolWrapped['consensusWrong'] = null;
+  let consensusWrong: PoolRecap['consensusWrong'] = null;
   const finalBacking = new Map<string, number>();
   for (const b of ctx.poolBrackets) {
     for (const code of b.predictions.knockout.final) {
@@ -1014,7 +1014,7 @@ export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
   }
 
   // --- Biggest standings shakeup between consecutive checkpoints ---
-  let biggestSwing: PoolWrapped['biggestSwing'] = null;
+  let biggestSwing: PoolRecap['biggestSwing'] = null;
   for (let i = 1; i < timeline.length; i += 1) {
     let movement = 0;
     const risers: { name: string; spots: number }[] = [];
@@ -1053,7 +1053,7 @@ export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
   const longestEntry = [...spells.entries()].sort((a, b) => b[1] - a[1])[0];
 
   // --- Chat ---
-  let chat: PoolWrapped['chat'] = null;
+  let chat: PoolRecap['chat'] = null;
   if (ctx.messageRows.length > 0) {
     const counts = new Map<string, number>();
     const days = new Map<string, number>();
@@ -1078,7 +1078,7 @@ export async function loadPoolWrapped(poolId: string): Promise<PoolWrapped> {
   }
 
   // --- Score prediction wall ---
-  let predictionWall: PoolWrapped['predictionWall'] = null;
+  let predictionWall: PoolRecap['predictionWall'] = null;
   const allPreds = [...ctx.predsByUser.values()].flat();
   if (allPreds.length > 0) {
     const byMatch = new Map<number, { hits: number; of: number }>();

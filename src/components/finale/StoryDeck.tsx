@@ -17,7 +17,7 @@ export interface Slide {
 
 const DEFAULT_MS = 6200;
 
-// A Spotify-Wrapped style story player. Full screen, segmented progress at the
+// A Spotify-Recap style story player. Full screen, segmented progress at the
 // top, tap the sides to page, hold to pause, swipe or arrow keys to move.
 // It is deliberately dependency-free: state plus CSS keyframes.
 export default function StoryDeck({
@@ -139,7 +139,7 @@ export default function StoryDeck({
       {/* Progress segments */}
       <div className="absolute inset-x-0 top-0 z-30 flex gap-1 px-3 pt-[calc(env(safe-area-inset-top)+0.6rem)]">
         {slides.map((s, i) => (
-          <span key={s.key} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/20">
+          <span key={s.key} className="h-[3px] flex-1 overflow-hidden rounded-full f-fill-2">
             <span
               className={`block h-full rounded-full bg-white ${
                 i === index && !paused && !done && !reduced ? 'seg-fill' : ''
@@ -158,7 +158,7 @@ export default function StoryDeck({
       {/* Controls */}
       <div className="absolute right-3 top-[calc(env(safe-area-inset-top)+1.4rem)] z-30 flex items-center gap-2">
         {paused ? (
-          <span className="flex h-8 items-center gap-1 rounded-full bg-white/10 px-3 text-[0.65rem] font-bold uppercase tracking-wider text-white/80">
+          <span className="flex h-8 items-center gap-1 rounded-full f-fill-2 px-3 text-[0.65rem] font-bold uppercase tracking-wider text-foreground">
             <Pause className="h-3 w-3" /> Held
           </span>
         ) : null}
@@ -166,7 +166,7 @@ export default function StoryDeck({
           type="button"
           onClick={close}
           aria-label={onExitLabel}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 active:scale-90"
+          className="flex h-9 w-9 items-center justify-center rounded-full f-fill-2 text-foreground active:scale-90"
         >
           <X className="h-4 w-4" />
         </button>
@@ -213,7 +213,7 @@ export default function StoryDeck({
           type="button"
           onClick={prev}
           disabled={index === 0}
-          className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/70 disabled:opacity-30 active:scale-95"
+          className="rounded-full border f-line f-track px-4 py-2 text-xs font-bold text-muted disabled:opacity-30 active:scale-95"
         >
           Back
         </button>
@@ -221,7 +221,7 @@ export default function StoryDeck({
           <button
             type="button"
             onClick={replay}
-            className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2 text-xs font-bold text-black active:scale-95"
+            className="flex items-center gap-1.5 rounded-full f-solid px-5 py-2 text-xs font-bold active:scale-95"
           >
             <RotateCcw className="h-3.5 w-3.5" /> Run it back
           </button>
@@ -229,12 +229,12 @@ export default function StoryDeck({
           <button
             type="button"
             onClick={next}
-            className="rounded-full bg-white px-6 py-2 text-xs font-bold text-black active:scale-95"
+            className="rounded-full f-solid px-6 py-2 text-xs font-bold active:scale-95"
           >
             Next
           </button>
         )}
-        <span className="w-14 text-right text-[0.65rem] font-bold tabular-nums text-white/35">
+        <span className="w-14 text-right text-[0.65rem] font-bold tabular-nums text-muted-2">
           {index + 1}/{slides.length}
         </span>
       </div>

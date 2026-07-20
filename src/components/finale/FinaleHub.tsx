@@ -1,8 +1,45 @@
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Users, Medal, Vote } from 'lucide-react';
+import { Sparkles, Users, Medal, Vote, MessageSquareHeart } from 'lucide-react';
 
-// The three doors (plus the voting booth) that the whole finale hangs off.
+// The three doors (plus the voting booth) the whole finale hangs off.
 // Rendered on /results and inlined at the top of /home once the final ends.
+//
+// Everything here is centre-aligned on purpose: one hero, one feature tile,
+// a two-up row, then the voting strip. No left-aligned icon-and-text rows.
+
+function Disc({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: 'accent' | 'gold' | 'live' | 'medal';
+}) {
+  const cls =
+    tone === 'medal'
+      ? 'medal-1'
+      : tone === 'gold'
+        ? 'bg-gold/15 text-gold ring-1 ring-gold/40'
+        : tone === 'live'
+          ? 'bg-live/15 text-live ring-1 ring-live/40'
+          : 'bg-accent/15 text-accent ring-1 ring-accent/40';
+  return (
+    <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+function Stat({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div className="flex-1 text-center">
+      <div className="font-display text-3xl leading-none">{value}</div>
+      <div className="mt-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 export default function FinaleHub({
   poolId,
   poolName,
@@ -28,124 +65,128 @@ export default function FinaleHub({
   const votesLeft = Math.max(0, votesTotal - votesDone);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-center">
       {!compact ? (
-        <header className="pb-1 pt-2 text-center">
+        <header className="pb-2 pt-2">
           <p className="finale-kicker text-gold">Full time</p>
           <h1 className="shine mt-1 font-display text-5xl leading-none">The finale</h1>
-          <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">
-            It is over. Everything that happened in {poolName} over the last month, three ways.
+          <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-relaxed text-muted">
+            It is over. Everything that happened in {poolName}, three ways.
           </p>
         </header>
-      ) : null}
+      ) : (
+        <p className="finale-kicker pt-1 text-gold">Full time</p>
+      )}
 
-      {/* Your Wrapped */}
+      {/* Feature tile: your own recap, with your headline numbers. */}
       <Link
-        href={`/results/wrapped${q}`}
-        className="door shine-sweep block p-5"
-        style={{ '--door-glow': 'rgba(30,230,164,0.22)' } as React.CSSProperties}
+        href={`/results/recap${q}`}
+        className="door shine-sweep block px-5 pb-5 pt-6 active:scale-[0.99]"
+        style={{ '--door-glow': 'rgba(30,230,164,0.24)' } as React.CSSProperties}
       >
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/40">
-            <Sparkles className="h-5 w-5 text-accent" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-2xl leading-none text-accent">Your Wrapped</div>
-            <div className="mt-0.5 text-xs text-muted">
-              Your tournament, slide by slide. Not all of it is flattering.
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-accent" />
-        </div>
-        <div className="mt-3 flex items-end gap-4 border-t border-edge pt-3">
-          <span>
-            <span className="block font-display text-3xl leading-none text-foreground">{points}</span>
-            <span className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">points</span>
-          </span>
+        <Disc tone="accent">
+          <Sparkles className="h-6 w-6" strokeWidth={2.2} />
+        </Disc>
+        <h2 className="mt-3 font-display text-3xl leading-none text-accent">Your recap</h2>
+        <p className="mx-auto mt-1 max-w-[16rem] text-xs leading-relaxed text-muted">
+          Your tournament, slide by slide. Not all of it is flattering.
+        </p>
+        <div className="mt-4 flex items-start border-t border-edge pt-3">
+          <Stat value={points} label="points" />
           {rank ? (
-            <span>
-              <span className="block font-display text-3xl leading-none text-foreground">
-                {rank}
-                <span className="text-muted">/{fieldSize}</span>
-              </span>
-              <span className="text-[0.6rem] font-bold uppercase tracking-wider text-muted">finish</span>
-            </span>
+            <>
+              <span className="w-px self-stretch bg-[var(--line)]" aria-hidden />
+              <Stat
+                value={
+                  <>
+                    {rank}
+                    <span className="text-muted">/{fieldSize}</span>
+                  </>
+                }
+                label="finish"
+              />
+            </>
           ) : null}
         </div>
       </Link>
 
-      {/* Pool Wrapped */}
-      <Link
-        href={`/results/pool${q}`}
-        className="door shine-sweep-2 block p-5"
-        style={{ '--door-glow': 'rgba(255,200,80,0.2)' } as React.CSSProperties}
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold/15 ring-1 ring-gold/40">
-            <Users className="h-5 w-5 text-gold" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-2xl leading-none text-gold">{poolName} Wrapped</div>
-            <div className="mt-0.5 text-xs text-muted">
-              What the {fieldSize} of you did to each other, in numbers.
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-gold" />
-        </div>
-      </Link>
+      {/* Two-up: the group's story and the podium. */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href={`/results/pool${q}`}
+          className="door shine-sweep-2 flex flex-col items-center justify-start px-3 pb-4 pt-5 active:scale-[0.98]"
+          style={{ '--door-glow': 'rgba(255,200,80,0.22)' } as React.CSSProperties}
+        >
+          <Disc tone="gold">
+            <Users className="h-6 w-6" strokeWidth={2.2} />
+          </Disc>
+          <h2 className="mt-3 font-display text-2xl leading-none text-gold">Pool recap</h2>
+          <p className="mt-1 text-[0.7rem] leading-snug text-muted">
+            What the {fieldSize} of you did to each other
+          </p>
+        </Link>
 
-      {/* The podium */}
-      <Link
-        href={`/results/podium${q}`}
-        className="door block p-5"
-        style={{ '--door-glow': 'rgba(255,255,255,0.14)' } as React.CSSProperties}
-      >
-        <div className="flex items-center gap-3">
-          <span className="medal-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-            <Medal className="h-5 w-5" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-2xl leading-none">The podium</div>
-            <div className="mt-0.5 text-xs text-muted">
-              {championName ? (
-                <>
-                  Gold, silver and bronze.{' '}
-                  <span className="select-none blur-[3px]">{championName}</span> took it.
-                </>
-              ) : (
-                'Gold, silver and bronze, revealed properly.'
-              )}
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
-        </div>
-      </Link>
+        <Link
+          href={`/results/podium${q}`}
+          className="door flex flex-col items-center justify-start px-3 pb-4 pt-5 active:scale-[0.98]"
+          style={{ '--door-glow': 'rgba(255,200,80,0.16)' } as React.CSSProperties}
+        >
+          <Disc tone="medal">
+            <Medal className="h-6 w-6" strokeWidth={2.2} />
+          </Disc>
+          <h2 className="mt-3 font-display text-2xl leading-none">The podium</h2>
+          <p className="mt-1 text-[0.7rem] leading-snug text-muted">
+            {championName ? (
+              <>
+                <span className="select-none blur-[4px]">{championName}</span> took it
+              </>
+            ) : (
+              'Gold, silver and bronze'
+            )}
+          </p>
+        </Link>
+      </div>
 
-      {/* Voting */}
+      {/* Voting strip. */}
       <Link
         href={`/results/vote${q}`}
-        className="door relative block p-5"
-        style={{ '--door-glow': 'rgba(255,93,115,0.16)' } as React.CSSProperties}
+        className="door relative block px-5 pb-4 pt-5 active:scale-[0.99]"
+        style={{ '--door-glow': 'rgba(255,93,115,0.18)' } as React.CSSProperties}
       >
         {votesLeft > 0 ? (
           <span className="absolute right-3 top-3 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-live px-1 text-[0.6rem] font-bold leading-none text-white">
             {votesLeft}
           </span>
         ) : null}
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-live/15 ring-1 ring-live/40">
-            <Vote className="h-5 w-5 text-live" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-2xl leading-none text-live">The people&apos;s awards</div>
-            <div className="mt-0.5 text-xs text-muted">
-              {votesLeft > 0
-                ? `${votesLeft} ${votesLeft === 1 ? 'category' : 'categories'} still need your vote. Everyone sees who you picked.`
-                : 'You have voted in every category. Go and check the damage.'}
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-live" />
-        </div>
+        <Disc tone="live">
+          <Vote className="h-6 w-6" strokeWidth={2.2} />
+        </Disc>
+        <h2 className="mt-3 font-display text-2xl leading-none text-live">
+          The people&apos;s awards
+        </h2>
+        <p className="mx-auto mt-1 max-w-[17rem] text-xs leading-relaxed text-muted">
+          {votesLeft > 0
+            ? `${votesLeft} ${votesLeft === 1 ? 'category' : 'categories'} still need your vote.`
+            : 'You have voted in every category. Go and check the damage.'}
+        </p>
+        <p className="mt-2 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-muted-2">
+          {votesDone} of {votesTotal} voted
+        </p>
+      </Link>
+
+      {/* Suggestions and reviews. */}
+      <Link
+        href="/feedback"
+        className="door block px-5 pb-4 pt-5 active:scale-[0.99]"
+        style={{ '--door-glow': 'rgba(30,230,164,0.12)' } as React.CSSProperties}
+      >
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/40">
+          <MessageSquareHeart className="h-6 w-6" strokeWidth={2.2} />
+        </span>
+        <h2 className="mt-3 font-display text-2xl leading-none">Thanks for playing</h2>
+        <p className="mx-auto mt-1 max-w-[17rem] text-xs leading-relaxed text-muted">
+          Tell me what you thought. Suggestions, reviews, complaints, all welcome.
+        </p>
       </Link>
     </div>
   );

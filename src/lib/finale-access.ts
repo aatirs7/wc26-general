@@ -27,6 +27,11 @@ export type FinaleGate =
       preview: boolean;
       memberships: Membership[];
       active: Membership;
+      // True when the caller named a pool they actually belong to. Someone in
+      // several pools has to pick one before a recap means anything, so the
+      // deck routes refuse to guess and send them to the chooser instead.
+      explicit: boolean;
+      needsChoice: boolean;
     };
 
 export async function finaleGate(requestedPool?: string): Promise<FinaleGate> {
@@ -58,13 +63,26 @@ export async function finaleGate(requestedPool?: string): Promise<FinaleGate> {
   if (memberships.length === 0) return { state: 'no-pool', userId };
 
   const cookiePool = (await cookies()).get('wc26_active_pool')?.value;
+  const requested = memberships.find((m) => m.poolId === requestedPool) ?? null;
   const active =
-    memberships.find((m) => m.poolId === requestedPool) ??
+    requested ??
     memberships.find((m) => m.poolId === cookiePool) ??
     memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
     memberships[0];
 
-  return { state: 'open', userId, displayName, over, preview, memberships, active };
+  const explicit = requested !== null;
+
+  return {
+    state: 'open',
+    userId,
+    displayName,
+    over,
+    preview,
+    memberships,
+    active,
+    explicit,
+    needsChoice: memberships.length > 1 && !explicit,
+  };
 }
 
 // Whether the finale is live at all, for the home page and layout. Cheap

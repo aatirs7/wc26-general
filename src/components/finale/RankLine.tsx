@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { JourneyPoint } from '@/lib/wrapped';
+import type { JourneyPoint } from '@/lib/recap';
 import { ordinal } from './kit';
 
 // The rank journey: an inverted line chart (rank 1 sits at the top) drawn on

@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 import { finaleGate } from '@/lib/finale-access';
-import { loadPoolWrapped } from '@/lib/wrapped';
+import { loadPoolRecap } from '@/lib/recap';
 import { loadResults } from '@/lib/results';
 import { loadVotes } from '@/lib/votes';
-import PoolWrappedDeck from '@/components/finale/PoolWrappedDeck';
+import PoolRecapDeck from '@/components/finale/PoolRecapDeck';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PoolWrappedPage({
+export default async function PoolRecapPage({
   searchParams,
 }: {
   searchParams: Promise<{ pool?: string }>;
@@ -18,12 +18,15 @@ export default async function PoolWrappedPage({
   if (gate.state === 'anon') redirect('/');
   if (gate.state === 'no-pool') redirect('/bracket');
   if (gate.state === 'locked') redirect('/results');
+  // A recap is meaningless without knowing which pool it is for, so anyone in
+  // several pools gets sent to the chooser rather than a guessed one.
+  if (gate.needsChoice) redirect('/results');
 
   const [data, results, votes] = await Promise.all([
-    loadPoolWrapped(gate.active.poolId),
+    loadPoolRecap(gate.active.poolId),
     loadResults(gate.active.poolId, gate.userId),
     loadVotes(gate.active.poolId, gate.userId),
   ]);
 
-  return <PoolWrappedDeck data={data} awards={results.awards} votes={votes} />;
+  return <PoolRecapDeck data={data} awards={results.awards} votes={votes} />;
 }

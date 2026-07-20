@@ -3,7 +3,7 @@ import { Bebas_Neue, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { matches, syncMeta, users } from '@/lib/schema';
+import { matches, poolMembers, syncMeta, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
 import { isTournamentOver, isFinalePreview } from '@/lib/finale';
 import { ROOT_ID } from '@/lib/knockout-bracket';
@@ -64,6 +64,7 @@ export default async function RootLayout({
   // The end-of-tournament finale splash, live once the final ends or for
   // preview players testing it early.
   let finaleActive = false;
+  let poolCount = 1;
   if (signedIn) {
     try {
       const uid = await currentUserId();
@@ -79,6 +80,13 @@ export default async function RootLayout({
           .where(eq(matches.id, ROOT_ID))
           .limit(1);
         finaleActive = isTournamentOver(finalMatch?.status) || isFinalePreview(me?.displayName);
+        if (finaleActive) {
+          const mine = await db
+            .select({ poolId: poolMembers.poolId })
+            .from(poolMembers)
+            .where(eq(poolMembers.userId, uid));
+          poolCount = mine.length;
+        }
         const [row] = await db
           .select({ value: syncMeta.value })
           .from(syncMeta)
@@ -112,7 +120,7 @@ export default async function RootLayout({
           {children}
         </main>
         <BottomTabBar />
-        {signedIn && finaleActive ? <FinaleTakeover /> : null}
+        {signedIn && finaleActive ? <FinaleTakeover poolCount={poolCount} /> : null}
       </body>
     </html>
   );

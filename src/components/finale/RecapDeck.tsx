@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import type { PersonalWrapped } from '@/lib/wrapped';
+import type { PersonalRecap } from '@/lib/recap';
 import { betrayalBias, championBias, rideBias } from '@/lib/bias';
 import StoryDeck, { type Slide } from './StoryDeck';
 import RankLine from './RankLine';
+import ShareCardButton from './ShareCardButton';
 import {
   Avatar,
   Bar,
@@ -25,16 +26,17 @@ import {
 } from './kit';
 
 // Each slide gets its own wash so the deck never feels like one long page.
+// The values live in globals.css so both themes get their own palette.
 const BG = {
-  emerald: 'radial-gradient(120% 80% at 50% 8%, rgba(30,230,164,0.30), transparent 60%), linear-gradient(180deg,#04120e,#04070e 70%)',
-  gold: 'radial-gradient(120% 80% at 50% 10%, rgba(255,200,80,0.30), transparent 60%), linear-gradient(180deg,#170f02,#04070e 70%)',
-  indigo: 'radial-gradient(120% 80% at 50% 5%, rgba(99,132,255,0.28), transparent 62%), linear-gradient(180deg,#080d20,#04070e 70%)',
-  crimson: 'radial-gradient(120% 80% at 50% 10%, rgba(255,93,115,0.32), transparent 60%), linear-gradient(180deg,#1a060c,#04070e 70%)',
-  violet: 'radial-gradient(120% 80% at 50% 8%, rgba(168,110,255,0.28), transparent 62%), linear-gradient(180deg,#120a20,#04070e 70%)',
-  slate: 'radial-gradient(120% 80% at 50% 12%, rgba(140,160,190,0.20), transparent 62%), linear-gradient(180deg,#0b111c,#04070e 70%)',
-  magenta: 'radial-gradient(120% 80% at 50% 8%, rgba(255,110,190,0.26), transparent 62%), linear-gradient(180deg,#180a16,#04070e 70%)',
-  teal: 'radial-gradient(120% 80% at 50% 8%, rgba(60,200,220,0.26), transparent 62%), linear-gradient(180deg,#04161c,#04070e 70%)',
-  night: 'radial-gradient(130% 90% at 50% 0%, rgba(255,200,80,0.16), transparent 55%), radial-gradient(90% 60% at 50% 108%, rgba(30,230,164,0.16), transparent 60%), linear-gradient(180deg,#0a0f1c,#03060c 70%)',
+  night: 'var(--f-bg-night)',
+  emerald: 'var(--f-bg-emerald)',
+  gold: 'var(--f-bg-gold)',
+  indigo: 'var(--f-bg-indigo)',
+  crimson: 'var(--f-bg-crimson)',
+  violet: 'var(--f-bg-violet)',
+  slate: 'var(--f-bg-slate)',
+  magenta: 'var(--f-bg-magenta)',
+  teal: 'var(--f-bg-teal)',
 };
 
 const dayLabel = (iso: string) =>
@@ -44,7 +46,7 @@ const dayLabel = (iso: string) =>
     month: 'long',
   });
 
-export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
+export default function RecapDeck({ data }: { data: PersonalRecap }) {
   const d = data;
   const slides: Slide[] = [];
   const push = (key: string, node: React.ReactNode, ms?: number, bg?: string) =>
@@ -56,17 +58,17 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
     <Layered
       layers={
         <>
-          <Marquee text="FULL TIME" className="top-4 -rotate-3" tone="rgba(255,255,255,0.05)" />
-          <Marquee text="WORLD CUP 2026" className="bottom-2 rotate-2" tone="rgba(30,230,164,0.07)" />
+          <Marquee text="FULL TIME" className="top-4 -rotate-3" tone="var(--f-ghost)" />
+          <Marquee text="WORLD CUP 2026" className="bottom-2 rotate-2" tone="var(--f-ghost)" />
         </>
       }
     >
       <MaskLines
-        className="font-display text-[2.5rem] leading-[0.95] text-white/70"
+        className="font-display text-[2.5rem] leading-[0.95] text-muted"
         lines={['Twenty six days.', '104 matches.', 'One bracket.']}
       />
       <MaskLines className="mt-6 finale-hero metal-gold" lines={[d.name]} delay={620} />
-      <p className="anim-in mt-6 text-sm text-white/55" style={{ animationDelay: '1200ms' }}>
+      <p className="anim-in mt-6 text-sm text-muted" style={{ animationDelay: '1200ms' }}>
         Here is how your World Cup actually went.
       </p>
     </Layered>,
@@ -84,7 +86,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
           value={d.me.combined}
           label={
             <>
-              points in <span className="font-semibold text-white">{d.poolName}</span>.
+              points in <span className="font-semibold text-foreground">{d.poolName}</span>.
               <br />
               {d.beat > 0
                 ? `You finished above ${d.beat} ${d.beat === 1 ? 'person' : 'people'}.`
@@ -120,11 +122,11 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
       <div>
         <Kicker tone="gold">The long way round</Kicker>
         <h2 className="mt-2 font-display text-4xl leading-none">Where you stood</h2>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/35">all tournament</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-2">all tournament</p>
         <div className="mt-5">
           <RankLine journey={d.journey} fieldSize={d.fieldSize} peak={d.peak} trough={d.trough} />
         </div>
-        <p className="anim-in mt-4 text-sm leading-relaxed text-white/70" style={{ animationDelay: '1500ms' }}>
+        <p className="anim-in mt-4 text-sm leading-relaxed text-muted" style={{ animationDelay: '1500ms' }}>
           {d.peak && d.peak.rank < last.rank
             ? `You were ${ordinal(d.peak.rank)} ${d.peak.label.toLowerCase()}. You are not ${ordinal(d.peak.rank)} now.`
             : d.peak && d.peak.rank === last.rank && first.rank > last.rank
@@ -175,7 +177,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
           <FlagDisc flag={d.champion.pick.flag} />
         </div>
         <h2 className="mt-4 font-display text-5xl leading-none">{d.champion.pick.name}</h2>
-        <p className="anim-in mt-4 text-sm leading-relaxed text-white/70" style={{ animationDelay: '600ms' }}>
+        <p className="anim-in mt-4 text-sm leading-relaxed text-muted" style={{ animationDelay: '600ms' }}>
           {d.champion.correct ? (
             <>
               And they went and did it. You called the World Cup winner months in advance and you have the
@@ -212,7 +214,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
           <FlagDisc flag={d.rideOrDie.team.flag} />
         </div>
         <h2 className="mt-4 font-display text-5xl leading-none">{d.rideOrDie.team.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '500ms' }}>
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '500ms' }}>
           They put <span className="font-bold text-accent">{d.rideOrDie.pts} points</span> on your total
           across {d.rideOrDie.picks} {d.rideOrDie.picks === 1 ? 'call' : 'separate calls'}. Nobody else came
           close to carrying you like that.
@@ -228,13 +230,13 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
   if (d.betrayal) {
     push(
       'betrayal',
-      <Layered layers={<Marquee text="BETRAYAL" className="top-6 -rotate-2" tone="rgba(255,93,115,0.09)" />}>
+      <Layered layers={<Marquee text="BETRAYAL" className="top-6 -rotate-2" tone="var(--f-ghost)" />}>
         <Kicker tone="live">The betrayal</Kicker>
         <div className="mt-4">
           <FlagDisc flag={d.betrayal.team.flag} />
         </div>
         <h2 className="mt-4 font-display text-5xl leading-none">{d.betrayal.team.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '500ms' }}>
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '500ms' }}>
           You backed them {d.betrayal.promised}. They went out at {d.betrayal.exitLabel} and took{' '}
           <span className="font-bold text-live">{d.betrayal.cost} points</span> with them.
         </p>
@@ -260,7 +262,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
             <div className="font-display text-2xl leading-tight">
               {d.bestCall.team.name} {d.bestCall.reason}
             </div>
-            <div className="mt-1 text-xs text-white/45">
+            <div className="mt-1 text-xs text-muted-2">
               Your single most valuable moment of foresight.
             </div>
           </Tilt>
@@ -285,13 +287,13 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
               <>
                 points that were available and did not end up yours.
                 <br />A perfect bracket was worth{' '}
-                <span className="font-semibold text-white">{d.leftOnTable + d.me.bracketTotal}</span>. You
+                <span className="font-semibold text-foreground">{d.leftOnTable + d.me.bracketTotal}</span>. You
                 took {d.me.bracketTotal}.
               </>
             }
           />
         </div>
-        <p className="anim-in mt-6 text-sm text-white/45" style={{ animationDelay: '1100ms' }}>
+        <p className="anim-in mt-6 text-sm text-muted-2" style={{ animationDelay: '1100ms' }}>
           Nobody got all of them. That is not really the point.
         </p>
       </Layered>,
@@ -321,14 +323,14 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
         <div className="mt-6 space-y-3 text-sm">
           {p.boldest ? (
             <Tilt deg={1.6}>
-              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-white/40">
+              <div className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-2">
                 Your boldest call
               </div>
               <div className="mt-1 font-display text-2xl leading-tight">{p.boldest.label}</div>
-              <div className="text-xs text-white/45">{p.boldest.total} goals. Ambitious.</div>
+              <div className="text-xs text-muted-2">{p.boldest.total} goals. Ambitious.</div>
             </Tilt>
           ) : null}
-          <p className="anim-in text-white/60" style={{ animationDelay: '950ms' }}>
+          <p className="anim-in text-muted" style={{ animationDelay: '950ms' }}>
             You predicted {p.goalsPredicted} goals across those games. There were {p.goalsActual}.{' '}
             {p.goalsPredicted > p.goalsActual
               ? 'You wanted more football than football wanted to give.'
@@ -351,10 +353,10 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
       'nopredict',
       <Layered layers={<Ghost opacity={0.05}>0</Ghost>}>
         <Kicker tone="muted">The score predictions</Kicker>
-        <div className="anim-count mt-6 finale-hero text-white/25" style={{ animationDelay: '200ms' }}>
+        <div className="anim-count mt-6 finale-hero text-muted-2" style={{ animationDelay: '200ms' }}>
           0
         </div>
-        <p className="anim-in mt-4 text-sm leading-relaxed text-white/60" style={{ animationDelay: '600ms' }}>
+        <p className="anim-in mt-4 text-sm leading-relaxed text-muted" style={{ animationDelay: '600ms' }}>
           You did not call a single scoreline all tournament. The button was right there, for a month,
           every day. We are not angry.
         </p>
@@ -378,30 +380,30 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
                 <span className="font-display text-4xl leading-none text-accent">
                   <CountUp to={d.chat.sharePct} suffix="%" delay={400} />
                 </span>
-                <span className="mt-1 text-[0.6rem] font-bold uppercase tracking-wider text-white/45">
+                <span className="mt-1 text-[0.6rem] font-bold uppercase tracking-wider text-muted-2">
                   of the chat
                 </span>
               </>
             }
           />
         </div>
-        <p className="anim-in mt-5 text-sm leading-relaxed text-white/70" style={{ animationDelay: '800ms' }}>
-          You sent <span className="font-bold text-white">{d.chat.sent}</span> of the {d.chat.poolTotal}{' '}
+        <p className="anim-in mt-5 text-sm leading-relaxed text-muted" style={{ animationDelay: '800ms' }}>
+          You sent <span className="font-bold text-foreground">{d.chat.sent}</span> of the {d.chat.poolTotal}{' '}
           messages in {d.poolName}, the {ordinal(d.chat.rank)} loudest person in the group.
         </p>
         {d.chat.busiestDay && d.chat.busiestDay.count > 1 ? (
-          <p className="anim-in mt-2 text-xs text-white/45" style={{ animationDelay: '1000ms' }}>
+          <p className="anim-in mt-2 text-xs text-muted-2" style={{ animationDelay: '1000ms' }}>
             Loudest day: {dayLabel(d.chat.busiestDay.day)}, {d.chat.busiestDay.count} messages.
           </p>
         ) : null}
         {d.chat.longest ? (
           <div className="mt-4">
             <Tilt deg={-1.8}>
-              <p className="text-sm italic leading-relaxed text-white/75">
+              <p className="text-sm italic leading-relaxed text-muted">
                 &ldquo;{d.chat.longest.slice(0, 180)}
                 {d.chat.longest.length > 180 ? '...' : ''}&rdquo;
               </p>
-              <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-wider text-white/35">
+              <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-wider text-muted-2">
                 your longest message
               </p>
             </Tilt>
@@ -417,21 +419,21 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
   if (d.nemesis) {
     push(
       'nemesis',
-      <Layered layers={<Marquee text="VS" className="top-1/3 -rotate-1" tone="rgba(255,255,255,0.05)" />}>
+      <Layered layers={<Marquee text="VS" className="top-1/3 -rotate-1" tone="var(--f-ghost)" />}>
         <Kicker tone="live">Your nemesis</Kicker>
         <div className="mt-6 flex items-center justify-center gap-4">
           <Avatar name={d.name} size="lg" />
-          <span className="font-display text-3xl text-white/25">vs</span>
+          <span className="font-display text-3xl text-muted-2">vs</span>
           <Avatar name={d.nemesis.name} size="lg" />
         </div>
         <h2 className="mt-4 font-display text-5xl leading-none">{d.nemesis.name}</h2>
-        <p className="anim-in mt-3 text-sm leading-relaxed text-white/70" style={{ animationDelay: '600ms' }}>
-          You two swapped places <span className="font-bold text-white">{d.nemesis.crossings}</span>{' '}
+        <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '600ms' }}>
+          You two swapped places <span className="font-bold text-foreground">{d.nemesis.crossings}</span>{' '}
           {d.nemesis.crossings === 1 ? 'time' : 'times'} over the tournament. It ended with{' '}
           {d.nemesis.aheadOfThem ? 'you ahead' : 'them ahead'} by {d.nemesis.gap}{' '}
           {d.nemesis.gap === 1 ? 'point' : 'points'}.
         </p>
-        <p className="anim-in mt-2 text-xs italic text-white/40" style={{ animationDelay: '900ms' }}>
+        <p className="anim-in mt-2 text-xs italic text-muted-2" style={{ animationDelay: '900ms' }}>
           {d.nemesis.aheadOfThem ? 'Do not let them forget it.' : 'There is always 2030.'}
         </p>
       </Layered>,
@@ -449,7 +451,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
         <div className="mt-5">
           <BigStat value={d.twin.pct} suffix="%" tone="gold" label={<>identical to {d.twin.name}</>} />
         </div>
-        <p className="anim-in mt-5 text-sm leading-relaxed text-white/70" style={{ animationDelay: '900ms' }}>
+        <p className="anim-in mt-5 text-sm leading-relaxed text-muted" style={{ animationDelay: '900ms' }}>
           {d.twin.pct >= 60
             ? `You and ${d.twin.name} filled in almost the same bracket. One of you had an original thought and we are not sure which.`
             : `${d.twin.name} came closest to thinking like you, and even then only ${d.twin.pct}% of the way. You were on your own out there.`}
@@ -477,7 +479,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
               style={{ animationDelay: `${240 + i * 150}ms` }}
             >
               <div className="font-display text-xl leading-none text-gold">{b.title}</div>
-              <div className="mt-0.5 text-xs text-white/60">{b.desc}</div>
+              <div className="mt-0.5 text-xs text-muted">{b.desc}</div>
             </div>
           ))}
         </div>
@@ -501,7 +503,7 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
       >
         {d.archetype.title}
       </h2>
-      <p className="anim-in mt-4 text-sm leading-relaxed text-white/70" style={{ animationDelay: '900ms' }}>
+      <p className="anim-in mt-4 text-sm leading-relaxed text-muted" style={{ animationDelay: '900ms' }}>
         {d.archetype.line}
       </p>
     </Layered>,
@@ -516,10 +518,10 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
     <Layered layers={<Ghost opacity={0.06}>{ordinal(d.me.rank)}</Ghost>}>
       <Kicker tone="gold">Full time</Kicker>
       <div className="anim-count mt-5 finale-hero" style={{ animationDelay: '160ms' }}>
-        <span className={podium ? 'metal-gold' : 'text-white'}>{ordinal(d.me.rank)}</span>
+        <span className={podium ? 'metal-gold' : 'text-foreground'}>{ordinal(d.me.rank)}</span>
       </div>
       <p
-        className="anim-in mt-1 text-xs font-bold uppercase tracking-[0.25em] text-white/45"
+        className="anim-in mt-1 text-xs font-bold uppercase tracking-[0.25em] text-muted-2"
         style={{ animationDelay: '500ms' }}
       >
         of {d.fieldSize} in {d.poolName}
@@ -548,27 +550,27 @@ export default function WrappedDeck({ data }: { data: PersonalWrapped }) {
   // 16. Outro
   push(
     'outro',
-    <Layered layers={<Marquee text="THAT IS A WRAP" className="top-8 -rotate-2" tone="rgba(255,255,255,0.05)" />}>
+    <Layered layers={<Marquee text="THAT IS A WRAP" className="top-8 -rotate-2" tone="var(--f-ghost)" />}>
       <div className="anim-trophy text-7xl">🏆</div>
       <h2 className="mt-4 font-display text-4xl leading-none">That was your World Cup</h2>
-      <p className="anim-in mt-3 text-sm leading-relaxed text-white/60" style={{ animationDelay: '400ms' }}>
+      <p className="anim-in mt-3 text-sm leading-relaxed text-muted" style={{ animationDelay: '400ms' }}>
         Thanks for playing. See you in 2030, when you will absolutely do this again and absolutely not
         learn from any of it.
       </p>
       <div className="mt-7 space-y-2">
-        <a
-          href={`/results/card/me?pool=${d.poolId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full rounded-2xl bg-white py-3 text-sm font-bold text-black active:scale-95"
-        >
-          Share your Wrapped
-        </a>
+        <ShareCardButton
+          url={`/results/card/me?pool=${d.poolId}`}
+          filename="my-recap.png"
+          title={`${d.name}, World Cup 2026`}
+          text={`My World Cup 2026 recap: ${ordinal(d.me.rank)} of ${d.fieldSize} in ${d.poolName} on ${d.me.combined} points. ${d.archetype.title}.`}
+          label="Share your recap"
+          className="w-full rounded-2xl f-solid py-3 text-sm font-bold active:scale-95"
+        />
         <Link
           href={`/results/pool?pool=${d.poolId}`}
-          className="block w-full rounded-2xl border border-white/20 bg-white/[0.06] py-3 text-sm font-bold text-white active:scale-95"
+          className="block w-full rounded-2xl border f-line f-track py-3 text-sm font-bold text-foreground active:scale-95"
         >
-          Watch the pool Wrapped
+          Watch the pool Recap
         </Link>
         <Link
           href={`/results/podium?pool=${d.poolId}`}

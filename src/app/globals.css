@@ -336,41 +336,150 @@ body {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Finale: the end-of-tournament Wrapped decks and podium stage.             */
-/* Everything below is motion-heavy on purpose. Every animation is gated     */
-/* behind prefers-reduced-motion and every deck has a static settled state.  */
+/* Finale: the end-of-tournament Recap decks and podium stage.               */
+/* Motion-heavy on purpose. Every animation is gated behind                  */
+/* prefers-reduced-motion and every deck has a static settled state.         */
+/*                                                                           */
+/* The stage is fully themed. Rather than forcing a dark surface, it          */
+/* redefines the app's own tokens so both themes get a first-class version:   */
+/* night for dark, warm paper for gray.                                       */
 /* ------------------------------------------------------------------------ */
 
-/* Full-bleed story surface that escapes the app's max-width main column. */
 .finale-stage {
   position: fixed;
   inset: 0;
   z-index: 200;
   overflow: hidden;
-  background:
-    radial-gradient(130% 80% at 50% -10%, rgba(30, 230, 164, 0.16), transparent 62%),
-    radial-gradient(100% 60% at 50% 110%, rgba(255, 200, 80, 0.12), transparent 60%),
-    linear-gradient(180deg, #0a1220, #04070e 55%);
-  color: #eef2fb;
-}
-/* The stage is always dark, even in the gray theme, so force the tokens the
-   slides read rather than restyling every child. */
-.finale-stage {
+  background: var(--f-base);
+  color: var(--fg);
+
+  /* Night stage (dark theme default). */
   --fg: #eef2fb;
-  --muted: #8693ad;
-  --muted-2: #5e6a85;
-  --line: rgba(255, 255, 255, 0.1);
-  --line-strong: rgba(255, 255, 255, 0.2);
+  --muted: #97a3ba;
+  --muted-2: #6b7590;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.22);
+
+  --f-base: linear-gradient(180deg, #0a1220, #04070e 55%);
+  --f-panel: rgba(255, 255, 255, 0.055);
+  --f-panel-2: rgba(255, 255, 255, 0.1);
+  --f-panel-line: rgba(255, 255, 255, 0.14);
+  --f-solid: #ffffff;
+  --f-solid-ink: #06101c;
+  --f-ghost: rgba(255, 255, 255, 0.07);
+  --f-track: rgba(255, 255, 255, 0.12);
+
+  /* Per-slide washes, referenced from the decks as var(--f-bg-*). */
+  --f-bg-night:
+    radial-gradient(130% 90% at 50% 0%, rgba(255, 200, 80, 0.16), transparent 55%),
+    radial-gradient(90% 60% at 50% 108%, rgba(30, 230, 164, 0.16), transparent 60%),
+    linear-gradient(180deg, #0a0f1c, #03060c 70%);
+  --f-bg-emerald:
+    radial-gradient(120% 80% at 50% 8%, rgba(30, 230, 164, 0.3), transparent 60%),
+    linear-gradient(180deg, #04120e, #04070e 70%);
+  --f-bg-gold:
+    radial-gradient(120% 80% at 50% 10%, rgba(255, 200, 80, 0.3), transparent 60%),
+    linear-gradient(180deg, #170f02, #04070e 70%);
+  --f-bg-indigo:
+    radial-gradient(120% 80% at 50% 5%, rgba(99, 132, 255, 0.28), transparent 62%),
+    linear-gradient(180deg, #080d20, #04070e 70%);
+  --f-bg-crimson:
+    radial-gradient(120% 80% at 50% 10%, rgba(255, 93, 115, 0.32), transparent 60%),
+    linear-gradient(180deg, #1a060c, #04070e 70%);
+  --f-bg-violet:
+    radial-gradient(120% 80% at 50% 8%, rgba(168, 110, 255, 0.28), transparent 62%),
+    linear-gradient(180deg, #120a20, #04070e 70%);
+  --f-bg-slate:
+    radial-gradient(120% 80% at 50% 12%, rgba(140, 160, 190, 0.2), transparent 62%),
+    linear-gradient(180deg, #0b111c, #04070e 70%);
+  --f-bg-magenta:
+    radial-gradient(120% 80% at 50% 8%, rgba(255, 110, 190, 0.26), transparent 62%),
+    linear-gradient(180deg, #180a16, #04070e 70%);
+  --f-bg-teal:
+    radial-gradient(120% 80% at 50% 8%, rgba(60, 200, 220, 0.26), transparent 62%),
+    linear-gradient(180deg, #04161c, #04070e 70%);
+}
+
+/* Day stage: warm paper rather than a washed-out copy of the night one. Ink
+   goes dark and the washes become tints, so every slide keeps its identity
+   instead of turning into pale grey mush. */
+[data-theme='gray'] .finale-stage {
+  --fg: #161c2a;
+  --muted: #4d5769;
+  --muted-2: #6f7889;
+  --line: rgba(20, 28, 45, 0.14);
+  --line-strong: rgba(20, 28, 45, 0.26);
+
+  --f-base: linear-gradient(180deg, #eceef2, #dfe3ea 60%);
+  --f-panel: rgba(255, 255, 255, 0.7);
+  --f-panel-2: rgba(255, 255, 255, 0.92);
+  --f-panel-line: rgba(20, 28, 45, 0.14);
+  --f-solid: #161c2a;
+  --f-solid-ink: #ffffff;
+  --f-ghost: rgba(20, 28, 45, 0.07);
+  --f-track: rgba(20, 28, 45, 0.14);
+
+  --f-bg-night:
+    radial-gradient(130% 90% at 50% 0%, rgba(214, 168, 60, 0.3), transparent 58%),
+    radial-gradient(90% 60% at 50% 108%, rgba(12, 155, 107, 0.2), transparent 62%),
+    linear-gradient(180deg, #f3f1ea, #e2e5ec 70%);
+  --f-bg-emerald:
+    radial-gradient(120% 80% at 50% 8%, rgba(12, 155, 107, 0.3), transparent 62%),
+    linear-gradient(180deg, #e6f2ec, #dfe4ea 72%);
+  --f-bg-gold:
+    radial-gradient(120% 80% at 50% 10%, rgba(214, 168, 60, 0.38), transparent 62%),
+    linear-gradient(180deg, #f7f0dd, #e2e5ec 72%);
+  --f-bg-indigo:
+    radial-gradient(120% 80% at 50% 5%, rgba(99, 132, 255, 0.3), transparent 64%),
+    linear-gradient(180deg, #e7eaf6, #dfe3ea 72%);
+  --f-bg-crimson:
+    radial-gradient(120% 80% at 50% 10%, rgba(207, 58, 82, 0.26), transparent 62%),
+    linear-gradient(180deg, #f7e8ea, #dfe3ea 72%);
+  --f-bg-violet:
+    radial-gradient(120% 80% at 50% 8%, rgba(138, 84, 214, 0.24), transparent 64%),
+    linear-gradient(180deg, #eee8f7, #dfe3ea 72%);
+  --f-bg-slate:
+    radial-gradient(120% 80% at 50% 12%, rgba(90, 110, 140, 0.22), transparent 64%),
+    linear-gradient(180deg, #e8eaef, #dcdfe6 72%);
+  --f-bg-magenta:
+    radial-gradient(120% 80% at 50% 8%, rgba(214, 74, 150, 0.22), transparent 64%),
+    linear-gradient(180deg, #f6e8f1, #dfe3ea 72%);
+  --f-bg-teal:
+    radial-gradient(120% 80% at 50% 8%, rgba(20, 150, 170, 0.24), transparent 64%),
+    linear-gradient(180deg, #e2f0f3, #dfe3ea 72%);
+}
+
+/* Shared finale surfaces, so no slide hard-codes a white alpha that would
+   vanish on a light background. */
+.f-panel {
+  background: var(--f-panel);
+  border: 1px solid var(--f-panel-line);
+}
+.f-chip {
+  background: var(--f-panel-2);
+  color: var(--fg);
+}
+.f-solid {
+  background: var(--f-solid);
+  color: var(--f-solid-ink);
+}
+.f-track {
+  background: var(--f-track);
+}
+.f-fill {
+  background: var(--f-panel);
+}
+.f-fill-2 {
+  background: var(--f-panel-2);
+}
+.f-line {
+  border-color: var(--f-panel-line);
 }
 
 /* Slide entrance: content rises and sharpens. */
 @keyframes finale-in {
   from { opacity: 0; transform: translateY(18px) scale(0.985); filter: blur(6px); }
   to { opacity: 1; transform: none; filter: blur(0); }
-}
-@keyframes finale-out {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: scale(0.96); }
 }
 
 /* Line-by-line kinetic type: each line wipes up from behind a mask. */
@@ -400,7 +509,7 @@ body {
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-/* Bars growing from zero; width is set inline as a custom property. */
+/* Bars growing from zero. */
 @keyframes bar-grow {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
@@ -439,7 +548,7 @@ body {
   50% { transform: translateY(-7px) rotate(2deg); }
 }
 
-/* Conic progress ring for share-of-chat style stats. */
+/* Conic progress ring for share-of-total stats. */
 @keyframes ring-fill {
   from { --ring-deg: 0deg; }
   to { --ring-deg: var(--ring-target); }
@@ -454,37 +563,6 @@ body {
 @keyframes seg-fill {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .anim-in { animation: finale-in 0.62s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
-  .mask-line > span { animation: mask-up 0.72s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
-  .anim-count { animation: count-pop 0.72s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
-  .anim-stamp { animation: stamp-in 0.55s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
-  .anim-bar { transform-origin: left center; animation: bar-grow 0.9s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
-  .anim-plinth { animation: plinth-rise 0.95s cubic-bezier(0.18, 0.9, 0.3, 1) both; }
-  .anim-flare { animation: flare 1.5s ease-out both; }
-  .anim-trophy { animation: trophy-sway 4.5s ease-in-out infinite; }
-  .spotlight { animation: spotlight-drift 11s ease-in-out infinite; }
-  .dust { animation: dust-float linear infinite; }
-  .seg-fill { transform-origin: left center; animation: seg-fill linear both; }
-  .ring-stat { animation: ring-fill 1.1s ease-out both; }
-}
-
-/* Reduced motion: everything is simply already there. */
-@media (prefers-reduced-motion: reduce) {
-  .anim-in,
-  .mask-line > span,
-  .anim-count,
-  .anim-stamp,
-  .anim-bar,
-  .anim-plinth,
-  .anim-flare,
-  .seg-fill,
-  .ring-stat {
-    animation: none !important;
-  }
-  .ring-stat { --ring-deg: var(--ring-target); }
 }
 
 /* Per-slide backdrop: a slow drift so no slide is ever completely static. */
@@ -511,24 +589,48 @@ body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .anim-in { animation: finale-in 0.62s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+  .mask-line > span { animation: mask-up 0.72s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+  .anim-count { animation: count-pop 0.72s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+  .anim-stamp { animation: stamp-in 0.55s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+  .anim-bar { transform-origin: left center; animation: bar-grow 0.9s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+  .anim-plinth { animation: plinth-rise 0.95s cubic-bezier(0.18, 0.9, 0.3, 1) both; }
+  .anim-flare { animation: flare 1.5s ease-out both; }
+  .anim-trophy { animation: trophy-sway 4.5s ease-in-out infinite; }
+  .spotlight { animation: spotlight-drift 11s ease-in-out infinite; }
+  .dust { animation: dust-float linear infinite; }
+  .seg-fill { transform-origin: left center; animation: seg-fill linear both; }
+  .ring-stat { animation: ring-fill 1.1s ease-out both; }
   .anim-slide-bg { animation: slide-bg 9s ease-out both; }
   .marquee-track { animation: marquee 26s linear infinite; }
   .anim-ghost { animation: ghost-in 1.2s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
   .halo-spin { animation: halo-spin 26s linear infinite; }
 }
+
+/* Reduced motion: everything is simply already there. */
 @media (prefers-reduced-motion: reduce) {
+  .anim-in,
+  .mask-line > span,
+  .anim-count,
+  .anim-stamp,
+  .anim-bar,
+  .anim-plinth,
+  .anim-flare,
+  .seg-fill,
+  .ring-stat,
   .anim-slide-bg,
   .marquee-track,
   .anim-ghost,
   .halo-spin {
     animation: none !important;
   }
+  .ring-stat { --ring-deg: var(--ring-target); }
 }
 
 /* Wordmark-scale display type for the story slides. */
 .finale-hero {
   font-family: var(--font-bebas), var(--font-hanken), sans-serif;
-  font-size: clamp(3.2rem, 17vw, 6.5rem);
+  font-size: clamp(3rem, 16vw, 6rem);
   line-height: 0.88;
   letter-spacing: 0.01em;
 }
@@ -539,20 +641,38 @@ body {
   text-transform: uppercase;
 }
 
-/* A metallic text fill for the champion's name. */
+/* Metallic text fill. The day theme needs genuinely darker stops, or gold on
+   a light surface reads as blank space. */
 .metal-gold {
   background: linear-gradient(170deg, #fff3cf 0%, #ffc850 42%, #b8862a 68%, #ffe7a8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
+[data-theme='gray'] .metal-gold {
+  background: linear-gradient(170deg, #a9761a 0%, #7d5209 38%, #c69a30 64%, #6d4707 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
-/* Finale door tiles on the home hub. */
+/* Same problem for the sweeping gold shine used on headings app-wide: its
+   near-white midpoint disappears on a light background. */
+[data-theme='gray'] .shine {
+  background: linear-gradient(90deg, #7d5209, #c69a30, #7d5209);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Finale door tiles on the hub. Centre-aligned by design. */
 .door {
   position: relative;
   overflow: hidden;
   border-radius: 1.35rem;
   border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
   isolation: isolate;
 }
 .door::after {
@@ -560,7 +680,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(120% 130% at 12% 0%, var(--door-glow, transparent), transparent 62%);
+  background: radial-gradient(120% 130% at 50% 0%, var(--door-glow, transparent), transparent 68%);
 }
 
 ::-webkit-scrollbar { width: 0; height: 0; }

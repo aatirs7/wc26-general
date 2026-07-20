@@ -27,10 +27,40 @@ export default async function ResultsPage({
           <div className="anim-trophy text-6xl">🏆</div>
           <h1 className="mt-3 font-display text-4xl">The finale</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-            The podium, your Wrapped, the pool Wrapped and the people&apos;s awards all unlock the moment
+            The podium, your Recap, the pool Recap and the people&apos;s awards all unlock the moment
             the World Cup final ends. Come back once the trophy is lifted.
           </p>
         </header>
+      </div>
+    );
+  }
+
+  // In more than one pool and have not said which: choose first. A recap only
+  // means anything against a specific group, so guessing from a cookie would
+  // launch the wrong one.
+  if (gate.needsChoice) {
+    return (
+      <div className="py-4 text-center lg:mx-auto lg:max-w-2xl">
+        <header className="pt-6">
+          <p className="finale-kicker text-gold">Full time</p>
+          <h1 className="shine mt-1 font-display text-5xl leading-none">The finale</h1>
+          <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-relaxed text-muted">
+            You are in {gate.memberships.length} pools. Pick the one you want the recap for.
+          </p>
+        </header>
+        <div className="mt-6 space-y-2">
+          {gate.memberships.map((m) => (
+            <Link
+              key={m.poolId}
+              href={`/results?pool=${m.poolId}`}
+              className="door block px-5 py-4 active:scale-[0.99]"
+              style={{ '--door-glow': 'rgba(30,230,164,0.18)' } as React.CSSProperties}
+            >
+              <span className="block font-display text-2xl leading-none">{m.poolName}</span>
+              <span className="mt-1 block text-xs text-muted">See this pool&apos;s finale</span>
+            </Link>
+          ))}
+        </div>
       </div>
     );
   }
