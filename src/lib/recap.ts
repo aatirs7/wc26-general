@@ -978,11 +978,17 @@ export async function loadPoolRecap(poolId: string): Promise<PoolRecap> {
       }
     : null;
 
-  // Least-backed team that still made the semi-finals.
+  // Least-backed team that still made the semi-finals, but ONLY when the
+  // backing was genuinely thin. Taking the minimum unconditionally produced
+  // nonsense like "nobody saw it coming" about a team 25 of 27 brackets had
+  // picked; if every semi-finalist was well backed, the slide is simply wrong
+  // and gets skipped.
+  const UNDERDOG_MAX_PCT = 35;
   const semiFinalists = [...ctx.facts.reached.final, ...ctx.facts.reached.sf];
   let nobodySaw: PoolRecap['nobodySaw'] = null;
   for (const code of new Set(semiFinalists)) {
     const count = backing.get(code) ?? 0;
+    if (pct(count) > UNDERDOG_MAX_PCT) continue;
     if (!nobodySaw || count < nobodySaw.count) {
       nobodySaw = {
         team: ctx.team(code)!,

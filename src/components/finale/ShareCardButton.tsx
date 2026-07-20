@@ -20,18 +20,23 @@ export default function ShareCardButton({
   text,
   className = '',
   label = 'Share',
+  onBusyChange,
 }: {
   url: string;
   filename: string;
   title: string;
   text: string;
   className?: string;
+  // Empty string renders an icon-only button, for the story deck header.
   label?: string;
+  // Lets a caller pause itself while the share sheet is open.
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [state, setState] = useState<State>('idle');
 
   async function run() {
     setState('working');
+    onBusyChange?.(true);
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error('could not build the image');
@@ -46,6 +51,7 @@ export default function ShareCardButton({
       if (nav.canShare?.({ files: [file] })) {
         await nav.share({ files: [file], title, text });
         setState('idle');
+        onBusyChange?.(false);
         return;
       }
 
@@ -59,8 +65,10 @@ export default function ShareCardButton({
       a.remove();
       URL.revokeObjectURL(href);
       setState('idle');
+      onBusyChange?.(false);
     } catch (e) {
       // A cancelled share sheet rejects with AbortError, which is not a failure.
+      onBusyChange?.(false);
       if (e instanceof DOMException && e.name === 'AbortError') {
         setState('idle');
         return;
@@ -74,6 +82,7 @@ export default function ShareCardButton({
       type="button"
       onClick={run}
       disabled={state === 'working'}
+      aria-label={label || 'Share this slide'}
       className={`flex items-center justify-center gap-2 ${className}`}
     >
       {state === 'working' ? (
@@ -83,7 +92,7 @@ export default function ShareCardButton({
       ) : (
         <Share2 className="h-4 w-4" />
       )}
-      {state === 'working' ? 'Building the image' : state === 'error' ? 'Try again' : label}
+      {label ? (state === 'working' ? 'Building the image' : state === 'error' ? 'Try again' : label) : null}
     </button>
   );
 }

@@ -360,3 +360,30 @@ the image can be sent straight into Messages. Each share carries a message:
 
 **Your own recap card**
 > My World Cup 2026 recap: {3rd} of {n} in {pool} on {n} points. {The Realist}.
+
+---
+
+## 11. Per-slide share cards (`src/lib/share-slides.ts`)
+
+Every slide in both recap decks can be exported as its own story image from the
+share control in the deck header. The slides themselves are unchanged; the card
+is a separate 1080x1920 image generated server-side from the same recap data,
+so nothing can be forged by editing a URL.
+
+Each card is: kicker, optional emoji or flag, headline, an oversized stat, a
+supporting line, then the footer. Examples of the accompanying message:
+
+- Total: `{n} points in {pool}.`
+- Champion: `I crowned {team}. Called it.` / `It did not work out.`
+- Ride or die: `{team} put {n} points on my total.`
+- Betrayal: `{team} cost me {n} points.`
+- Nemesis: `{name} and I swapped places {n} times.`
+- Twin: `My bracket was {n}% identical to {name}.`
+- Persona: `My World Cup 2026 persona: {The Realist}.`
+- Placement: `Finished {3rd} of {n} in {pool} on {n} points.`
+- Pool total: `{n} of us scored {n} points between us.`
+- Underdog: `{team} reached {the semi-finals} with {n} of {n} brackets backing them.`
+
+Note: the persona card deliberately does not reuse the deck's line, which is
+written in the second person ("You produced...") and would read as if it were
+addressing whoever received the image.

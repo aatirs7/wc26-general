@@ -7,6 +7,7 @@ import type { Award } from '@/lib/results';
 import { actualChampionBias, exitBias, poolChampionBias } from '@/lib/bias';
 import StoryDeck, { type Slide } from './StoryDeck';
 import ShareCardButton from './ShareCardButton';
+import { poolShareCards } from '@/lib/share-slides';
 import { congratsText } from '@/lib/share-text';
 import { Avatar, Bar, BiasNote, BigStat, CountUp, FlagDisc, Kicker, Layered, Marquee, MaskLines } from './kit';
 
@@ -38,8 +39,25 @@ export default function PoolRecapDeck({
 }) {
   const d = data;
   const slides: Slide[] = [];
-  const push = (key: string, node: React.ReactNode, ms?: number, bg?: string) =>
-    slides.push({ key, node, ms, bg });
+  // Per-slide export cards, as on the personal deck. Slide markup is untouched.
+  const shareCards = poolShareCards(d);
+  const push = (key: string, node: React.ReactNode, ms?: number, bg?: string) => {
+    const card = shareCards[key];
+    slides.push({
+      key,
+      node,
+      ms,
+      bg,
+      share: card
+        ? {
+            url: `/results/card/slide?pool=${d.poolId}&deck=pool&slide=${key}`,
+            filename: `${d.poolName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${key}.png`,
+            title: `${d.poolName}, World Cup 2026`,
+            text: card.text,
+          }
+        : undefined,
+    });
+  };
 
   // 1. Cold open
   push(

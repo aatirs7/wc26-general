@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Pause, RotateCcw } from 'lucide-react';
 import { useBodyScrollLock, useReducedMotion } from './kit';
+import ShareCardButton from './ShareCardButton';
 
 export interface Slide {
   key: string;
@@ -13,6 +14,9 @@ export interface Slide {
   // background value; it sits above the deck's base gradient and drifts.
   bg?: string;
   node: React.ReactNode;
+  // When set, this slide can be exported as its own story image. The deck
+  // shows a share control for it; the slide itself is untouched.
+  share?: { url: string; filename: string; title: string; text: string };
 }
 
 const DEFAULT_MS = 6200;
@@ -158,6 +162,17 @@ export default function StoryDeck({
 
       {/* Controls */}
       <div className="absolute right-3 top-[calc(env(safe-area-inset-top)+1.4rem)] z-30 flex items-center gap-2">
+        {current.share ? (
+          <ShareCardButton
+            url={current.share.url}
+            filename={current.share.filename}
+            title={current.share.title}
+            text={current.share.text}
+            label=""
+            onBusyChange={setPaused}
+            className="h-9 w-9 rounded-full f-fill-2 text-foreground active:scale-90"
+          />
+        ) : null}
         {paused ? (
           <span className="flex h-8 items-center gap-1 rounded-full f-fill-2 px-3 text-[0.65rem] font-bold uppercase tracking-wider text-foreground">
             <Pause className="h-3 w-3" /> Held

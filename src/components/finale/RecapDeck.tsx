@@ -5,6 +5,7 @@ import type { PersonalRecap } from '@/lib/recap';
 import { betrayalBias, championBias, rideBias } from '@/lib/bias';
 import StoryDeck, { type Slide } from './StoryDeck';
 import RankLine from './RankLine';
+import { personalShareCards } from '@/lib/share-slides';
 import ShareCardButton from './ShareCardButton';
 import {
   Avatar,
@@ -49,8 +50,26 @@ const dayLabel = (iso: string) =>
 export default function RecapDeck({ data }: { data: PersonalRecap }) {
   const d = data;
   const slides: Slide[] = [];
-  const push = (key: string, node: React.ReactNode, ms?: number, bg?: string) =>
-    slides.push({ key, node, ms, bg });
+  // Per-slide export cards. Attaching them here keeps every slide's markup
+  // exactly as it was; the deck just gains a share control in its header.
+  const shareCards = personalShareCards(d);
+  const push = (key: string, node: React.ReactNode, ms?: number, bg?: string) => {
+    const card = shareCards[key];
+    slides.push({
+      key,
+      node,
+      ms,
+      bg,
+      share: card
+        ? {
+            url: `/results/card/slide?pool=${d.poolId}&deck=me&slide=${key}`,
+            filename: `recap-${key}.png`,
+            title: `${d.name}, World Cup 2026`,
+            text: card.text,
+          }
+        : undefined,
+    });
+  };
 
   // 1. Cold open
   push(
