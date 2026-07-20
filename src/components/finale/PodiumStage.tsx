@@ -279,6 +279,27 @@ export default function PodiumStage({
           </div>
         ) : null}
 
+        {/* Share sits directly under the champion, which is the emotional peak
+            and where people actually want to send it. It used to be at the very
+            bottom, below the whole field, where nobody found it. */}
+        <div
+          className="mt-4 transition-all duration-700"
+          style={{ opacity: settled ? 1 : 0, transform: settled ? 'none' : 'translateY(12px)' }}
+        >
+          <ShareCardButton
+            url={`/results/card?pool=${poolId}`}
+            filename="podium.png"
+            title={`${data.poolName} final standings`}
+            text={congratsText(
+              data.poolName,
+              data.podium,
+              data.championTeam ? `${data.championTeam.flag} ${data.championTeam.name}` : null,
+            )}
+            label="Share this podium"
+            className="w-full rounded-2xl f-solid py-3.5 text-sm font-bold active:scale-95"
+          />
+        </div>
+
         {/* The rest of the field */}
         {rest.length ? (
           <section className="mt-8" style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms' }}>
@@ -317,26 +338,14 @@ export default function PodiumStage({
             {data.viewer.player.combined} points.
           </p>
         ) : null}
-
-        <div className="mt-8 space-y-2" style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms 400ms' }}>
+        {/* Tail action only. Sharing has moved up next to the champion. */}
+        <div className="mt-8" style={{ opacity: settled ? 1 : 0, transition: 'opacity 700ms 400ms' }}>
           <Link
             href={`/results/recap?pool=${poolId}`}
-            className="block w-full rounded-2xl f-solid py-3 text-center text-sm font-bold active:scale-95"
+            className="block w-full rounded-2xl border py-3 text-center text-sm font-bold f-panel active:scale-95"
           >
-            Watch your Recap
+            Watch your recap
           </Link>
-          <ShareCardButton
-            url={`/results/card?pool=${poolId}`}
-            filename="podium.png"
-            title={`${data.poolName} final standings`}
-            text={congratsText(
-              data.poolName,
-              data.podium,
-              data.championTeam ? `${data.championTeam.flag} ${data.championTeam.name}` : null,
-            )}
-            label="Share this podium"
-            className="w-full rounded-2xl border py-3 text-sm font-bold active:scale-95 f-panel"
-          />
         </div>
       </div>
     </div>
