@@ -1,81 +1,55 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db';
-import { matches, poolMembers, pools, users } from '@/lib/schema';
-import { currentUserId } from '@/lib/auth';
-import { ROOT_ID } from '@/lib/knockout-bracket';
-import { isTournamentOver, isFinalePreview } from '@/lib/finale';
+import { finaleGate } from '@/lib/finale-access';
 import { loadResults } from '@/lib/results';
-import ResultsView from '@/components/results/ResultsView';
+import { loadVotes } from '@/lib/votes';
+import FinaleHub from '@/components/finale/FinaleHub';
 
 export const dynamic = 'force-dynamic';
 
+// The finale hub: the three doors plus voting. Every other /results/* route
+// is one of the doors.
 export default async function ResultsPage({
   searchParams,
 }: {
   searchParams: Promise<{ pool?: string }>;
 }) {
-  const userId = await currentUserId();
-  if (!userId) redirect('/');
+  const { pool: requested } = await searchParams;
+  const gate = await finaleGate(requested);
 
-  const [me] = await db
-    .select({ displayName: users.displayName })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const [finalMatch] = await db
-    .select({ status: matches.status })
-    .from(matches)
-    .where(eq(matches.id, ROOT_ID))
-    .limit(1);
+  if (gate.state === 'anon') redirect('/');
+  if (gate.state === 'no-pool') redirect('/bracket');
 
-  const over = isTournamentOver(finalMatch?.status);
-  const preview = isFinalePreview(me?.displayName);
-
-  if (!over && !preview) {
+  if (gate.state === 'locked') {
     return (
       <div className="py-4 lg:mx-auto lg:max-w-2xl">
         <header className="pt-10 text-center">
-          <div className="text-6xl">🏆</div>
+          <div className="anim-trophy text-6xl">🏆</div>
           <h1 className="mt-3 font-display text-4xl">The finale</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-            The podium, the superlative awards and your tournament recap all unlock the moment the
-            World Cup final ends. Come back once the trophy is lifted.
+            The podium, your Wrapped, the pool Wrapped and the people&apos;s awards all unlock the moment
+            the World Cup final ends. Come back once the trophy is lifted.
           </p>
         </header>
       </div>
     );
   }
 
-  const memberships = await db
-    .select({ poolId: poolMembers.poolId, poolName: pools.name })
-    .from(poolMembers)
-    .innerJoin(pools, eq(pools.id, poolMembers.poolId))
-    .where(eq(poolMembers.userId, userId));
-  if (memberships.length === 0) redirect('/bracket');
-
-  const { pool: requested } = await searchParams;
-  const cookiePool = (await cookies()).get('wc26_active_pool')?.value;
-  const active =
-    memberships.find((m) => m.poolId === requested) ??
-    memberships.find((m) => m.poolId === cookiePool) ??
-    memberships.find((m) => m.poolId === process.env.NEXT_PUBLIC_DEFAULT_POOL_ID) ??
-    memberships[0];
-
-  const data = await loadResults(active.poolId, userId);
+  const [data, votes] = await Promise.all([
+    loadResults(gate.active.poolId, gate.userId),
+    loadVotes(gate.active.poolId, gate.userId),
+  ]);
 
   return (
     <div className="py-4 lg:mx-auto lg:max-w-2xl">
-      {memberships.length > 1 ? (
+      {gate.memberships.length > 1 ? (
         <div className="mb-3 flex justify-center gap-2 overflow-x-auto pb-1">
-          {memberships.map((m) => (
+          {gate.memberships.map((m) => (
             <Link
               key={m.poolId}
               href={`/results?pool=${m.poolId}`}
               className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                m.poolId === active.poolId
+                m.poolId === gate.active.poolId
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-edge bg-white/[0.02] text-muted'
               }`}
@@ -86,7 +60,23 @@ export default async function ResultsPage({
         </div>
       ) : null}
 
-      <ResultsView data={data} over={over} poolId={active.poolId} />
+      {!gate.over ? (
+        <p className="mb-3 rounded-xl border border-gold/40 bg-gold/[0.08] px-3 py-2 text-center text-[0.7rem] font-semibold text-gold">
+          Preview, computed from the standings as they are right now. The real finale unlocks when the
+          World Cup final ends.
+        </p>
+      ) : null}
+
+      <FinaleHub
+        poolId={gate.active.poolId}
+        poolName={data.poolName}
+        points={data.viewer?.player.combined ?? 0}
+        rank={data.viewer?.player.rank ?? null}
+        fieldSize={data.standings.length}
+        championName={data.podium[0]?.name ?? null}
+        votesDone={votes.myVoteCount}
+        votesTotal={votes.categories.length}
+      />
     </div>
   );
 }

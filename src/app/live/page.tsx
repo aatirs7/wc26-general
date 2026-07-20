@@ -125,6 +125,11 @@ export default async function LivePage({
   // Next scheduled kickoff in the future, for the countdown.
   const nextMatch = allMatches.find((m) => m.status === 'scheduled' && m.kickoffUtc.getTime() > now) ?? null;
 
+  // Nothing scheduled and nothing in play means the whole tournament is done,
+  // so Match Day becomes a sign-off pointing at the finale rather than a
+  // countdown to a kickoff that will never come.
+  const tournamentOver = nextMatch === null && liveMatches.length === 0;
+
   const inPlay = [...liveMatches, ...todayMatches].filter(
     (m) => (m.homeCode && labels.has(m.homeCode)) || (m.awayCode && labels.has(m.awayCode)),
   ).length;
@@ -176,6 +181,23 @@ export default async function LivePage({
         </div>
       </section>
 
+      {tournamentOver ? (
+        <section className="card space-y-3 p-5 text-center">
+          <div className="anim-trophy text-5xl">🏆</div>
+          <h2 className="font-display text-3xl leading-none">That is full time on all of it</h2>
+          <p className="mx-auto max-w-xs text-sm leading-relaxed text-muted">
+            Every one of the 104 matches has been played. There is no next kickoff. All that is left is
+            the reckoning.
+          </p>
+          <Link
+            href={`/results?pool=${active.poolId}`}
+            className="mx-auto block w-full max-w-xs rounded-2xl bg-accent py-3 text-sm font-bold text-[var(--accent-ink)] active:scale-95"
+          >
+            Open the finale
+          </Link>
+        </section>
+      ) : null}
+
       {nextMatch ? (
         <section className="card space-y-3 p-4">
           <div className="flex items-center justify-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-gold">
@@ -215,7 +237,11 @@ export default async function LivePage({
           ))
         ) : (
           <p className="card p-4 text-center text-sm text-muted">
-            {liveMatches.length > 0 ? 'That is every match today.' : 'No matches today. The next kickoff is counting down above.'}
+            {liveMatches.length > 0
+              ? 'That is every match today.'
+              : tournamentOver
+                ? 'The tournament is finished. There will not be another one of these for four years.'
+                : 'No matches today. The next kickoff is counting down above.'}
           </p>
         )}
       </section>

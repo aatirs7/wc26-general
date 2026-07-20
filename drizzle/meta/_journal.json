@@ -22,6 +22,13 @@
       "when": 1782757925317,
       "tag": "0002_awesome_the_call",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784504503610,
+      "tag": "0003_curly_edwin_jarvis",
+      "breakpoints": true
     }
   ]
 }

@@ -30,6 +30,10 @@ import AutofillNotice from '@/components/AutofillNotice';
 import DailyRecap, { type RecapData } from '@/components/home/DailyRecap';
 import UnlockBanner from '@/components/home/UnlockBanner';
 import ChatBadge from '@/components/chat/ChatBadge';
+import { isFinaleActive } from '@/lib/finale-access';
+import { loadVotes } from '@/lib/votes';
+import FinaleHub from '@/components/finale/FinaleHub';
+import BackToApp from '@/components/finale/BackToApp';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,6 +146,7 @@ export default async function HomePage({
     | { id: string; name: string; submitted: boolean; points: number; complete: boolean }
     | null = null;
   let recap: RecapData = { climber: null, faller: null, gainer: null, you: null };
+  let leaderName: string | null = null;
 
   if (active) {
     const members = await db
@@ -282,6 +287,18 @@ export default async function HomePage({
       recap = { climber, faller, gainer, you };
     }
 
+    // Leader of the active pool, for the (blurred) champion tease on the
+    // finale hub.
+    const leaderId = standings[0]?.ownerId;
+    if (leaderId) {
+      const [leader] = await db
+        .select({ name: users.displayName })
+        .from(users)
+        .where(eq(users.id, leaderId))
+        .limit(1);
+      leaderName = leader?.name ?? null;
+    }
+
     const mine = bracketByOwner.get(userId);
     if (mine) {
       myBracket = {
@@ -318,6 +335,11 @@ export default async function HomePage({
     }
   }
 
+  // Once the final has been played the home screen leads with the finale and
+  // tucks the normal dashboard behind a toggle.
+  const finaleActive = await isFinaleActive(me?.displayName);
+  const votes = finaleActive ? await loadVotes(active.poolId, userId) : null;
+
   const cta =
     !myBracket || (!locked && !myBracket.submitted)
       ? locked
@@ -348,6 +370,24 @@ export default async function HomePage({
       {memberships.length > 1 ? (
         <PoolSwitcher pools={memberships} activeId={active.poolId} />
       ) : null}
+
+      {finaleActive && votes ? (
+        <section className="reveal">
+          <FinaleHub
+            poolId={active.poolId}
+            poolName={active.poolName}
+            points={myBracket?.points ?? 0}
+            rank={myRank}
+            fieldSize={fieldSize}
+            championName={leaderName}
+            votesDone={votes.myVoteCount}
+            votesTotal={votes.categories.length}
+            compact
+          />
+        </section>
+      ) : null}
+
+      <FinaleWrap active={finaleActive}>
 
       {unlocks.map((u) => (
         <UnlockBanner key={u.poolId} poolName={u.poolName} poolId={u.poolId} untilMs={u.until.getTime()} />
@@ -537,6 +577,14 @@ export default async function HomePage({
       </section>
       </div>
       </div>
+      </FinaleWrap>
     </div>
   );
+}
+
+// Before the finale the dashboard renders exactly as it always has; after it,
+// the same content moves behind a "Back to the app" toggle.
+function FinaleWrap({ active, children }: { active: boolean; children: React.ReactNode }) {
+  if (!active) return <>{children}</>;
+  return <BackToApp>{children}</BackToApp>;
 }

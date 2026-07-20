@@ -410,7 +410,12 @@ const REMAINING_KICKOFFS_UTC = [
   '2026-07-19T19:00:00Z', // final
 ];
 const PRE_MATCH_MS = 15 * 60 * 1000; // begin syncing 15 min before kickoff
-const POST_MATCH_MS = 3 * 60 * 60 * 1000; // keep syncing up to 3h past kickoff
+// Keep syncing well past kickoff. Three hours was not enough: the final went
+// to extra time and the provider only flipped it to a final status after the
+// window had already closed, so the result sat stuck on "live" with no tick
+// left to correct it. A knockout tie can run 90 + 30 + penalties plus a long
+// build-up and provider lag, so leave a generous tail.
+const POST_MATCH_MS = 8 * 60 * 60 * 1000;
 
 // Pure and DB-free: is `now` inside any remaining match's live window? The cron
 // calls this FIRST so an out-of-window tick returns before opening a Neon

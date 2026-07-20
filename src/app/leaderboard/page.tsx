@@ -236,12 +236,12 @@ export default async function LeaderboardPage({
 
       {finaleReady ? (
         <Link
-          href="/results"
-          className="block rounded-xl border border-gold/40 bg-gold/[0.08] px-4 py-3 text-center active:scale-[0.99]"
+          href={`/results?pool=${active.poolId}`}
+          className="shine-sweep block rounded-xl border border-gold/40 bg-gold/[0.08] px-4 py-3 text-center active:scale-[0.99]"
         >
-          <span className="font-display text-lg text-gold">🏆 The finale is here</span>
+          <span className="font-display text-lg text-gold">🏆 This table is final</span>
           <span className="mt-0.5 block text-xs text-muted">
-            See the podium, awards and your tournament recap →
+            Your Wrapped, the pool Wrapped and the podium are ready &rarr;
           </span>
         </Link>
       ) : null}

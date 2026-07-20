@@ -143,6 +143,23 @@ export const standingSnapshots = pgTable(
   (t) => [primaryKey({ columns: [t.poolId, t.userId] })],
 );
 
+// Voted superlatives: at the end of the tournament each member crowns one
+// other member per category. Receipts are public by design, so voterId is
+// read back and shown in the UI. One row per (pool, voter, category); voting
+// again overwrites the previous pick.
+export const superlativeVotes = pgTable(
+  'superlative_votes',
+  {
+    poolId: uuid('pool_id').notNull(),
+    voterId: uuid('voter_id').notNull(),
+    categoryKey: text('category_key').notNull(),
+    subjectId: uuid('subject_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.poolId, t.voterId, t.categoryKey] })],
+);
+
 // Group smack-talk: a lightweight per-group message feed.
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
