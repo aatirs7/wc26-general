@@ -387,3 +387,22 @@ supporting line, then the footer. Examples of the accompanying message:
 Note: the persona card deliberately does not reuse the deck's line, which is
 written in the second person ("You produced...") and would read as if it were
 addressing whoever received the image.
+
+---
+
+## 12. Badge wording correction
+
+Two badges in `src/lib/achievements.ts` were describing themselves wrongly.
+
+**Thirds Oracle** said "Called all eight best third-place teams." The points are
+actually awarded for having each qualifying third anywhere in your top three,
+not for slotting them third, so someone could earn it having called only six of
+eight as thirds while a rival who called seven missed out. Now reads:
+
+> Every best third-place qualifier was in your top three.
+
+**Group Stage Guru** ("Nailed every group top two.") was unearnable. It compared
+`scores.groups` against `12 * groupTop2 * 2 = 72`, a threshold written before
+the exact-position bonus existed; real brackets score 90 to 98 against a ceiling
+of 120, so the equality never held. It now counts correct top-two teams directly
+and its hint reads `{n}/24 top-two teams`.

@@ -96,7 +96,17 @@ export default function StoryDeck({
   const touch = useRef<{ x: number; y: number; t: number } | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Taps that land on a control are that control's business. Without this the
+  // container's tap-to-advance also fired, so hitting share moved the deck on
+  // and you ended up sharing the next slide.
+  const fromControl = (target: EventTarget | null) =>
+    target instanceof Element && !!target.closest('button, a, [role="button"]');
+
   function onTouchStart(e: React.TouchEvent) {
+    if (fromControl(e.target)) {
+      touch.current = null;
+      return;
+    }
     const t = e.touches[0];
     touch.current = { x: t.clientX, y: t.clientY, t: Date.now() };
     holdTimer.current = setTimeout(() => setPaused(true), 260);
@@ -104,6 +114,11 @@ export default function StoryDeck({
 
   function onTouchEnd(e: React.TouchEvent) {
     if (holdTimer.current) clearTimeout(holdTimer.current);
+    if (fromControl(e.target)) {
+      touch.current = null;
+      setPaused(false);
+      return;
+    }
     const start = touch.current;
     touch.current = null;
     const wasPaused = paused;

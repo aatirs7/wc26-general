@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { feedback, users } from '@/lib/schema';
 import { currentUserId } from '@/lib/auth';
+import { isFeedbackAdmin } from '@/lib/feedback-access';
 import FeedbackForm from '@/components/finale/FeedbackForm';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export default async function FeedbackPage() {
     .where(eq(users.id, userId))
     .limit(1);
   const name = me?.displayName ?? 'you';
+  const admin = isFeedbackAdmin(me?.displayName);
 
   const mine = await db
     .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt })
@@ -65,6 +67,15 @@ export default async function FeedbackPage() {
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {admin ? (
+        <Link
+          href="/feedback/all"
+          className="block rounded-2xl border border-gold/40 bg-gold/[0.08] py-3 text-sm font-bold text-gold active:scale-95"
+        >
+          Read everyone&apos;s feedback
+        </Link>
       ) : null}
 
       <Link
