@@ -41,13 +41,12 @@ export default function FinaleTakeover({ poolCount = 1 }: { poolCount?: number }
 
   if (!open) return null;
 
+  // The night wash comes from the themed palette, so the splash follows the
+  // app's theme instead of forcing a dark surface under light text.
   return (
     <div
       className="finale-stage z-[300] flex flex-col items-center justify-center gap-4 px-8 text-center"
-      style={{
-        background:
-          'radial-gradient(130% 90% at 50% 0%, rgba(255,200,80,0.22), transparent 55%), radial-gradient(90% 60% at 50% 108%, rgba(30,230,164,0.2), transparent 60%), linear-gradient(180deg,#0a0f1c,#03060c 70%)',
-      }}
+      style={{ background: 'var(--f-bg-night)' }}
     >
       <button
         type="button"

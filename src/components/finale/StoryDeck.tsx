@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Pause, RotateCcw } from 'lucide-react';
-import { useReducedMotion } from './kit';
+import { useBodyScrollLock, useReducedMotion } from './kit';
 
 export interface Slide {
   key: string;
@@ -36,6 +36,7 @@ export default function StoryDeck({
   // Bumped on replay so every slide's animations restart from scratch.
   const [run, setRun] = useState(0);
   const reduced = useReducedMotion();
+  useBodyScrollLock();
 
   const current = slides[index];
   const duration = current?.ms ?? DEFAULT_MS;

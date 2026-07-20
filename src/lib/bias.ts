@@ -31,7 +31,7 @@ export function rideBias(code: string | null | undefined, name: string): string 
 
 // Line shown when a heavily backed team busts.
 export function betrayalBias(code: string | null | undefined): string | null {
-  if (isGoat(code)) return 'Not their fault. Never their fault.';
+  if (isGoat(code)) return 'Not Ronaldos fault. We looking at you Bruno Fernandes..';
   if (isRival(code)) return 'Honestly, this one felt inevitable from here.';
   return null;
 }

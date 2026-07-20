@@ -7,7 +7,7 @@ import type { ResultsData, ResultPlayer } from '@/lib/results';
 import Confetti from '@/components/results/Confetti';
 import ShareCardButton from './ShareCardButton';
 import { congratsText } from '@/lib/share-text';
-import { Avatar, CountUp, ordinal, useReducedMotion } from './kit';
+import { Avatar, CountUp, ordinal, useBodyScrollLock, useReducedMotion } from './kit';
 
 // Reveal beats. Third place first, then second, then a deliberate pause, then
 // the champion with a flare and confetti, then the rest of the table.
@@ -121,6 +121,7 @@ export default function PodiumStage({
   preview: boolean;
 }) {
   const reduced = useReducedMotion();
+  useBodyScrollLock();
   const [rawPhase, setPhase] = useState<number>(PHASE.DARK);
   const [run, setRun] = useState(0);
   const [first, second, third] = data.podium;
@@ -145,7 +146,7 @@ export default function PodiumStage({
   const rest = data.standings.slice(3);
 
   return (
-    <div key={run} className="finale-stage overflow-y-auto">
+    <div key={run} className="finale-stage finale-scroll">
       <Confetti fire={phase >= PHASE.FIRST} />
 
       {/* Spotlights and dust, purely atmosphere. */}

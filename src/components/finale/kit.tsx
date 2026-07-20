@@ -32,6 +32,24 @@ export const ordinal = (n: number) => {
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 };
 
+// The finale surfaces are fixed and cover the whole viewport, so the document
+// behind them must not scroll: without this a drag on the podium moved the
+// page underneath instead of the podium itself.
+export function useBodyScrollLock() {
+  useEffect(() => {
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBody = body.style.overflow;
+    const prevHtml = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = prevBody;
+      html.style.overflow = prevHtml;
+    };
+  }, []);
+}
+
 export function Kicker({ children, tone = 'accent' }: { children: React.ReactNode; tone?: 'accent' | 'gold' | 'muted' | 'live' }) {
   const color =
     tone === 'gold' ? 'text-gold' : tone === 'live' ? 'text-live' : tone === 'muted' ? 'text-muted-2' : 'text-accent';

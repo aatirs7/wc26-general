@@ -449,6 +449,18 @@ body {
     linear-gradient(180deg, #e2f0f3, #dfe3ea 72%);
 }
 
+/* The story decks are paged, so the stage above clips. The podium is a normal
+   tall page inside the same full-screen surface and has to scroll.
+   This cannot be done with Tailwind's overflow-y-auto utility: utilities live
+   in a cascade layer and the unlayered `overflow: hidden` above always beats
+   them, which silently left the rest of the field unreachable. */
+.finale-stage.finale-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
 /* Shared finale surfaces, so no slide hard-codes a white alpha that would
    vanish on a light background. */
 .f-panel {
